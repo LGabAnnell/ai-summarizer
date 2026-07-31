@@ -1,0 +1,13 @@
+{
+  "name": "shared",
+  "version": "1.0.0",
+  "description": "Shared library for Article Summarizer extension",
+  "peerDependencies": {
+    "@angular/core": "^19.0.0",
+    "@angular/common": "^19.0.0",
+    "rxjs": "^7.8.0"
+  },
+  "dependencies": {
+    "tslib": "^2.6.0"
+  }
+}

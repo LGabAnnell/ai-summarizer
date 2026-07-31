@@ -1,0 +1,16 @@
+{
+  "name": "popup",
+  "version": "1.0.0",
+  "description": "Popup app for Article Summarizer extension",
+  "scripts": {
+    "ng": "ng",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development"
+  },
+  "private": true,
+  "dependencies": {
+    "rxjs": "^7.8.0",
+    "tslib": "^2.6.0",
+    "zone.js": "^0.15.0"
+  }
+}

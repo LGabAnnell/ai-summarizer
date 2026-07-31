@@ -1,0 +1,47 @@
+{
+  "name": "article-summarizer",
+  "version": "1.0.0",
+  "description": "Firefox Manifest V3 extension that extracts article content and sends it to configurable AI providers for summarization",
+  "main": "extension-core/background.js",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "npm run build:popup && npm run build:options && npm run build:shared && npm run build:extension",
+    "build:popup": "ng build popup --configuration production",
+    "build:options": "ng build options --configuration production",
+    "build:shared": "ng build shared",
+    "build:extension": "npx tsx builds/build-extension.ts && npx tsx builds/package-dist.ts",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "lint": "ng lint",
+    "package": "web-ext build",
+    "run": "web-ext run"
+  },
+  "private": true,
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "rxjs": "^7.8.0",
+    "tslib": "^2.6.0",
+    "webextension-polyfill": "^0.12.0",
+    "zone.js": "^0.15.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^19.2.27",
+    "@angular/animations": "^19.0.0",
+    "@angular/cli": "^19.0.0",
+    "@angular/common": "^19.0.0",
+    "@angular/compiler": "^19.0.0",
+    "@angular/compiler-cli": "^19.0.0",
+    "@angular/core": "^19.0.0",
+    "@angular/forms": "^19.0.0",
+    "@angular/platform-browser": "^19.0.0",
+    "@angular/platform-browser-dynamic": "^19.0.0",
+    "@angular/router": "^19.0.0",
+    "@types/node": "^22.0.0",
+    "@types/webextension-polyfill": "^0.12.5",
+    "esbuild": "^0.24.0",
+    "ng-packager": "^1.0.0",
+    "typescript": "~5.6.0",
+    "web-ext": "^7.8.0"
+  }
+}
