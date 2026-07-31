@@ -1,17 +1,12 @@
 /**
  * Qwen (DashScope) Provider Implementation
- * Implements the AIProvider interface for Alibaba Cloud's DashScope API
+ * Extends BaseProvider — implements DashScope body shape and response parsing.
  */
 
-import type { AIProvider, AIProviderConfig, AIProviderRequest, AIProviderResponse } from './provider.model';
-import { SUMMARY_PROMPTS } from './summary-prompts';
+import type { AIProviderConfig, AIProviderResponse } from './provider.model';
+import { BaseProvider } from './base-provider';
 import {
-  estimateTokenCount,
-  buildBaseHeaders,
-  addAuthHeader,
   buildUserMessage,
-  getSystemPrompt as getSystemPromptUtil,
-  getTokenCount as getTokenCountUtil,
   validateRequiredApiKey,
   validateApiKeyLength,
   validateModel,
@@ -44,23 +39,19 @@ const QWEN_CONFIG: AIProviderConfig = {
  * Qwen Provider Implementation
  * Uses DashScope API with OpenAI-compatible format
  */
-export class QwenProvider implements AIProvider {
+export class QwenProvider extends BaseProvider {
   readonly config = QWEN_CONFIG;
-  private apiKey: string;
 
   constructor(apiKey: string) {
-    this.apiKey = apiKey;
+    super(apiKey);
   }
 
-  /**
-   * Build the API request for summarization
-   * Qwen uses OpenAI-compatible format
-   */
-  buildRequest(
+  /** Build the request body — DashScope format (parameters wrapper). */
+  buildRequestBody(
     articleText: string,
     title?: string,
     settings?: Record<string, any>
-  ): AIProviderRequest {
+  ): Record<string, any> {
     const {
       model = this.config.defaultModel,
       temperature = 0.7,
@@ -69,26 +60,15 @@ export class QwenProvider implements AIProvider {
       customPrompt,
     } = settings || {};
 
-    // Get the system prompt
-    const systemPrompt = getSystemPromptUtil(summaryStyle, customPrompt);
-
-    // Build the user message with context
+    const systemPrompt = this.getSystemPrompt(summaryStyle, customPrompt);
     const userMessage = buildUserMessage(articleText, title);
 
-    // Build the messages array
     const messages = [
-      {
-        role: 'system',
-        content: systemPrompt,
-      },
-      {
-        role: 'user',
-        content: userMessage,
-      },
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage },
     ];
 
-    // Build the request body (DashScope format)
-    const body = {
+    return {
       model,
       messages,
       parameters: {
@@ -98,30 +78,15 @@ export class QwenProvider implements AIProvider {
         repetition_penalty: 1.0,
       },
     };
-
-    // Build headers
-    const headers = buildBaseHeaders();
-
-    // Add authorization header
-    addAuthHeader(headers, this.apiKey, this.config.authHeader!, this.config.useBearerToken!);
-
-    return {
-      url: this.config.endpoint,
-      method: 'POST',
-      headers,
-      body,
-    };
   }
 
-  /**
-   * Parse the API response to extract the summary
-   */
-  parseResponse(response: any): AIProviderResponse {
+  /** Parse the response — DashScope format. */
+  parseResponseBody(response: any): AIProviderResponse {
     try {
       // Qwen API response format
       if (response.output && response.output.choices && response.output.choices.length > 0) {
         const firstChoice = response.output.choices[0];
-        
+
         if (firstChoice.message && firstChoice.message.content) {
           return {
             summary: firstChoice.message.content,
@@ -145,7 +110,6 @@ export class QwenProvider implements AIProvider {
         }
       }
 
-      // Handle error responses
       if (response.error) {
         throw new Error(response.error.message || 'Unknown Qwen API error');
       }
@@ -160,56 +124,25 @@ export class QwenProvider implements AIProvider {
     }
   }
 
-  /**
-   * Validate the provider configuration
-   */
   validateConfig(apiKey: string, settings?: Record<string, any>): ValidationResult {
-    // Validate API key is required
     const apiKeyCheck = validateRequiredApiKey(apiKey);
     if (!apiKeyCheck.valid) return apiKeyCheck;
 
-    // Validate API key format (DashScope keys are typically long strings)
     const apiKeyLength = validateApiKeyLength(apiKey, 30);
     if (!apiKeyLength.valid) {
       return { valid: false, error: 'Invalid DashScope API key format. Key seems too short.' };
     }
 
-    // Validate model
     const modelCheck = validateModel(settings?.model, this.config.availableModels, 'Qwen');
     if (!modelCheck.valid) return modelCheck;
 
-    // Validate temperature
     const tempCheck = validateTemperature(settings?.temperature, 0, 1);
     if (!tempCheck.valid) return tempCheck;
 
-    // Validate maxTokens
     const maxTokensCheck = validateMaxTokens(settings?.maxTokens);
     if (!maxTokensCheck.valid) return maxTokensCheck;
 
     return { valid: true };
-  }
-
-  /**
-   * Get the estimated token count for the request
-   */
-  getTokenCount(articleText: string): number {
-    // Estimate tokens for the article text plus prompt tokens
-    const systemPrompt = getSystemPromptUtil('concise');
-    return getTokenCountUtil(articleText, systemPrompt, estimateTokenCount);
-  }
-
-  /**
-   * Get the system prompt for summarization
-   */
-  getSystemPrompt(style?: string, customPrompt?: string): string {
-    return getSystemPromptUtil(style, customPrompt);
-  }
-
-  /**
-   * Update the API key
-   */
-  updateApiKey(apiKey: string): void {
-    this.apiKey = apiKey;
   }
 }
 

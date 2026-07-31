@@ -1,17 +1,12 @@
 /**
  * Anthropic Claude Provider Implementation
- * Implements the AIProvider interface for Anthropic's Messages API
+ * Extends BaseProvider — implements Messages API body shape and response parsing.
  */
 
-import type { AIProvider, AIProviderConfig, AIProviderRequest, AIProviderResponse } from './provider.model';
-import { SUMMARY_PROMPTS } from './summary-prompts';
+import type {AIProviderConfig, AIProviderResponse, AIProviderSettings} from './provider.model';
+import { BaseProvider } from './base-provider';
 import {
-  estimateTokenCount,
-  buildBaseHeaders,
-  addAuthHeader,
   buildUserMessage,
-  getSystemPrompt as getSystemPromptUtil,
-  getTokenCount as getTokenCountUtil,
   validateRequiredApiKey,
   validateApiKeyFormat,
   validateModel,
@@ -51,23 +46,23 @@ const ANTHROPIC_ROLES = {
  * Anthropic Claude Provider Implementation
  * Uses the Messages API (Claude 3)
  */
-export class AnthropicProvider implements AIProvider {
-  readonly config = ANTHROPIC_CONFIG;
-  private apiKey: string;
+export class AnthropicProvider extends BaseProvider {
+  override readonly config = ANTHROPIC_CONFIG;
 
   constructor(apiKey: string) {
-    this.apiKey = apiKey;
+    super(apiKey);
   }
 
-  /**
-   * Build the API request for summarization
-   * Anthropic uses the Messages API with a different payload structure
-   */
-  buildRequest(
+  protected override getExtraHeaders(): Record<string, string> {
+    return { 'anthropic-version': '2023-06-01' };
+  }
+
+  /** Build the request body — Anthropic Messages API format. */
+  buildRequestBody(
     articleText: string,
     title?: string,
     settings?: Record<string, any>
-  ): AIProviderRequest {
+  ): Record<string, any> {
     const {
       model = this.config.defaultModel,
       temperature = 0.7,
@@ -76,60 +71,28 @@ export class AnthropicProvider implements AIProvider {
       customPrompt,
     } = settings || {};
 
-    // Get the system prompt
-    const systemPrompt = getSystemPromptUtil(summaryStyle, customPrompt);
-
-    // Build the user message with context
+    const systemPrompt = this.getSystemPrompt(summaryStyle, customPrompt);
     const userMessage = buildUserMessage(articleText, title);
 
-    // Anthropic Messages API expects this structure
-    const body = {
+    return {
       model,
       messages: [
-        {
-          role: ANTHROPIC_ROLES.system,
-          content: systemPrompt,
-        },
-        {
-          role: ANTHROPIC_ROLES.user,
-          content: userMessage,
-        },
+        { role: ANTHROPIC_ROLES.system, content: systemPrompt },
+        { role: ANTHROPIC_ROLES.user, content: userMessage },
       ],
       max_tokens: maxTokens,
       temperature,
-      // Additional Claude-specific parameters
       top_p: 0.9,
       top_k: 5,
     };
-
-    // Build headers
-    const headers = {
-      ...buildBaseHeaders(),
-      'anthropic-version': '2023-06-01', // Required for Messages API
-    };
-
-    // Add authorization header
-    addAuthHeader(headers, this.apiKey, this.config.authHeader!, this.config.useBearerToken!);
-
-    return {
-      url: this.config.endpoint,
-      method: 'POST',
-      headers,
-      body,
-    };
   }
 
-  /**
-   * Parse the API response to extract the summary
-   * Anthropic Messages API has a different response format
-   */
-  parseResponse(response: any): AIProviderResponse {
+  /** Parse the response — Anthropic Messages API format. */
+  parseResponseBody(response: any): AIProviderResponse {
     try {
-      // Anthropic Messages API response format
       if (response.content && response.content.length > 0) {
         const content = response.content[0];
-        
-        // Content can be text or other types
+
         if (content.type === 'text') {
           return {
             summary: content.text,
@@ -138,7 +101,7 @@ export class AnthropicProvider implements AIProvider {
             truncated: false,
           };
         }
-        
+
         // Fallback to first content block
         if (Array.isArray(response.content)) {
           for (const block of response.content) {
@@ -154,7 +117,6 @@ export class AnthropicProvider implements AIProvider {
         }
       }
 
-      // Handle error responses
       if (response.error) {
         throw new Error(response.error.message || 'Unknown Anthropic API error');
       }
@@ -169,56 +131,25 @@ export class AnthropicProvider implements AIProvider {
     }
   }
 
-  /**
-   * Validate the provider configuration
-   */
-  validateConfig(apiKey: string, settings?: Record<string, any>): ValidationResult {
-    // Validate API key is required
+  validateConfig(apiKey: string, settings?: AIProviderSettings): ValidationResult {
     const apiKeyCheck = validateRequiredApiKey(apiKey);
     if (!apiKeyCheck.valid) return apiKeyCheck;
 
-    // Validate API key format (Anthropic keys start with sk_)
     const apiKeyFormat = validateApiKeyFormat(apiKey, ['sk_']);
     if (!apiKeyFormat.valid) {
       return { valid: false, error: 'Invalid Anthropic API key format. Expected to start with sk_' };
     }
 
-    // Validate model
     const modelCheck = validateModel(settings?.model, this.config.availableModels, 'Anthropic');
     if (!modelCheck.valid) return modelCheck;
 
-    // Validate temperature
     const tempCheck = validateTemperature(settings?.temperature, 0, 1);
     if (!tempCheck.valid) return tempCheck;
 
-    // Validate maxTokens (Claude has a max limit of 4096)
     const maxTokensCheck = validateMaxTokens(settings?.maxTokens, 4096);
     if (!maxTokensCheck.valid) return maxTokensCheck;
 
     return { valid: true };
-  }
-
-  /**
-   * Get the estimated token count for the request
-   */
-  getTokenCount(articleText: string): number {
-    // Estimate tokens for the article text plus prompt tokens
-    const systemPrompt = getSystemPromptUtil('concise');
-    return getTokenCountUtil(articleText, systemPrompt, estimateTokenCount);
-  }
-
-  /**
-   * Get the system prompt for summarization
-   */
-  getSystemPrompt(style?: string, customPrompt?: string): string {
-    return getSystemPromptUtil(style, customPrompt);
-  }
-
-  /**
-   * Update the API key
-   */
-  updateApiKey(apiKey: string): void {
-    this.apiKey = apiKey;
   }
 }
 

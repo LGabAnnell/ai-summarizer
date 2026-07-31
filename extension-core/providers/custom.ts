@@ -4,7 +4,7 @@
  */
 
 import type { AIProvider, AIProviderConfig, AIProviderRequest, AIProviderResponse } from './provider.model';
-import { SUMMARY_PROMPTS, type SummaryStyle } from './summary-prompts';
+import { SUMMARY_PROMPTS } from './summary-prompts';
 import {
   estimateTokenCount,
   buildBaseHeaders,

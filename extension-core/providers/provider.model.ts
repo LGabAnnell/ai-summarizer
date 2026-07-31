@@ -42,6 +42,22 @@ export interface AIProviderResponse {
   truncated?: boolean;
 }
 
+
+// Mistral provider settings type
+export interface AIProviderSettings {
+  /** Model to use for completion */
+  model?: string;
+  /** Sampling temperature (0-1) */
+  temperature?: number;
+  /** Maximum tokens to generate */
+  maxTokens?: number;
+  /** Summary style */
+  summaryStyle?: string;
+  /** Custom system prompt */
+  customPrompt?: string;
+}
+
+
 export interface AIProvider {
   /** Provider configuration */
   config: AIProviderConfig;
