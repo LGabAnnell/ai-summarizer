@@ -1,12 +1,16 @@
 import { Component, inject, signal, OnInit, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MarkdownPipe } from '@shared/lib/pipes/markdown.pipe';
-import { SummaryService } from '@shared/lib/services/summary.service';
-import { MessagingService } from '@shared/lib/services/messaging.service';
-import { SettingsService } from '@shared/lib/services/settings.service';
-import { HistoryService, HistoryItem } from '@shared/lib/services/history.service';
-import { ThemeService } from '@shared/lib/services/theme.service';
-import { SummaryState, SummaryResult } from '@shared/lib/models/summary.model';
+import {
+  MarkdownPipe,
+  SummaryService,
+  MessagingService,
+  SettingsService,
+  HistoryService,
+  ThemeService,
+  SummaryState,
+  SummaryResult,
+  HistoryItem
+} from '@shared/public-api';
 
 // Declare browser API for Firefox extensions
 declare const browser: any;
@@ -346,38 +350,8 @@ export class AppComponent implements OnInit {
     effect(() => {
       this.themeService.applyThemeToDocument();
     });
-  }
-
-  ngOnInit(): void {
-    // Initialize by loading current state
-    this.loadInitialState();
-
-    // Check if we're in a browser extension context
-    if (typeof browser !== 'undefined') {
-      browser.runtime.onMessage.addListener((message: any) => {
-        console.log('Sidebar received message:', message);
-        // Handle any relevant messages
-      });
-    }
-  }
-
-  /**
-   * Load initial state from services
-   */
-  private loadInitialState(): void {
-    // Get current state from summary service
-    const currentState = this.summaryService.state();
-    this.summaryState.set(currentState);
-
-    // Set up subscriptions to state changes
-    this.setupStateSubscriptions();
-  }
-
-  /**
-   * Set up subscriptions to service state changes
-   */
-  private setupStateSubscriptions(): void {
-    // Watch for summary state changes
+    
+    // Set up effect to watch summary state changes
     effect(() => {
       const state = this.summaryService.state();
       this.summaryState.set(state);
@@ -387,6 +361,20 @@ export class AppComponent implements OnInit {
         this.historyService.addSummary(state.summary);
       }
     });
+  }
+
+  ngOnInit(): void {
+    // Get current state from summary service
+    const currentState = this.summaryService.state();
+    this.summaryState.set(currentState);
+
+    // Check if we're in a browser extension context
+    if (typeof browser !== 'undefined') {
+      browser.runtime.onMessage.addListener((message: any) => {
+        console.log('Sidebar received message:', message);
+        // Handle any relevant messages
+      });
+    }
   }
 
   /**

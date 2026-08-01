@@ -5,7 +5,7 @@
 import { Injectable, signal } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
-import { MessagingService } from './messaging.service';
+import { MessagingService, MessageResponse } from './messaging.service';
 import { SettingsService } from './settings.service';
 import {
   ArticleData,
@@ -37,6 +37,13 @@ export class SummaryService {
   ) {}
 
   /**
+   * Extract data from response, handling both wrapped (data property) and unwrapped formats
+   */
+  private extractResponseData<T>(response: MessageResponse<T>): T {
+    return response.data !== undefined ? response.data : (response as unknown as T);
+  }
+
+  /**
    * Extract and summarize the current article
    */
   extractAndSummarize(): Observable<SummaryResult> {
@@ -46,18 +53,22 @@ export class SummaryService {
 
     return this.messaging.extractAndSummarize().pipe(
       switchMap((response) => {
-        if (response.success && response.data) {
-          const result: SummaryResult = {
-            summary: response.data.summary,
-            cached: response.data.cached || false,
-            timestamp: new Date(),
-            title: response.data.title,
-            articleUrl: response.data.articleUrl,
-          };
+        if (response.success) {
+          // Extract data, handling both wrapped and unwrapped response formats
+          const data = this.extractResponseData<{
+            summary: string;
+            title: string;
+            articleUrl: string;
+            cached: boolean;
+          }>(response);
           
-          // Save article data if available
-          // Note: In the current implementation, article data is handled by the background script
-          // We might need to adjust this based on the actual message flow
+          const result: SummaryResult = {
+            summary: data.summary,
+            cached: data.cached || false,
+            timestamp: new Date(),
+            title: data.title,
+            articleUrl: data.articleUrl,
+          };
           
           this._state.set({ state: 'success', summary: result });
           return of(result);
@@ -87,11 +98,18 @@ export class SummaryService {
     
     return this.messaging.summarizeArticle(article, settings.provider).pipe(
       switchMap((response) => {
-        if (response.success && response.data) {
+        if (response.success) {
+          // Extract data, handling both wrapped and unwrapped response formats
+          const data = this.extractResponseData<{
+            summary: string;
+            cached: boolean;
+            tokenCount?: number;
+          }>(response);
+          
           const result: SummaryResult = {
-            summary: response.data.summary,
-            cached: response.data.cached || false,
-            tokenCount: response.data.tokenCount,
+            summary: data.summary,
+            cached: data.cached || false,
+            tokenCount: data.tokenCount,
             timestamp: new Date(),
             provider: settings.provider,
             model: settings.model,

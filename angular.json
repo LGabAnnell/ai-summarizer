@@ -85,6 +85,13 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "debug": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true,
+              "outputHashing": "none"
             }
           },
           "defaultConfiguration": "production"
@@ -178,6 +185,13 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "debug": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true,
+              "outputHashing": "none"
             }
           },
           "defaultConfiguration": "production"
@@ -272,6 +286,13 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "debug": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true,
+              "outputHashing": "none"
             }
           },
           "defaultConfiguration": "production"
@@ -302,9 +323,20 @@
       "prefix": "shared",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-angular:ng-packagr",
+          "builder": "@angular/build:ng-packagr",
           "options": {
             "project": "projects/shared/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/shared/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/shared/tsconfig.lib.json"
+            },
+            "debug": {
+              "tsConfig": "projects/shared/tsconfig.lib.debug.json"
+            }
           }
         },
         "test": {
