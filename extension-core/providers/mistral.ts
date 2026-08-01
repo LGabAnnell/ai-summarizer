@@ -18,6 +18,7 @@ import {
 const MISTRAL_CONFIG: AIProviderConfig = {
   name: 'mistral',
   endpoint: 'https://api.mistral.ai/v1/chat/completions',
+  modelsEndpoint: 'https://api.mistral.ai/v1/models',
   authHeader: 'Authorization',
   useBearerToken: true,
   defaultModel: 'mistral-tiny',

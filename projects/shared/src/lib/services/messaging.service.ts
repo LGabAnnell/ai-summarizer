@@ -139,6 +139,17 @@ export class MessagingService {
   }
 
   /**
+   * Refresh models for a specific provider
+   */
+  refreshModels(provider: string, apiKey: string): Observable<MessageResponse<{ models: string[] }>> {
+    return this.sendMessage<{ models: string[] }>({ 
+      type: 'REFRESH_MODELS', 
+      provider, 
+      apiKey 
+    });
+  }
+
+  /**
    * Open the options page
    */
   openOptionsPage(): void {

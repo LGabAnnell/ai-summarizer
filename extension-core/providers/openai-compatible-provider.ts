@@ -4,7 +4,7 @@
  */
 
 import { BaseProvider } from './base-provider';
-import type { AIProviderResponse } from './provider.model';
+import type { AIProviderResponse, AIProviderConfig } from './provider.model';
 import type { ValidationResult } from './provider.utils';
 import { buildUserMessage } from './provider.utils';
 
@@ -82,6 +82,66 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
         rawResponse: response,
         truncated: false,
       };
+    }
+  }
+
+  // ── Concrete methods (shared model fetching) ───────────────────────
+
+  /**
+   * Fetch available models from the provider's API.
+   * OpenAI-compatible providers use /v1/models endpoint.
+   * @param apiKey - The API key for authentication
+   * @returns Promise with array of model IDs
+   */
+  async fetchModels(apiKey: string): Promise<string[]> {
+    const modelsEndpoint = (this.config as AIProviderConfig).modelsEndpoint;
+    
+    if (!modelsEndpoint) {
+      // Fallback to hardcoded models if no models endpoint is configured
+      return this.config.availableModels || [];
+    }
+
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Add authentication header
+      if (this.config.authHeader && this.config.useBearerToken) {
+        headers[this.config.authHeader] = `Bearer ${apiKey}`;
+      } else if (this.config.authHeader) {
+        headers[this.config.authHeader] = apiKey;
+      }
+
+      const response = await fetch(modelsEndpoint, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        // If API call fails, fall back to hardcoded models
+        console.warn(`Failed to fetch models from ${modelsEndpoint}: ${response.status} ${response.statusText}`);
+        return this.config.availableModels || [];
+      }
+
+      const data = await response.json();
+      
+      // Handle OpenAI/Mistral/DeepSeek response format: { data: [{ id: string, ... }] }
+      if (data.data && Array.isArray(data.data)) {
+        return data.data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');
+      }
+      
+      // Handle alternative format where models are directly in the response
+      if (Array.isArray(data)) {
+        return data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');
+      }
+
+      console.warn('Unexpected models API response format', data);
+      return this.config.availableModels || [];
+    } catch (error) {
+      console.error('Error fetching models:', error);
+      // Fall back to hardcoded models on any error
+      return this.config.availableModels || [];
     }
   }
 

@@ -18,6 +18,7 @@ import {
 const OPENAI_CONFIG: AIProviderConfig = {
   name: 'openai',
   endpoint: 'https://api.openai.com/v1/chat/completions',
+  modelsEndpoint: 'https://api.openai.com/v1/models',
   authHeader: 'Authorization',
   useBearerToken: true,
   defaultModel: 'gpt-3.5-turbo',

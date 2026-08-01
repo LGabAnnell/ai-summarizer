@@ -19,6 +19,7 @@ import {
 const QWEN_CONFIG: AIProviderConfig = {
   name: 'qwen',
   endpoint: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+  modelsEndpoint: 'https://dashscope.aliyuncs.com/api/v1/models',
   authHeader: 'Authorization',
   useBearerToken: true,
   defaultModel: 'qwen-plus',
@@ -143,6 +144,63 @@ export class QwenProvider extends BaseProvider {
     if (!maxTokensCheck.valid) return maxTokensCheck;
 
     return { valid: true };
+  }
+
+  /**
+   * Fetch available models from DashScope API.
+   * @param apiKey - The API key for authentication
+   * @returns Promise with array of model IDs
+   */
+  async fetchModels(apiKey: string): Promise<string[]> {
+    const modelsEndpoint = this.config.modelsEndpoint;
+    
+    if (!modelsEndpoint) {
+      // Fallback to hardcoded models if no models endpoint is configured
+      return this.config.availableModels || [];
+    }
+
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Add authentication header for DashScope
+      if (this.config.authHeader && this.config.useBearerToken) {
+        headers[this.config.authHeader] = `Bearer ${apiKey}`;
+      } else if (this.config.authHeader) {
+        headers[this.config.authHeader] = apiKey;
+      }
+
+      const response = await fetch(modelsEndpoint, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        // If API call fails, fall back to hardcoded models
+        console.warn(`Failed to fetch models from ${modelsEndpoint}: ${response.status} ${response.statusText}`);
+        return this.config.availableModels || [];
+      }
+
+      const data = await response.json();
+      
+      // Handle DashScope response format
+      if (data.data && Array.isArray(data.data)) {
+        return data.data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');
+      }
+      
+      // Handle alternative format where models are directly in the response
+      if (Array.isArray(data)) {
+        return data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');
+      }
+
+      console.warn('Unexpected models API response format from DashScope', data);
+      return this.config.availableModels || [];
+    } catch (error) {
+      console.error('Error fetching Qwen models:', error);
+      // Fall back to hardcoded models on any error
+      return this.config.availableModels || [];
+    }
   }
 }
 

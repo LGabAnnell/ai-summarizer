@@ -19,6 +19,7 @@ import {
 const DEEPSEEK_CONFIG: AIProviderConfig = {
   name: 'deepseek',
   endpoint: 'https://api.deepseek.com/v1/chat/completions',
+  modelsEndpoint: 'https://api.deepseek.com/v1/models',
   authHeader: 'Authorization',
   useBearerToken: true,
   defaultModel: 'deepseek-chat',

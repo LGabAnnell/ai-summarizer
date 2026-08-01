@@ -58,6 +58,12 @@ interface TestProviderRequest {
   apiKey: string;
 }
 
+interface RefreshModelsRequest {
+  type: 'REFRESH_MODELS';
+  provider: string;
+  apiKey: string;
+}
+
 interface Message {
   type: string;
   [key: string]: any;
@@ -390,6 +396,33 @@ async function handleSaveSettings(settings: Partial<ExtensionSettings>): Promise
 }
 
 /**
+ * Handle REFRESH_MODELS request
+ */
+async function handleRefreshModels(providerType: string, apiKey: string): Promise<{ success: boolean; models?: string[]; error?: string }> {
+  try {
+    if (!apiKey || apiKey.trim() === '') {
+      return { success: false, error: 'API key is required' };
+    }
+
+    // Create provider instance
+    const provider = createProvider(providerType as any, apiKey);
+    
+    // Call the provider's fetchModels method
+    const models = await provider.fetchModels(apiKey);
+    
+    return {
+      success: true,
+      models,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: `Failed to refresh models: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/**
  * Test a provider connection
  */
 async function testProviderConnection(providerType: string, apiKey: string): Promise<{ valid: boolean; error?: string }> {
@@ -477,6 +510,9 @@ async function handleMessage(request: Message, sender: any): Promise<any> {
 
     case 'TEST_PROVIDER':
       return testProviderConnection(request.provider, request.apiKey);
+
+    case 'REFRESH_MODELS':
+      return handleRefreshModels(request.provider, request.apiKey);
 
     case 'CLEAR_CACHE':
       try {

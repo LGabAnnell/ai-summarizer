@@ -817,3 +817,62 @@ options-root {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* Model select with refresh button */
+.model-select-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.model-select-wrapper .form-select {
+  flex: 1;
+}
+
+.btn--refresh {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 14px;
+  transition: var(--transition);
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn--refresh:hover:not(:disabled) {
+  background: var(--primary-light);
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn--refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Spinner animation */
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-color);
+  border-top: 2px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Form error */
+.form-error {
+  color: var(--error-color);
+  font-size: 12px;
+  margin-top: 4px;
+}

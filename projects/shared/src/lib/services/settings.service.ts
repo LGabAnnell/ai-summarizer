@@ -6,6 +6,7 @@ import { Injectable, signal } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { MessagingService } from './messaging.service';
+import { ModelService } from './model.service';
 import {
   ExtensionSettings,
   DEFAULT_SETTINGS,
@@ -28,7 +29,7 @@ export class SettingsService {
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
 
-  constructor(private messaging: MessagingService) {}
+  constructor(private messaging: MessagingService, private modelService: ModelService) {}
 
   /**
    * Load settings from storage
@@ -118,8 +119,16 @@ export class SettingsService {
 
   /**
    * Get available models for a specific provider
+   * Checks cached dynamic models first, then falls back to hardcoded list
    */
   getAvailableModelsForProvider(provider: ProviderType): string[] {
+    // First check if we have cached dynamic models
+    const cachedModels = this.modelService.getCachedModels(provider);
+    if (cachedModels.length > 0) {
+      return cachedModels;
+    }
+    
+    // Fall back to hardcoded models
     return PROVIDER_MODELS[provider] || [];
   }
 
@@ -217,6 +226,52 @@ export class SettingsService {
         return of({ valid: false, error: error.message || 'Connection test failed' });
       })
     );
+  }
+
+  /**
+   * Refresh models for a specific provider from the API
+   */
+  refreshModels(provider: ProviderType, apiKey: string): Observable<string[]> {
+    return this.messaging.refreshModels(provider, apiKey).pipe(
+      map((response) => {
+        if (response.success && response.data && response.data.models) {
+          // Update the model cache in the model service
+          this.modelService.updateCachedModels(provider, response.data.models);
+          return response.data.models;
+        } else {
+          // Clear cache on error and return hardcoded models
+          this.modelService.clearCache(provider);
+          throw new Error(response.error || 'Failed to refresh models');
+        }
+      }),
+      catchError((error) => {
+        // Clear cache on error and return hardcoded models
+        this.modelService.clearCache(provider);
+        return of(PROVIDER_MODELS[provider] || []);
+      })
+    );
+  }
+
+  /**
+   * Refresh models for the current provider
+   */
+  refreshCurrentProviderModels(): Observable<string[]> {
+    const settings = this._settings();
+    return this.refreshModels(settings.provider as ProviderType, settings.apiKey);
+  }
+
+  /**
+   * Get model loading state for a provider
+   */
+  isModelsLoading(provider: ProviderType): boolean {
+    return this.modelService.isLoading(provider);
+  }
+
+  /**
+   * Get model error state for a provider
+   */
+  getModelsError(provider: ProviderType): string | undefined {
+    return this.modelService.getError(provider);
   }
 
   /**

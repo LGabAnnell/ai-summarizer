@@ -88,12 +88,29 @@ declare const browser: any;
 
             <div class="form-group">
               <label class="form-label" for="model">Model</label>
-              <select id="model" formControlName="model" class="form-select">
-                @for (model of availableModels(); track model) {
-                  <option [value]="model">{{ model }}</option>
-                }
-              </select>
+              <div class="model-select-wrapper">
+                <select id="model" formControlName="model" class="form-select">
+                  @for (model of availableModels(); track model) {
+                    <option [value]="model">{{ model }}</option>
+                  }
+                </select>
+                <button 
+                  type="button" 
+                  class="btn btn--refresh" 
+                  (click)="refreshModels()" 
+                  [disabled]="modelsLoading()" 
+                  title="Refresh model list">
+                  @if (modelsLoading()) {
+                    <span class="spinner"></span>
+                  } @else {
+                    🔄
+                  }
+                </button>
+              </div>
               <div class="form-description">Select the model to use for summarization</div>
+              @if (modelsError()) {
+                <div class="form-error">{{ modelsError() }}</div>
+              }
             </div>
           </div>
 
@@ -416,6 +433,8 @@ export class AppComponent implements OnInit {
   successMessage = signal<string | undefined>(undefined);
   connectionStatus = signal<'connected' | 'failed' | undefined>(undefined);
   showApiKey = signal<boolean>(false);
+  modelsLoading = signal<boolean>(false);
+  modelsError = signal<string | undefined>(undefined);
   settingsForm!: FormGroup;
 
   providerTypes = computed(() => this.settingsService.getProviderTypes());
@@ -655,6 +674,42 @@ export class AppComponent implements OnInit {
 
   clearSuccess(): void {
     this.successMessage.set(undefined);
+  }
+
+  /**
+   * Clear model-specific error
+   */
+  clearModelsError(): void {
+    this.modelsError.set(undefined);
+  }
+
+  /**
+   * Refresh the available models for the current provider
+   */
+  refreshModels(): void {
+    const apiKey = this.settingsForm?.get('apiKey')?.value || '';
+    const provider = this.settingsForm?.get('provider')?.value || 'mistral';
+    
+    this.modelsLoading.set(true);
+    this.modelsError.set(undefined);
+    
+    this.settingsService.refreshModels(provider as ProviderType, apiKey).subscribe({
+      next: (models) => {
+        this.modelsLoading.set(false);
+        if (models.length > 0) {
+          // Update the model dropdown to the first fetched model if current model is not available
+          const currentModel = this.settingsForm?.get('model')?.value;
+          if (currentModel && !models.includes(currentModel)) {
+            this.settingsForm.patchValue({ model: models[0] });
+          }
+          this.successMessage.set(`Successfully refreshed ${models.length} models!`);
+        }
+      },
+      error: (error) => {
+        this.modelsLoading.set(false);
+        this.modelsError.set(`Failed to refresh models: ${error.message || 'Unknown error'}`);
+      }
+    });
   }
 
   openPrivacyPolicy(): void {

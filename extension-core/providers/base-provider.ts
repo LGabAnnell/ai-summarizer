@@ -49,6 +49,13 @@ export abstract class BaseProvider implements AIProvider {
   ): ValidationResult;
 
   /**
+   * Fetch available models from the provider's API
+   * @param apiKey - The API key for authentication
+   * @returns Promise with array of model IDs
+   */
+  abstract fetchModels(apiKey: string): Promise<string[]>;
+
+  /**
    * Override to add provider-specific headers (e.g., anthropic-version).
    * Returns an empty object by default.
    */

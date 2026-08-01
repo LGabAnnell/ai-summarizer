@@ -4,6 +4,7 @@
  */
 
 import type { AIProvider, AIProviderConfig, AIProviderRequest, AIProviderResponse } from './provider.model';
+import type { SummaryStyle } from './summary-prompts';
 import { SUMMARY_PROMPTS } from './summary-prompts';
 import {
   estimateTokenCount,
@@ -281,6 +282,19 @@ export class CustomProvider implements AIProvider {
    */
   updateApiKey(apiKey: string): void {
     this.apiKey = apiKey;
+  }
+
+  /**
+   * Fetch available models from the custom endpoint.
+   * For custom providers, this tries to use a /v1/models endpoint relative to the custom endpoint.
+   * @param apiKey - The API key for authentication
+   * @returns Promise with array of model IDs
+   */
+  async fetchModels(apiKey: string): Promise<string[]> {
+    // Custom providers don't have a predefined models endpoint
+    // They could potentially support it if the user provides one, but for now
+    // we'll return the available models from config or empty array
+    return this.config.availableModels || [];
   }
 }
 

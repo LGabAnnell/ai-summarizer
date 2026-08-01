@@ -8,6 +8,8 @@ export interface AIProviderConfig {
   name: string;
   /** API endpoint URL */
   endpoint: string;
+  /** Models API endpoint URL for fetching available models */
+  modelsEndpoint?: string;
   /** Authentication header name (e.g., 'Authorization', 'x-api-key') */
   authHeader?: string;
   /** Default model for this provider */
@@ -99,6 +101,13 @@ export interface AIProvider {
    * @param customPrompt - Custom prompt override
    */
   getSystemPrompt(style?: string, customPrompt?: string): string;
+
+  /**
+   * Fetch available models from the provider's API
+   * @param apiKey - The API key for authentication
+   * @returns Promise with array of model IDs
+   */
+  fetchModels(apiKey: string): Promise<string[]>;
 }
 
 /**
