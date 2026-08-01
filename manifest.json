@@ -10,8 +10,23 @@
   "action": {
     "default_popup": "popup/index.html",
     "default_icon": {
-      "48": "icons/icon-48.png",
-      "96": "icons/icon-96.png"
+      "48": "icons/icon-48.svg",
+      "96": "icons/icon-96.svg"
+    }
+  },
+  "sidebar_action": {
+    "default_panel": "popup/index.html",
+    "default_title": "Article Summarizer",
+    "default_icon": {
+      "48": "icons/icon-48.svg",
+      "96": "icons/icon-96.svg"
+    },
+    "open_at_install": false
+  },
+  "commands": {
+    "_execute_sidebar_action": {
+      "suggested_keyboard_shortcuts": ["Ctrl+Shift+Y"],
+      "description": "Toggle Article Summarizer sidebar"
     }
   },
   "options_ui": {
