@@ -15,7 +15,7 @@
     }
   },
   "sidebar_action": {
-    "default_panel": "popup/index.html",
+    "default_panel": "sidebar/index.html",
     "default_title": "Article Summarizer",
     "default_icon": {
       "48": "icons/icon-48.svg",

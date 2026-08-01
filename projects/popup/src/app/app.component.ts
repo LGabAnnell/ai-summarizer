@@ -1,5 +1,6 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { MarkdownPipe } from '@shared/lib/pipes/markdown.pipe';
 
 // Declare browser API for Firefox extensions
 declare const browser: any;
@@ -7,7 +8,7 @@ declare const browser: any;
 @Component({
   selector: 'popup-root',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MarkdownPipe],
   template: `
     <div class="container">
       <div class="header">
@@ -57,7 +58,7 @@ declare const browser: any;
                 }
               </button>
             </div>
-            <div class="summary-text">{{ summary() }}</div>
+            <div class="summary-text markdown-content" [innerHTML]="summary() | markdown"></div>
             <div class="summary-meta">
               <span>{{ characterCount() }} characters</span>
               @if (cached()) {

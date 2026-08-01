@@ -9,10 +9,11 @@ const filesToCopy = [
   { src: 'icons/icon-96.svg', dest: 'dist/icons/icon-96.svg' },
 ];
 
-// Copy popup and options folders from Angular builds
+// Copy popup, options, and sidebar folders from Angular builds
 const foldersToCopy = [
   { src: 'dist/popup', dest: 'dist/popup' },
   { src: 'dist/options', dest: 'dist/options' },
+  { src: 'dist/sidebar', dest: 'dist/sidebar' },
 ];
 
 async function packageDist() {
@@ -81,10 +82,11 @@ async function packageDist() {
     if (fs.existsSync(manifestPath)) {
       const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
       
-      // The popup and options should already be in the right place from Angular builds
+      // The popup, options, and sidebar should already be in the right place from Angular builds
       // But we need to make sure the paths are correct
       manifest.action.default_popup = 'popup/index.html';
       manifest.options_ui.page = 'options/index.html';
+      manifest.sidebar_action.default_panel = 'sidebar/index.html';
       
       // Firefox uses "scripts" instead of "service_worker" for background
       if (manifest.background && manifest.background.service_worker) {
