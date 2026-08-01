@@ -47,10 +47,25 @@ export class MessagingService {
       map((response: any) => {
         // Handle both direct responses and wrapped responses
         if (response && typeof response === 'object') {
+          // If response has a data property, use it. Otherwise, the response itself is the data
+          // (excluding standard message fields)
+          const standardFields = ['type', 'success', 'error', 'data'];
+          const hasExplicitData = response.data !== undefined;
+          
+          // Collect all non-standard fields as the actual data
+          const responseData: any = {};
+          for (const key in response) {
+            if (!standardFields.includes(key)) {
+              responseData[key] = response[key];
+            }
+          }
+          
+          const data = hasExplicitData ? response.data : (Object.keys(responseData).length > 0 ? responseData : undefined);
+          
           return {
             type: response.type || message.type + '_RESPONSE',
             success: response.success !== false, // Default to true if not specified
-            data: response.data,
+            data: data as T,
             error: response.error,
           } as MessageResponse<T>;
         }

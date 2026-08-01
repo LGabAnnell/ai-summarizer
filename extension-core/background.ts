@@ -490,7 +490,13 @@ async function handleMessage(request: Message, sender: any): Promise<any> {
             success: false,
           };
         }
-        return handleSummarize(article);
+        const summaryResponse = await handleSummarize(article);
+        // Add article metadata to the response for the sidebar
+        return {
+          ...summaryResponse,
+          title: article.title,
+          articleUrl: article.url,
+        };
       } catch (error) {
         return {
           type: 'SUMMARIZE_RESPONSE',

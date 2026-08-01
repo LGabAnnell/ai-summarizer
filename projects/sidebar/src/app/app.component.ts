@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, effect, computed } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   MarkdownPipe,
@@ -298,7 +298,7 @@ type ViewMode = 'current' | 'history' | 'history-detail';
     `
   ],
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   // Services
   private summaryService = inject(SummaryService);
   private messagingService = inject(MessagingService);
@@ -309,6 +309,9 @@ export class AppComponent implements OnInit {
   // State signals
   currentView = signal<ViewMode>('current');
   summaryState = signal<SummaryState>({ state: 'idle' });
+  
+  // Store message listener for cleanup
+  private messageListener: any = null;
   
   // Copy state for current summary
   copying = signal<boolean>(false);
@@ -370,10 +373,19 @@ export class AppComponent implements OnInit {
 
     // Check if we're in a browser extension context
     if (typeof browser !== 'undefined') {
-      browser.runtime.onMessage.addListener((message: any) => {
+      this.messageListener = (message: any) => {
         console.log('Sidebar received message:', message);
         // Handle any relevant messages
-      });
+      };
+      browser.runtime.onMessage.addListener(this.messageListener);
+    }
+  }
+
+  ngOnDestroy(): void {
+    // Clean up message listener to prevent memory leaks
+    if (this.messageListener && typeof browser !== 'undefined') {
+      browser.runtime.onMessage.removeListener(this.messageListener);
+      this.messageListener = null;
     }
   }
 
