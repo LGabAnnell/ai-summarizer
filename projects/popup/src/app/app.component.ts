@@ -1,6 +1,5 @@
-import { Component, inject, signal, OnInit, computed } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { SettingsService, ProviderType, ModelService } from '@shared/public-api';
 
 // Declare browser API for Firefox extensions
 declare const browser: any;
@@ -80,36 +79,6 @@ declare const browser: any;
         </div>
       </div>
       
-      <div class="model-selector">
-        <label for="popup-model">Model:</label>
-        <div class="model-select-wrapper">
-          <select 
-            id="popup-model" 
-            [value]="selectedModel()"
-            (change)="onModelChange($event)"
-            class="form-select">
-            @for (model of availableModels(); track model) {
-              <option [value]="model">{{ model }}</option>
-            }
-          </select>
-          <button 
-            type="button" 
-            class="btn btn--refresh btn--small"
-            (click)="refreshModels()"
-            [disabled]="modelsLoading()"
-            title="Refresh model list">
-            @if (modelsLoading()) {
-              <span class="spinner"></span>
-            } @else {
-              Refresh
-            }
-          </button>
-        </div>
-        @if (modelsError()) {
-          <div class="error-message">{{ modelsError() }}</div>
-        }
-      </div>
-      
       <button 
         class="btn btn--primary btn--full-width"
         (click)="summarize()"
@@ -135,63 +104,6 @@ declare const browser: any;
       margin-bottom: 12px;
     }
     
-    .model-selector {
-      margin-top: 12px;
-      margin-bottom: 12px;
-    }
-    
-    .model-selector > label {
-      display: block;
-      margin-bottom: 4px;
-      font-size: 12px;
-      color: #666;
-      font-weight: 500;
-    }
-    
-    .model-select-wrapper {
-      display: flex;
-      gap: 8px;
-    }
-    
-    .model-select-wrapper select {
-      flex: 1;
-      padding: 8px 12px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
-      background-color: white;
-      color: #333;
-    }
-    
-    .model-select-wrapper select:focus {
-      outline: none;
-      border-color: #007bff;
-    }
-    
-    .btn--refresh {
-      padding: 8px 12px;
-      font-size: 12px;
-      background-color: #f0f0f0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    
-    .btn--refresh:hover:not(:disabled) {
-      background-color: #e0e0e0;
-    }
-    
-    .btn--refresh:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-    
-    .error-message {
-      margin-top: 4px;
-      font-size: 12px;
-      color: #dc3545;
-    }
-    
     .spinner {
       display: inline-block;
       width: 12px;
@@ -210,10 +122,6 @@ declare const browser: any;
   `],
 })
 export class AppComponent implements OnInit {
-  // Services
-  private settingsService = inject(SettingsService);
-  private modelService = inject(ModelService);
-
   // State management
   state = signal<'idle' | 'loading' | 'success' | 'error'>('idle');
   summary = signal<string>('');
@@ -226,23 +134,10 @@ export class AppComponent implements OnInit {
   // Copy to clipboard state
   copying = signal<boolean>(false);
   copied = signal<boolean>(false);
-  
-  // Model selection state
-  provider = signal<ProviderType>('mistral');
-  selectedModel = signal<string>('');
-  modelsLoading = signal<boolean>(false);
-  modelsError = signal<string | undefined>(undefined);
-  
-  // Computed
-  availableModels = computed(() => 
-    this.settingsService.getAvailableModelsForProvider(this.provider())
-  );
 
   constructor() {}
 
   ngOnInit(): void {
-    this.loadSettings();
-    
     // Check if we're in a browser extension context
     if (typeof browser !== 'undefined') {
       // Listen for any messages that might be relevant
@@ -252,54 +147,8 @@ export class AppComponent implements OnInit {
     }
   }
 
-  /**
-   * Load settings from storage
-   */
-  loadSettings(): void {
-    this.settingsService.loadSettings().subscribe(settings => {
-      this.provider.set(settings.provider as ProviderType);
-      this.selectedModel.set(settings.model);
-    });
-  }
-
   characterCount() {
     return this.summary().length;
-  }
-
-  /**
-   * Refresh the available models for the current provider
-   */
-  refreshModels(): void {
-    const apiKey = this.settingsService.getSetting('apiKey');
-    const provider = this.provider();
-    
-    this.modelsLoading.set(true);
-    this.modelsError.set(undefined);
-    
-    this.settingsService.refreshModels(provider, apiKey).subscribe({
-      next: (models) => {
-        this.modelsLoading.set(false);
-        if (models.length > 0 && !models.includes(this.selectedModel())) {
-          this.selectedModel.set(models[0]);
-          // Save the new model to settings
-          this.settingsService.updateSetting('model', models[0]).subscribe();
-        }
-      },
-      error: (error) => {
-        this.modelsLoading.set(false);
-        this.modelsError.set(error.message || 'Failed to refresh models');
-      }
-    });
-  }
-
-  /**
-   * Handle model selection change
-   */
-  onModelChange(event: Event): void {
-    const model = (event.target as HTMLSelectElement).value;
-    this.selectedModel.set(model);
-    // Save to settings
-    this.settingsService.updateSetting('model', model).subscribe();
   }
 
   /**
