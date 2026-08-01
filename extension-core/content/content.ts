@@ -42,7 +42,7 @@ const MAX_TEXT_LENGTH = 25000;
 function extractArticle(): ArticleData | null {
   try {
     // Use Mozilla's Readability library
-    const doc = document;
+    const doc = document.cloneNode(true) as Document;
     const readability = new Readability(doc, {
       maxCharCount: MAX_TEXT_LENGTH,
       stripUnlikelyCandidates: true,
