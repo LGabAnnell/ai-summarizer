@@ -114,7 +114,7 @@ type ViewMode = 'current' | 'history' | 'history-detail';
                       Copy
                     }
                   </button>
-                  <button class="expand-btn" (click)="addToHistory()" title="Save to history">
+                  <button class="expand-btn" (click)="addToHistory()" title="Save to history" [disabled]="isArticleInHistory()">
                     💾 Save
                   </button>
                 </div>
@@ -346,6 +346,13 @@ export class AppComponent implements OnInit, OnDestroy {
 
   historyItems = computed<HistoryItem[]>(() => {
     return this.historyService.getItems();
+  });
+
+  isArticleInHistory = computed<boolean>(() => {
+    const currentUrl = this.currentArticleUrl();
+    if (!currentUrl) return false;
+    const items = this.historyItems();
+    return items.some(item => item.articleUrl === currentUrl);
   });
 
   constructor() {

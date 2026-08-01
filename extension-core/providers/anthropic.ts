@@ -167,7 +167,7 @@ export class AnthropicProvider extends BaseProvider {
     }
 
     try {
-      const headers = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       

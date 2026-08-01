@@ -47,10 +47,6 @@
   --active-bg: #1E293B;
 }
 
-* {
-  box-sizing: border-box;
-}
-
 html, body {
   margin: 0;
   padding: 0;
@@ -270,7 +266,6 @@ sidebar-root {
     font-size: 15px;
     line-height: 1.7;
     color: var(--text-secondary);
-    white-space: pre-wrap;
     word-break: break-word;
     max-height: 400px;
     overflow-y: auto;
@@ -777,10 +772,6 @@ sidebar-root {
   h2 { font-size: 20px; }
   h3 { font-size: 18px; }
   
-  p {
-    margin: 12px 0;
-  }
-  
   strong, b {
     font-weight: 600;
   }
@@ -790,12 +781,7 @@ sidebar-root {
   }
   
   ul, ol {
-    margin: 12px 0;
     padding-left: 24px;
-  }
-  
-  li {
-    margin: 6px 0;
   }
   
   code {

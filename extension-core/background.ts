@@ -5,6 +5,7 @@
 
 // Import provider factory
 import { createProvider, getAvailableProviderTypes } from './providers';
+import browser from 'webextension-polyfill';
 
 // Type definitions for messaging
 export interface ArticleData {
@@ -34,6 +35,22 @@ interface SummarizeRequest {
   settings?: any;
 }
 
+interface ExtractAndSummarizeRequest {
+  type: 'EXTRACT_AND_SUMMARIZE';
+}
+
+interface ExtractArticleRequest {
+  type: 'EXTRACT_ARTICLE';
+}
+
+interface CachedSummaryData {
+  summary: string;
+  timestamp: number;
+  url: string;
+  provider: string;
+  model: string;
+}
+
 interface SummarizeResponse {
   type: 'SUMMARIZE_RESPONSE';
   summary?: string;
@@ -49,7 +66,7 @@ interface GetSettingsRequest {
 
 interface SaveSettingsRequest {
   type: 'SAVE_SETTINGS';
-  settings: any;
+  settings: Partial<ExtensionSettings>;
 }
 
 interface TestProviderRequest {
@@ -64,10 +81,20 @@ interface RefreshModelsRequest {
   apiKey: string;
 }
 
-interface Message {
-  type: string;
-  [key: string]: any;
+interface ClearCacheRequest {
+  type: 'CLEAR_CACHE';
 }
+
+// Discriminated union type for all possible incoming message types
+type Message =
+  | ExtractAndSummarizeRequest
+  | SummarizeRequest
+  | GetSettingsRequest
+  | SaveSettingsRequest
+  | TestProviderRequest
+  | RefreshModelsRequest
+  | ClearCacheRequest
+  | ExtractArticleRequest;
 
 // Cache configuration
 const CACHE_PREFIX = 'summary_cache_';
@@ -120,7 +147,7 @@ function generateCacheKey(article: ArticleData, settings: Partial<ExtensionSetti
  */
 async function getCachedSummary(article: ArticleData, settings: Partial<ExtensionSettings>): Promise<string | null> {
   const cacheKey = generateCacheKey(article, settings);
-  const result = await browser.storage.local.get(cacheKey);
+  const result = await browser.storage.local.get(cacheKey) as Record<string, CachedSummaryData>;
   
   if (result[cacheKey]) {
     const cached = result[cacheKey];
@@ -157,7 +184,7 @@ async function cacheSummary(article: ArticleData, settings: Partial<ExtensionSet
  * Get extension settings from storage
  */
 async function getSettings(): Promise<ExtensionSettings> {
-  const result = await browser.storage.local.get('extension_settings');
+  const result = await browser.storage.local.get('extension_settings') as { extension_settings?: ExtensionSettings };;
   return { ...DEFAULT_SETTINGS, ...result.extension_settings };
 }
 
@@ -549,7 +576,7 @@ async function handleMessage(request: Message, sender: any): Promise<any> {
 
 // Set up message listener
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  handleMessage(request, sender)
+  handleMessage(request as Message, sender)
     .then(response => sendResponse(response))
     .catch(error => sendResponse({
       type: 'ERROR_RESPONSE',
