@@ -39,14 +39,21 @@ export class MessagingService {
   sendMessage<T>(message: Message): Observable<MessageResponse<T>> {
     // Check if we're running in a browser extension context
     if (typeof browser === 'undefined') {
+      console.error('MessagingService.sendMessage: Not running in a browser extension context');
       return throwError(() => new Error('Not running in a browser extension context'));
     }
+
+    console.log('MessagingService.sendMessage: Sending message:', message.type, message);
+    console.log('Message details:', JSON.stringify(message, null, 2));
 
     // Return an observable that wraps the message sending
     return from(browser.runtime.sendMessage(message)).pipe(
       map((response: any) => {
+        console.log('MessagingService.sendMessage: Raw response received:', response);
+        
         // Handle both direct responses and wrapped responses
         if (response && typeof response === 'object') {
+          console.log('Response is object, processing...');
           // If response has a data property, use it. Otherwise, the response itself is the data
           // (excluding standard message fields)
           const standardFields = ['type', 'success', 'error', 'data'];
@@ -62,17 +69,23 @@ export class MessagingService {
           
           const data = hasExplicitData ? response.data : (Object.keys(responseData).length > 0 ? responseData : undefined);
           
-          return {
+          const result = {
             type: response.type || message.type + '_RESPONSE',
             success: response.success !== false, // Default to true if not specified
             data: data as T,
             error: response.error,
           } as MessageResponse<T>;
+          
+          console.log('Processed response:', result);
+          return result;
         }
+        console.error('Invalid response format, raw response:', response);
         return { type: 'UNKNOWN', success: false, error: 'Invalid response format' };
       }),
       catchError((error) => {
         console.error('Message sending failed:', error);
+        console.error('Error details:', error instanceof Error ? error.message : JSON.stringify(error));
+        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace available');
         return of({ 
           type: message.type + '_RESPONSE', 
           success: false, 
@@ -98,6 +111,7 @@ export class MessagingService {
     articleUrl: string;
     cached: boolean;
   }>> {
+    console.log('MessagingService.extractAndSummarize: Called');
     return this.sendMessage<{
       summary: string;
       title: string;
@@ -110,6 +124,7 @@ export class MessagingService {
    * Get extension settings
    */
   getSettings(): Observable<MessageResponse<any>> {
+    console.log('MessagingService.getSettings: Called');
     return this.sendMessage({ type: 'GET_SETTINGS' });
   }
 
@@ -117,6 +132,7 @@ export class MessagingService {
    * Save extension settings
    */
   saveSettings(settings: any): Observable<MessageResponse<void>> {
+    console.log('MessagingService.saveSettings: Called with settings:', JSON.stringify(settings, null, 2));
     return this.sendMessage({ type: 'SAVE_SETTINGS', settings });
   }
 
@@ -124,6 +140,7 @@ export class MessagingService {
    * Clear the summary cache
    */
   clearCache(): Observable<MessageResponse<{ cleared: number }>> {
+    console.log('MessagingService.clearCache: Called');
     return this.sendMessage<{ cleared: number }>({ type: 'CLEAR_CACHE' });
   }
 
@@ -135,6 +152,9 @@ export class MessagingService {
     cached: boolean;
     tokenCount?: number;
   }>> {
+    console.log('MessagingService.summarizeArticle: Called with article data');
+    console.log('Article data:', JSON.stringify(article, null, 2));
+    console.log('Provider:', provider);
     return this.sendMessage({ 
       type: 'SUMMARIZE', 
       article, 
@@ -146,6 +166,7 @@ export class MessagingService {
    * Test a provider connection
    */
   testProvider(provider: string, apiKey: string): Observable<MessageResponse<{ valid: boolean }>> {
+    console.log('MessagingService.testProvider: Called for provider:', provider);
     return this.sendMessage<{ valid: boolean }>({ 
       type: 'TEST_PROVIDER', 
       provider, 
@@ -157,6 +178,7 @@ export class MessagingService {
    * Refresh models for a specific provider
    */
   refreshModels(provider: string, apiKey: string): Observable<MessageResponse<{ models: string[] }>> {
+    console.log('MessagingService.refreshModels: Called for provider:', provider);
     return this.sendMessage<{ models: string[] }>({ 
       type: 'REFRESH_MODELS', 
       provider, 
@@ -168,8 +190,16 @@ export class MessagingService {
    * Open the options page
    */
   openOptionsPage(): void {
+    console.log('MessagingService.openOptionsPage: Called');
     if (typeof browser !== 'undefined') {
-      browser.runtime.openOptionsPage();
+      try {
+        browser.runtime.openOptionsPage();
+        console.log('Options page opened');
+      } catch (error) {
+        console.error('Failed to open options page:', error);
+      }
+    } else {
+      console.log('Cannot open options page: not in browser extension context');
     }
   }
 
@@ -177,16 +207,25 @@ export class MessagingService {
    * Get the current tab
    */
   getCurrentTab(): Observable<browser.Tabs.Tab> {
+    console.log('MessagingService.getCurrentTab: Called');
     if (typeof browser === 'undefined') {
+      console.error('MessagingService.getCurrentTab: Not running in a browser extension context');
       return throwError(() => new Error('Not running in a browser extension context'));
     }
 
     return from(browser.tabs.query({ active: true, currentWindow: true })).pipe(
       map((tabs: browser.Tabs.Tab[]) => {
+        console.log('MessagingService.getCurrentTab: Received tabs:', tabs.length);
         if (tabs.length === 0) {
+          console.error('MessagingService.getCurrentTab: No active tab found');
           throw new Error('No active tab found');
         }
+        console.log('MessagingService.getCurrentTab: Returning tab:', tabs[0].id, tabs[0].url);
         return tabs[0];
+      }),
+      catchError((error) => {
+        console.error('MessagingService.getCurrentTab: Error getting current tab:', error);
+        return throwError(() => error);
       })
     );
   }

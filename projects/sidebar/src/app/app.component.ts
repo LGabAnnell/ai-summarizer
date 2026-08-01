@@ -310,6 +310,9 @@ export class AppComponent implements OnInit, OnDestroy {
   currentView = signal<ViewMode>('current');
   summaryState = signal<SummaryState>({ state: 'idle' });
   
+  // Track last added summary to prevent infinite loop
+  private lastAddedSummaryId = signal<string | null>(null);
+  
   // Store message listener for cleanup
   private messageListener: any = null;
   
@@ -357,35 +360,72 @@ export class AppComponent implements OnInit, OnDestroy {
     // Set up effect to watch summary state changes
     effect(() => {
       const state = this.summaryService.state();
-      this.summaryState.set(state);
+      console.log('Summary service state changed:', state);
+      
+      // Only update local state if it actually changed to avoid infinite loop
+      const currentState = this.summaryState();
+      if (JSON.stringify(currentState) !== JSON.stringify(state)) {
+        this.summaryState.set(state);
+      }
       
       // Auto-add to history when a new summary is generated
       if (state.state === 'success' && state.summary) {
-        this.historyService.addSummary(state.summary);
+        // Generate a unique identifier for this summary using timestamp + content hash
+        const summaryId = state.summary.timestamp.getTime().toString() + state.summary.summary.substring(0, 50);
+        
+        // Only add if we haven't added this exact summary already
+        if (this.lastAddedSummaryId() !== summaryId) {
+          console.log('Adding successful summary to history:', state.summary.title);
+          this.historyService.addSummary(state.summary);
+          this.lastAddedSummaryId.set(summaryId);
+          console.log('Summary added to history');
+        }
+      }
+      
+      if (state.state === 'error') {
+        console.error('Summary service entered error state:', state.error);
+      }
+      
+      if (state.state === 'loading') {
+        console.log('Summary service entered loading state:', state.loadingMessage);
       }
     });
   }
 
   ngOnInit(): void {
+    console.log('Sidebar component initialized');
+    
     // Get current state from summary service
     const currentState = this.summaryService.state();
     this.summaryState.set(currentState);
+    console.log('Initial summary state:', currentState);
 
     // Check if we're in a browser extension context
     if (typeof browser !== 'undefined') {
+      console.log('Browser extension context detected, setting up message listener');
       this.messageListener = (message: any) => {
         console.log('Sidebar received message:', message);
+        console.log('Message type:', message?.type);
+        console.log('Message data:', JSON.stringify(message, null, 2));
         // Handle any relevant messages
       };
       browser.runtime.onMessage.addListener(this.messageListener);
+      console.log('Message listener registered successfully');
+    } else {
+      console.log('Not in browser extension context');
     }
   }
 
   ngOnDestroy(): void {
+    console.log('Sidebar component being destroyed, cleaning up resources');
     // Clean up message listener to prevent memory leaks
     if (this.messageListener && typeof browser !== 'undefined') {
+      console.log('Removing message listener');
       browser.runtime.onMessage.removeListener(this.messageListener);
       this.messageListener = null;
+      console.log('Message listener removed');
+    } else {
+      console.log('No message listener to remove');
     }
   }
 
@@ -393,18 +433,22 @@ export class AppComponent implements OnInit, OnDestroy {
    * Set the current view
    */
   setView(view: ViewMode): void {
+    console.log('Setting view to:', view);
     this.currentView.set(view);
     
     // Clear copy states when switching views
     if (view !== 'history-detail') {
+      console.log('Clearing detail copy states');
       this.detailCopying.set(false);
       this.detailCopySuccess.set(false);
     }
     
     if (view !== 'current') {
+      console.log('Clearing current copy states');
       this.copying.set(false);
       this.copySuccess.set(false);
     }
+    console.log('View changed to:', view);
   }
 
   /**
@@ -412,8 +456,10 @@ export class AppComponent implements OnInit, OnDestroy {
    */
   toggleTheme(): void {
     const current = this.themeService.getTheme();
+    console.log('Toggling theme from:', current);
     const newTheme = current === 'light' ? 'dark' : 'light';
     this.themeService.setTheme(newTheme);
+    console.log('Theme changed to:', newTheme);
   }
 
   /**
@@ -453,23 +499,38 @@ export class AppComponent implements OnInit, OnDestroy {
    * Trigger article summarization
    */
   async summarize(): Promise<void> {
+    console.log('Summarize method called');
     const state = this.summaryState();
-    if (state.state === 'loading') return;
+    console.log('Current state before summarization:', state);
+    
+    if (state.state === 'loading') {
+      console.log('Already in loading state, skipping new request');
+      return;
+    }
 
+    console.log('Starting article extraction and summarization');
     this.summaryService.extractAndSummarize().subscribe({
       next: (result) => {
         console.log('Summarization result:', result);
+        console.log('Result summary length:', result?.summary?.length);
+        console.log('Result title:', result?.title);
+        console.log('Result URL:', result?.articleUrl);
+        console.log('Result cached:', result?.cached);
       },
       error: (error) => {
         console.error('Summarization error:', error);
+        console.error('Error details:', error instanceof Error ? error.message : JSON.stringify(error));
+        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace available');
       }
     });
+    console.log('Summarization request submitted');
   }
 
   /**
    * Retry summarization
    */
   retry(): void {
+    console.log('Retry method called');
     this.summarize();
   }
 
@@ -477,26 +538,38 @@ export class AppComponent implements OnInit, OnDestroy {
    * Copy current summary to clipboard
    */
   async copyToClipboard(): Promise<void> {
-    if (this.copying()) return;
+    console.log('Copy to clipboard requested');
+    if (this.copying()) {
+      console.log('Already copying, skipping');
+      return;
+    }
 
     const summary = this.currentSummary();
-    if (!summary?.summary) return;
+    if (!summary?.summary) {
+      console.log('No summary available to copy');
+      return;
+    }
+    
+    console.log('Copying summary to clipboard, length:', summary.summary.length);
 
     this.copying.set(true);
     this.copySuccess.set(false);
 
     try {
       await navigator.clipboard.writeText(summary.summary);
+      console.log('Successfully copied to clipboard');
       this.copySuccess.set(true);
       
       setTimeout(() => {
         this.copySuccess.set(false);
+        console.log('Copy success state reset');
       }, 2000);
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
       this.copying.set(false);
     } finally {
       this.copying.set(false);
+      console.log('Copy operation completed');
     }
   }
 
@@ -504,11 +577,20 @@ export class AppComponent implements OnInit, OnDestroy {
    * Add current summary to history
    */
   async addToHistory(): Promise<void> {
+    console.log('Add to history requested');
     const summary = this.currentSummary();
     if (summary) {
+      console.log('Adding summary to history:', summary.title, 'length:', summary.summary.length);
       await this.historyService.addSummary(summary);
+      // Track this summary as added to prevent duplicate auto-adds
+      const summaryId = summary.timestamp.getTime().toString() + summary.summary.substring(0, 50);
+      this.lastAddedSummaryId.set(summaryId);
+      console.log('Summary added to history successfully');
       // Switch to history view
       this.setView('history');
+      console.log('Switched to history view');
+    } else {
+      console.log('No current summary to add to history');
     }
   }
 
@@ -516,26 +598,37 @@ export class AppComponent implements OnInit, OnDestroy {
    * View history detail
    */
   viewHistoryDetail(item: HistoryItem): void {
+    console.log('View history detail requested for item:', item.id, item.title);
     this.historyService.selectItem(item);
+    console.log('Item selected in history service');
     this.setView('history-detail');
+    console.log('Switched to history-detail view');
   }
 
   /**
    * Delete a history item
    */
   async deleteHistoryItem(event: Event, id: string): Promise<void> {
+    console.log('Delete history item requested:', id);
     event.stopPropagation(); // Prevent triggering the click on the item
     await this.historyService.deleteItem(id);
+    console.log('History item deleted:', id);
   }
 
   /**
    * Delete the selected history item
    */
   async deleteSelectedHistoryItem(): Promise<void> {
+    console.log('Delete selected history item requested');
     const item = this.selectedHistoryItem();
     if (item) {
+      console.log('Deleting selected item:', item.id, item.title);
       await this.historyService.deleteItem(item.id);
+      console.log('Selected history item deleted');
       this.setView('history');
+      console.log('Switched back to history view');
+    } else {
+      console.log('No selected history item to delete');
     }
   }
 
@@ -543,26 +636,38 @@ export class AppComponent implements OnInit, OnDestroy {
    * Copy history item to clipboard
    */
   async copyHistoryToClipboard(): Promise<void> {
-    if (this.detailCopying()) return;
+    console.log('Copy history to clipboard requested');
+    if (this.detailCopying()) {
+      console.log('Already copying, skipping');
+      return;
+    }
 
     const item = this.selectedHistoryItem();
-    if (!item?.summary) return;
+    if (!item?.summary) {
+      console.log('No history item summary available to copy');
+      return;
+    }
+    
+    console.log('Copying history item to clipboard, length:', item.summary.length);
 
     this.detailCopying.set(true);
     this.detailCopySuccess.set(false);
 
     try {
       await navigator.clipboard.writeText(item.summary);
+      console.log('Successfully copied history item to clipboard');
       this.detailCopySuccess.set(true);
       
       setTimeout(() => {
         this.detailCopySuccess.set(false);
+        console.log('History copy success state reset');
       }, 2000);
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
       this.detailCopying.set(false);
     } finally {
       this.detailCopying.set(false);
+      console.log('History copy operation completed');
     }
   }
 
@@ -570,15 +675,26 @@ export class AppComponent implements OnInit, OnDestroy {
    * Clear all history
    */
   async clearAllHistory(): Promise<void> {
+    console.log('Clear all history requested');
     await this.historyService.clearAll();
+    console.log('All history cleared');
   }
 
   /**
    * Open options page
    */
   openOptions(): void {
+    console.log('Open options page requested');
     if (typeof browser !== 'undefined') {
-      browser.runtime.openOptionsPage();
+      console.log('Attempting to open options page via browser API');
+      try {
+        browser.runtime.openOptionsPage();
+        console.log('Options page opened successfully');
+      } catch (error) {
+        console.error('Failed to open options page:', error);
+      }
+    } else {
+      console.log('Cannot open options page: not in browser extension context');
     }
   }
 }
