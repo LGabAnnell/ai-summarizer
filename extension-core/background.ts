@@ -398,7 +398,7 @@ async function handleSaveSettings(settings: Partial<ExtensionSettings>): Promise
 /**
  * Handle REFRESH_MODELS request
  */
-async function handleRefreshModels(providerType: string, apiKey: string): Promise<{ success: boolean; models?: string[]; error?: string }> {
+async function handleRefreshModels(providerType: string, apiKey: string): Promise<{ success: boolean; data?: { models: string[] }; error?: string }> {
   try {
     if (!apiKey || apiKey.trim() === '') {
       return { success: false, error: 'API key is required' };
@@ -412,7 +412,7 @@ async function handleRefreshModels(providerType: string, apiKey: string): Promis
     
     return {
       success: true,
-      models,
+      data: { models },
     };
   } catch (error) {
     return {
