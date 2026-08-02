@@ -1,10 +1,7 @@
-import { Component, signal, OnInit, computed, inject, HostListener } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import {Component, signal, OnInit, computed, inject, HostListener} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators} from '@angular/forms';
 import {SettingsService, ExtensionSettings, ProviderType} from '@shared/public-api';
-
-// Declare browser API for Firefox extensions
-declare const browser: any;
 
 @Component({
   selector: 'options-root',
@@ -48,10 +45,10 @@ declare const browser: any;
         <!-- Sticky Save Bar -->
         <div class="save-bar" [class.save-bar--compact]="isScrolled()">
           <div class="save-bar-buttons">
-            <button 
-              type="submit" 
-              class="btn btn--primary"
-              [disabled]="isLoading() || settingsForm.invalid">
+            <button
+                    type="submit"
+                    class="btn btn--primary"
+                    [disabled]="isLoading() || settingsForm.invalid">
               @if (isScrolled()) {
                 <span>Save</span>
               } @else {
@@ -64,11 +61,11 @@ declare const browser: any;
               }
             </button>
             @if (!isScrolled()) {
-              <button 
-                type="button" 
-                class="btn btn--secondary"
-                (click)="resetToDefaults()"
-                [disabled]="isLoading()">
+              <button
+                      type="button"
+                      class="btn btn--secondary"
+                      (click)="resetToDefaults()"
+                      [disabled]="isLoading()">
                 Reset to Defaults
               </button>
             }
@@ -78,295 +75,301 @@ declare const browser: any;
         <!-- Form Content -->
         <div class="form-content">
           <!-- Provider Section -->
-        <div class="section">
-          <div class="section-header">
-            <div class="section-title">
-              <span>🤖</span>
-              AI Provider Configuration
-            </div>
-            <div class="section-actions">
-              <button 
-                type="button" 
-                class="btn btn--secondary btn--small"
-                (click)="testConnection()"
-                [disabled]="isTesting()">
-                @if (isTesting()) {
-                  <span class="spinner"></span>
-                  Testing...
-                } @else {
-                  Test Connection
-                }
-              </button>
-            </div>
-          </div>
-          <div class="section-description">
-            Configure your AI provider and API credentials
-          </div>
-
-          <div class="grid-2">
-            <div class="form-group">
-              <label class="form-label" for="provider">AI Provider</label>
-              <select 
-                id="provider" 
-                formControlName="provider" 
-                class="form-select"
-                (change)="onProviderChange($event)">
-                @for (provider of providerTypes(); track provider) {
-                  <option [value]="provider">{{ getProviderDisplayName(provider) }}</option>
-                }
-              </select>
-              <div class="form-description">Choose your preferred AI provider</div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="model">Model</label>
-              <div class="model-select-wrapper">
-                <select id="model" formControlName="model" class="form-select">
-                  @for (model of availableModels(); track model) {
-                    <option [value]="model">{{ model }}</option>
-                  }
-                </select>
-                <button 
-                  type="button" 
-                  class="btn btn--refresh" 
-                  (click)="refreshModels()" 
-                  [disabled]="modelsLoading()" 
-                  title="Refresh model list">
-                  @if (modelsLoading()) {
+          <div class="section">
+            <div class="section-header">
+              <div class="section-title">
+                <span>🤖</span>
+                AI Provider Configuration
+              </div>
+              <div class="section-actions">
+                <button
+                        type="button"
+                        class="btn btn--secondary btn--small"
+                        (click)="testConnection()"
+                        [disabled]="isTesting()">
+                  @if (isTesting()) {
                     <span class="spinner"></span>
+                    Testing...
                   } @else {
-                    🔄
+                    Test Connection
                   }
                 </button>
               </div>
-              <div class="form-description">Select the model to use for summarization</div>
-              @if (modelsError()) {
-                <div class="form-error">{{ modelsError() }}</div>
+            </div>
+            <div class="section-description">
+              Configure your AI provider and API credentials
+            </div>
+
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="provider">AI Provider</label>
+                <select
+                        id="provider"
+                        formControlName="provider"
+                        class="form-select"
+                        (change)="onProviderChange($event)">
+                  @for (provider of providerTypes(); track provider) {
+                    <option [value]="provider">{{ getProviderDisplayName(provider) }}</option>
+                  }
+                </select>
+                <div class="form-description">Choose your preferred AI provider</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="model">Model</label>
+                <div class="model-select-wrapper">
+                  <select id="model" formControlName="model" class="form-select">
+                    @for (model of availableModels(); track model) {
+                      <option [value]="model">{{ model }}</option>
+                    }
+                  </select>
+                  <button
+                          type="button"
+                          class="btn btn--refresh"
+                          (click)="refreshModels()"
+                          [disabled]="modelsLoading()"
+                          title="Refresh model list">
+                    @if (modelsLoading()) {
+                      <span class="spinner"></span>
+                    } @else {
+                      🔄
+                    }
+                  </button>
+                </div>
+                <div class="form-description">Select the model to use for summarization</div>
+                @if (modelsError()) {
+                  <div class="form-error">{{ modelsError() }}</div>
+                }
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="apiKey">API Key</label>
+              <div class="password-container">
+                <input
+                        id="apiKey"
+                        type="password"
+                        formControlName="apiKey"
+                        class="form-input"
+                        placeholder="Enter your API key..."
+                >
+                <button
+                        type="button"
+                        class="password-toggle"
+                        (click)="toggleShowApiKey()"
+                        [attr.aria-label]="showApiKey() ? 'Hide API key' : 'Show API key'">
+                  @if (showApiKey()) {
+                    👁️
+                  } @else {
+                    🔒
+                  }
+                </button>
+              </div>
+              <div class="form-description">
+                Your API key will be stored locally and never sent to third parties
+              </div>
+              @if (apiKeyError()) {
+                <div class="form-error">{{ apiKeyError() }}</div>
               }
             </div>
-          </div>
 
-          <div class="form-group">
-            <label class="form-label" for="apiKey">API Key</label>
-            <div class="password-container">
-              <input 
-                id="apiKey" 
-                type="password" 
-                formControlName="apiKey" 
-                class="form-input"
-                placeholder="Enter your API key..."
-              >
-              <button 
-                type="button" 
-                class="password-toggle"
-                (click)="toggleShowApiKey()"
-                [attr.aria-label]="showApiKey() ? 'Hide API key' : 'Show API key'">
-                @if (showApiKey()) {
-                  👁️
-                } @else {
-                  🔒
+            @if (settings().provider === 'custom') {
+              <div class="form-group">
+                <label class="form-label" for="customEndpoint">Custom Endpoint URL</label>
+                <input
+                        id="customEndpoint"
+                        type="url"
+                        formControlName="customEndpoint"
+                        class="form-input"
+                        placeholder="https://api.example.com/v1/chat/completions"
+                >
+                <div class="form-description">
+                  Enter the API endpoint URL for your custom provider
+                </div>
+              </div>
+            }
+
+            @if (connectionStatus()) {
+              <div class="form-group">
+                @if (connectionStatus() === 'connected') {
+                  <div class="status-badge status-connected">
+                    <span class="status-dot status-connected"></span>
+                    Connection successful
+                  </div>
                 }
-              </button>
-            </div>
-            <div class="form-description">
-              Your API key will be stored locally and never sent to third parties
-            </div>
-            @if (apiKeyError()) {
-              <div class="form-error">{{ apiKeyError() }}</div>
+                @if (connectionStatus() === 'failed') {
+                  <div class="status-badge status-disconnected">
+                    <span class="status-dot status-disconnected"></span>
+                    Connection failed
+                  </div>
+                }
+              </div>
             }
           </div>
 
-          @if (settings().provider === 'custom') {
+          <!-- Summarization Settings Section -->
+          <div class="section">
+            <div class="section-header">
+              <div class="section-title">
+                <span>⚙️</span>
+                Summarization Settings
+              </div>
+            </div>
+            <div class="section-description">
+              Customize how articles are summarized
+            </div>
+
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="summaryStyle">Summary Style</label>
+                <select id="summaryStyle" formControlName="summaryStyle" class="form-select">
+                  <option value="concise">Concise</option>
+                  <option value="detailed">Detailed</option>
+                  <option value="bullet_points">Bullet Points</option>
+                  <option value="custom">Custom Prompt</option>
+                </select>
+                <div class="form-description">Choose the style of summary to generate</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="temperature">Temperature</label>
+                <div class="number-input-container">
+                  <button
+                          type="button"
+                          class="number-decrement"
+                          (click)="decrementTemperature()"
+                          [disabled]="isLoading()">
+                    −
+                  </button>
+                  <input
+                          id="temperature"
+                          type="number"
+                          formControlName="temperature"
+                          class="form-input"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                  >
+                  <button
+                          type="button"
+                          class="number-increment"
+                          (click)="incrementTemperature()"
+                          [disabled]="isLoading()">
+                    +
+                  </button>
+                </div>
+                <div class="form-description">
+                  Controls randomness (0 = deterministic, 1 = most creative)
+                </div>
+              </div>
+            </div>
+
             <div class="form-group">
-              <label class="form-label" for="customEndpoint">Custom Endpoint URL</label>
-              <input 
-                id="customEndpoint" 
-                type="url" 
-                formControlName="customEndpoint" 
-                class="form-input"
-                placeholder="https://api.example.com/v1/chat/completions"
-              >
+              <label class="form-label" for="customPrompt">Custom System Prompt</label>
+              <textarea
+                      id="customPrompt"
+                      formControlName="customPrompt"
+                      class="form-textarea"
+                      placeholder="You are a helpful assistant that summarizes articles..."
+                      [disabled]="settingsForm.get('summaryStyle')?.value !== 'custom'"></textarea>
               <div class="form-description">
-                Enter the API endpoint URL for your custom provider
+                Customize the system prompt when using "Custom Prompt" style
               </div>
-            </div>
-          }
-
-          @if (connectionStatus()) {
-            <div class="form-group">
-              <div class="status-badge status-connected" *ngIf="connectionStatus() === 'connected'">
-                <span class="status-dot status-connected"></span>
-                Connection successful
-              </div>
-              <div class="status-badge status-disconnected" *ngIf="connectionStatus() === 'failed'">
-                <span class="status-dot status-disconnected"></span>
-                Connection failed
-              </div>
-            </div>
-          }
-        </div>
-
-        <!-- Summarization Settings Section -->
-        <div class="section">
-          <div class="section-header">
-            <div class="section-title">
-              <span>⚙️</span>
-              Summarization Settings
-            </div>
-          </div>
-          <div class="section-description">
-            Customize how articles are summarized
-          </div>
-
-          <div class="grid-2">
-            <div class="form-group">
-              <label class="form-label" for="summaryStyle">Summary Style</label>
-              <select id="summaryStyle" formControlName="summaryStyle" class="form-select">
-                <option value="concise">Concise</option>
-                <option value="detailed">Detailed</option>
-                <option value="bullet_points">Bullet Points</option>
-                <option value="custom">Custom Prompt</option>
-              </select>
-              <div class="form-description">Choose the style of summary to generate</div>
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="temperature">Temperature</label>
+              <label class="form-label" for="maxTokens">Maximum Tokens</label>
               <div class="number-input-container">
-                <button 
-                  type="button" 
-                  class="number-decrement"
-                  (click)="decrementTemperature()"
-                  [disabled]="isLoading()">
-                  −
-                </button>
-                <input 
-                  id="temperature" 
-                  type="number" 
-                  formControlName="temperature" 
-                  class="form-input"
-                  min="0" 
-                  max="1" 
-                  step="0.1"
+                <input
+                        id="maxTokens"
+                        type="number"
+                        formControlName="maxTokens"
+                        class="form-input"
+                        min="50"
+                        max="4000"
                 >
-                <button 
-                  type="button" 
-                  class="number-increment"
-                  (click)="incrementTemperature()"
-                  [disabled]="isLoading()">
-                  +
-                </button>
               </div>
               <div class="form-description">
-                Controls randomness (0 = deterministic, 1 = most creative)
+                Maximum number of tokens to generate in the summary
               </div>
             </div>
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="customPrompt">Custom System Prompt</label>
-            <textarea 
-              id="customPrompt" 
-              formControlName="customPrompt" 
-              class="form-textarea"
-              placeholder="You are a helpful assistant that summarizes articles..."
-              [disabled]="settingsForm.get('summaryStyle')?.value !== 'custom'"></textarea>
-            <div class="form-description">
-              Customize the system prompt when using "Custom Prompt" style
+          <!-- Cache Settings Section -->
+          <div class="section">
+            <div class="section-header">
+              <div class="section-title">
+                <span>💾</span>
+                Cache Settings
+              </div>
             </div>
-          </div>
+            <div class="section-description">
+              Manage summary caching to avoid unnecessary API calls
+            </div>
 
-          <div class="form-group">
-            <label class="form-label" for="maxTokens">Maximum Tokens</label>
-            <div class="number-input-container">
-              <input 
-                id="maxTokens" 
-                type="number" 
-                formControlName="maxTokens" 
-                class="form-input"
-                min="50"
-                max="4000"
-              >
+            <div class="form-group">
+              <div class="form-switch">
+                <label class="switch">
+                  <input
+                          type="checkbox"
+                          formControlName="cacheEnabled"
+                          [checked]="settingsForm.get('cacheEnabled')?.value"
+                  >
+                  <span class="switch"></span>
+                </label>
+                <span class="switch-label">Enable Summary Caching</span>
+              </div>
+              <div class="form-description">
+                Cache summaries to avoid re-processing the same articles
+              </div>
             </div>
-            <div class="form-description">
-              Maximum number of tokens to generate in the summary
-            </div>
-          </div>
-        </div>
 
-        <!-- Cache Settings Section -->
-        <div class="section">
-          <div class="section-header">
-            <div class="section-title">
-              <span>💾</span>
-              Cache Settings
-            </div>
-          </div>
-          <div class="section-description">
-            Manage summary caching to avoid unnecessary API calls
-          </div>
+            @if (settingsForm.get('cacheEnabled')?.value) {
+              <div class="form-group">
+                <label class="form-label" for="cacheTTL">Cache Expiration (days)</label>
+                <div class="number-input-container">
+                  <button
+                          type="button"
+                          class="number-decrement"
+                          (click)="decrementCacheTTL()"
+                          [disabled]="isLoading()">
+                    −
+                  </button>
+                  <input
+                          id="cacheTTL"
+                          type="number"
+                          formControlName="cacheTTL"
+                          class="form-input"
+                          min="1"
+                          max="30"
+                  >
+                  <button
+                          type="button"
+                          class="number-increment"
+                          (click)="incrementCacheTTL()"
+                          [disabled]="isLoading()">
+                    +
+                  </button>
+                </div>
+                <div class="form-description">
+                  Number of days to keep cached summaries
+                </div>
+              </div>
+            }
 
-          <div class="form-group">
-            <div class="form-switch">
-              <label class="switch">
-                <input 
-                  type="checkbox" 
-                  formControlName="cacheEnabled"
-                  [checked]="settingsForm.get('cacheEnabled')?.value"
-                >
-                <span class="switch"></span>
-              </label>
-              <span class="switch-label">Enable Summary Caching</span>
-            </div>
-            <div class="form-description">
-              Cache summaries to avoid re-processing the same articles
-            </div>
-          </div>
-
-          <div class="form-group" *ngIf="settingsForm.get('cacheEnabled')?.value">
-            <label class="form-label" for="cacheTTL">Cache Expiration (days)</label>
-            <div class="number-input-container">
-              <button 
-                type="button" 
-                class="number-decrement"
-                (click)="decrementCacheTTL()"
-                [disabled]="isLoading()">
-                −
+            <div class="form-group">
+              <button
+                      type="button"
+                      class="btn btn--secondary"
+                      (click)="clearCache()"
+                      [disabled]="isLoading()">
+                Clear Cache
               </button>
-              <input 
-                id="cacheTTL" 
-                type="number" 
-                formControlName="cacheTTL" 
-                class="form-input"
-                min="1"
-                max="30"
-              >
-              <button 
-                type="button" 
-                class="number-increment"
-                (click)="incrementCacheTTL()"
-                [disabled]="isLoading()">
-                +
-              </button>
-            </div>
-            <div class="form-description">
-              Number of days to keep cached summaries
+              <div class="form-description">
+                Remove all cached summaries
+              </div>
             </div>
           </div>
-
-          <div class="form-group">
-            <button 
-              type="button" 
-              class="btn btn--secondary"
-              (click)="clearCache()"
-              [disabled]="isLoading()">
-              Clear Cache
-            </button>
-            <div class="form-description">
-              Remove all cached summaries
-            </div>
-          </div>
-        </div>
 
         </div>
       </form>
@@ -375,7 +378,7 @@ declare const browser: any;
       <div class="page-footer">
         <div class="footer-left">
           <span>Version 1.0.0</span>
-          <a class="footer-link" (click)="openPrivacyPolicy()">Privacy Policy</a>
+          <button class="footer-link" type="button" (click)="openPrivacyPolicy()">Privacy Policy</button>
         </div>
         <div class="footer-right">
           <a class="footer-link" href="https://github.com" target="_blank">GitHub</a>
@@ -473,7 +476,11 @@ export class AppComponent implements OnInit {
   private settingsService = inject(SettingsService);
 
   // State
-  settings = signal<ExtensionSettings>(this.settingsService.getSetting('provider') as any || {});
+  settings = signal<Partial<ExtensionSettings>>(
+    this.settingsService.getSetting('provider') != null ? {
+      provider: this.settingsService.getSetting('provider')
+    } : {}
+  );
   isLoading = signal<boolean>(false);
   isTesting = signal<boolean>(false);
   error = signal<string | undefined>(undefined);
@@ -494,9 +501,9 @@ export class AppComponent implements OnInit {
   apiKeyError = computed(() => {
     const form = this.settingsForm;
     if (!form) return undefined;
-    
+
     const apiKey: string = form.get('apiKey')?.value;
-    
+
     if (!apiKey || apiKey.trim() === '') {
       return 'API key is required';
     }
@@ -555,54 +562,53 @@ export class AppComponent implements OnInit {
   }
 
   getProviderDisplayName(provider: string): string {
-    return this.settingsService.getProviderDisplayName(provider as any);
+    return this.settingsService.getProviderDisplayName(provider as ProviderType);
   }
 
   onProviderChange(event: Event): void {
-    const provider = (event.target as HTMLSelectElement).value as any;
+    const provider = (event.target as HTMLSelectElement).value as ProviderType;
     const models = this.settingsService.getAvailableModelsForProvider(provider);
-    
+
     // Update the model to the first available model for this provider
     if (models.length > 0) {
-      this.settingsForm.patchValue({ model: models[0] });
+      this.settingsForm.patchValue({model: models[0]});
     }
 
     // Reset custom endpoint if not custom provider
     if (provider !== 'custom') {
-      this.settingsForm.patchValue({ customEndpoint: '' });
+      this.settingsForm.patchValue({customEndpoint: ''});
     }
   }
 
   toggleShowApiKey(): void {
-    const currentType = this.settingsForm.get('apiKey')?.value;
     this.showApiKey.update(v => !v);
   }
 
   incrementTemperature(): void {
     const current = this.settingsForm.get('temperature')?.value || 0;
     if (current < 1) {
-      this.settingsForm.patchValue({ temperature: Math.min(current + 0.1, 1) });
+      this.settingsForm.patchValue({temperature: Math.min(current + 0.1, 1)});
     }
   }
 
   decrementTemperature(): void {
     const current = this.settingsForm.get('temperature')?.value || 0;
     if (current > 0) {
-      this.settingsForm.patchValue({ temperature: Math.max(current - 0.1, 0) });
+      this.settingsForm.patchValue({temperature: Math.max(current - 0.1, 0)});
     }
   }
 
   incrementCacheTTL(): void {
     const current = this.settingsForm.get('cacheTTL')?.value || 7;
     if (current < 30) {
-      this.settingsForm.patchValue({ cacheTTL: current + 1 });
+      this.settingsForm.patchValue({cacheTTL: current + 1});
     }
   }
 
   decrementCacheTTL(): void {
     const current = this.settingsForm.get('cacheTTL')?.value || 7;
     if (current > 1) {
-      this.settingsForm.patchValue({ cacheTTL: current - 1 });
+      this.settingsForm.patchValue({cacheTTL: current - 1});
     }
   }
 
@@ -706,7 +712,7 @@ export class AppComponent implements OnInit {
     if (confirm('Are you sure you want to clear all cached summaries?')) {
       this.isLoading.set(true);
       this.settingsService.clearError();
-      
+
       // This will be handled by the messaging service
       // For now, just show a success message
       this.successMessage.set('Cache cleared!');
@@ -736,10 +742,10 @@ export class AppComponent implements OnInit {
   refreshModels(): void {
     const apiKey = this.settingsForm?.get('apiKey')?.value || '';
     const provider = this.settingsForm?.get('provider')?.value || 'mistral';
-    
+
     this.modelsLoading.set(true);
     this.modelsError.set(undefined);
-    
+
     this.settingsService.refreshModels(provider as ProviderType, apiKey).subscribe({
       next: (models) => {
         this.modelsLoading.set(false);
@@ -747,7 +753,7 @@ export class AppComponent implements OnInit {
           // Update the model dropdown to the first fetched model if current model is not available
           const currentModel = this.settingsForm?.get('model')?.value;
           if (currentModel && !models.includes(currentModel)) {
-            this.settingsForm.patchValue({ model: models[0] });
+            this.settingsForm.patchValue({model: models[0]});
           }
           this.successMessage.set(`Successfully refreshed ${models.length} models!`);
         }

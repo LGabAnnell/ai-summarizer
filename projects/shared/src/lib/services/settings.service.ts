@@ -2,9 +2,9 @@
  * Settings Service for managing extension settings
  */
 
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
-import { catchError, map, switchMap, tap } from 'rxjs/operators';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { MessagingService } from './messaging.service';
 import { ModelService } from './model.service';
 import {
@@ -29,7 +29,10 @@ export class SettingsService {
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
 
-  constructor(private messaging: MessagingService, private modelService: ModelService) {}
+  private messaging = inject(MessagingService);
+  private modelService = inject(ModelService);
+
+  constructor() {}
 
   /**
    * Load settings from storage
@@ -244,7 +247,7 @@ export class SettingsService {
           throw new Error(response.error || 'Failed to refresh models');
         }
       }),
-      catchError((error) => {
+      catchError(() => {
         // Clear cache on error and return hardcoded models
         this.modelService.clearCache(provider);
         return of(PROVIDER_MODELS[provider] || []);

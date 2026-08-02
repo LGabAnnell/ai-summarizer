@@ -112,6 +112,15 @@
             "styles": ["projects/popup/src/styles.scss"],
             "scripts": []
           }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/popup/src/**/*.ts",
+              "projects/popup/src/**/*.html"
+            ]
+          }
         }
       }
     },
@@ -211,6 +220,15 @@
             ],
             "styles": ["projects/options/src/styles.scss"],
             "scripts": []
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/options/src/**/*.ts",
+              "projects/options/src/**/*.html"
+            ]
           }
         }
       }
@@ -313,6 +331,15 @@
             "styles": ["projects/sidebar/src/styles.scss"],
             "scripts": []
           }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/sidebar/src/**/*.ts",
+              "projects/sidebar/src/**/*.html"
+            ]
+          }
         }
       }
     },
@@ -348,6 +375,14 @@
             "assets": [],
             "styles": [],
             "scripts": []
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/shared/src/**/*.ts"
+            ]
           }
         }
       }

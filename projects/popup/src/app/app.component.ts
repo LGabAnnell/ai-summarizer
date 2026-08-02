@@ -1,9 +1,8 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MarkdownPipe } from '@shared/lib/pipes/markdown.pipe';
-
-// Declare browser API for Firefox extensions
-declare const browser: any;
+import browser from 'webextension-polyfill';
+import {SummarizeResponse, SummaryResult} from "@shared/lib/models/summary.model";
 
 @Component({
   selector: 'popup-root',
@@ -76,7 +75,7 @@ declare const browser: any;
           }
         </div>
         <div class="footer-right">
-          <a class="settings-link" (click)="openOptions()">Settings</a>
+          <button class="settings-link" type="button" (click)="openOptions()">Settings</button>
         </div>
       </div>
       
@@ -142,7 +141,7 @@ export class AppComponent implements OnInit {
     // Check if we're in a browser extension context
     if (typeof browser !== 'undefined') {
       // Listen for any messages that might be relevant
-      browser.runtime.onMessage.addListener((message: any) => {
+      browser.runtime.onMessage.addListener((message: unknown) => {
         console.log('Popup received message:', message);
       });
     }
@@ -175,7 +174,7 @@ export class AppComponent implements OnInit {
       // Send message to background script to extract and summarize
       const response = await browser.runtime.sendMessage({ 
         type: 'EXTRACT_AND_SUMMARIZE' 
-      });
+      }) as SummaryResult & { success: boolean, error: string };
 
       if (response.success) {
         this.state.set('success');

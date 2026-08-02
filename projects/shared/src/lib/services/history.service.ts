@@ -5,9 +5,7 @@
 
 import { Injectable, signal } from '@angular/core';
 import { SummaryResult } from '../models/summary.model';
-
-// Declare browser API for Firefox extensions
-declare const browser: any;
+import browser from 'webextension-polyfill';
 
 /**
  * Summary history item with additional metadata
@@ -59,7 +57,7 @@ export class HistoryService {
     try {
       // Check if we're in a browser extension context
       if (typeof browser !== 'undefined' && browser.storage) {
-        const result = await browser.storage.local.get([HISTORY_STORAGE_KEY]);
+        const result = await browser.storage.local.get([HISTORY_STORAGE_KEY]) as Record<string, HistoryItem[]> ;
         if (result[HISTORY_STORAGE_KEY]) {
           const storedHistory: HistoryItem[] = result[HISTORY_STORAGE_KEY];
           this._history.set(storedHistory.sort((a, b) => 

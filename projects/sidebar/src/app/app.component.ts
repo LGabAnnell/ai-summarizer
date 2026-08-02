@@ -11,9 +11,7 @@ import {
   SummaryResult,
   HistoryItem
 } from '@shared/public-api';
-
-// Declare browser API for Firefox extensions
-declare const browser: any;
+import browser from "webextension-polyfill";
 
 /**
  * View modes for the sidebar
@@ -146,7 +144,10 @@ type ViewMode = 'current' | 'history' | 'history-detail';
                 <div
                         class="history-item"
                         [class.history-item--selected]="selectedHistoryItem()?.id === item.id"
-                        (click)="viewHistoryDetail(item)">
+                        tabindex="0"
+                        (click)="viewHistoryDetail(item)"
+                        (keyup.enter)="viewHistoryDetail(item)"
+                        (keyup.space)="viewHistoryDetail(item)">
                   <div class="history-icon">📄</div>
                   <div class="history-content">
                     <div class="history-title">{{ item.title }}</div>
@@ -248,7 +249,7 @@ type ViewMode = 'current' | 'history' | 'history-detail';
               Clear History
             </button>
           }
-          <a class="settings-link" (click)="openOptions()">Settings</a>
+          <button class="settings-link" (click)="openOptions()" (keyup.enter)="openOptions()" (keyup.space)="openOptions()">Settings</button>
         </div>
       </div>
 
@@ -323,7 +324,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private lastAddedSummaryId = signal<string | null>(null);
 
   // Store message listener for cleanup
-  private messageListener: any = null;
+  private messageListener: ((message: unknown) => void) | null = null;
 
   // Copy state for current summary
   copying = signal<boolean>(false);
@@ -419,9 +420,9 @@ export class AppComponent implements OnInit, OnDestroy {
     // Check if we're in a browser extension context
     if (typeof browser !== 'undefined') {
       console.log('Browser extension context detected, setting up message listener');
-      this.messageListener = (message: any) => {
+      this.messageListener = (message: unknown) => {
         console.log('Sidebar received message:', message);
-        console.log('Message type:', message?.type);
+        console.log('Message type:', message != null ? (message as any)['type'] : null);
         console.log('Message data:', JSON.stringify(message, null, 2));
         // Handle any relevant messages
       };

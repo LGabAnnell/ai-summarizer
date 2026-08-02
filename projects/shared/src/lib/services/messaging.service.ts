@@ -5,17 +5,14 @@
 
 import { Injectable } from '@angular/core';
 import { Observable, from, of, throwError } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 
 import * as browser from 'webextension-polyfill';
+import { ExtensionSettings } from '../models/settings.model';
+import { ArticleData } from '../models/article.model';
+import {Message} from "../models/summary.model";
 
-// Message types
-export interface Message {
-  type: string;
-  [key: string]: any;
-}
-
-export interface MessageResponse<T = any> {
+export interface MessageResponse<T = unknown> {
   type: string;
   success: boolean;
   data?: T;
@@ -48,32 +45,33 @@ export class MessagingService {
 
     // Return an observable that wraps the message sending
     return from(browser.runtime.sendMessage(message)).pipe(
-      map((response: any) => {
+      map((response: unknown) => {
         console.log('MessagingService.sendMessage: Raw response received:', response);
         
         // Handle both direct responses and wrapped responses
-        if (response && typeof response === 'object') {
+        if (response && typeof response === 'object' && !Array.isArray(response)) {
           console.log('Response is object, processing...');
           // If response has a data property, use it. Otherwise, the response itself is the data
           // (excluding standard message fields)
+          const responseObj = response as Record<string, unknown>;
           const standardFields = ['type', 'success', 'error', 'data'];
-          const hasExplicitData = response.data !== undefined;
+          const hasExplicitData = responseObj['data'] !== undefined;
           
           // Collect all non-standard fields as the actual data
-          const responseData: any = {};
-          for (const key in response) {
+          const responseData: Record<string, unknown> = {};
+          for (const key in responseObj) {
             if (!standardFields.includes(key)) {
-              responseData[key] = response[key];
+              responseData[key] = responseObj[key];
             }
           }
           
-          const data = hasExplicitData ? response.data : (Object.keys(responseData).length > 0 ? responseData : undefined);
+          const data = hasExplicitData ? responseObj['data'] : (Object.keys(responseData).length > 0 ? responseData : undefined);
           
           const result = {
-            type: response.type || message.type + '_RESPONSE',
-            success: response.success !== false, // Default to true if not specified
+            type: responseObj['type'] || message.type + '_RESPONSE',
+            success: responseObj['success'] !== false, // Default to true if not specified
             data: data as T,
-            error: response.error,
+            error: responseObj['error'],
           } as MessageResponse<T>;
           
           console.log('Processed response:', result);
@@ -123,15 +121,15 @@ export class MessagingService {
   /**
    * Get extension settings
    */
-  getSettings(): Observable<MessageResponse<any>> {
+  getSettings(): Observable<MessageResponse<ExtensionSettings>> {
     console.log('MessagingService.getSettings: Called');
-    return this.sendMessage({ type: 'GET_SETTINGS' });
+    return this.sendMessage<ExtensionSettings>({ type: 'GET_SETTINGS' });
   }
 
   /**
    * Save extension settings
    */
-  saveSettings(settings: any): Observable<MessageResponse<void>> {
+  saveSettings(settings: Partial<ExtensionSettings>): Observable<MessageResponse<void>> {
     console.log('MessagingService.saveSettings: Called with settings:', JSON.stringify(settings, null, 2));
     return this.sendMessage({ type: 'SAVE_SETTINGS', settings });
   }
@@ -147,7 +145,7 @@ export class MessagingService {
   /**
    * Summarize with specific article data
    */
-  summarizeArticle(article: any, provider?: string): Observable<MessageResponse<{
+  summarizeArticle(article: ArticleData, provider?: string): Observable<MessageResponse<{
     summary: string;
     cached: boolean;
     tokenCount?: number;

@@ -4,9 +4,7 @@
  */
 
 import { Injectable, signal, effect } from '@angular/core';
-
-// Declare browser API for Firefox extensions
-declare const browser: any;
+import browser from "webextension-polyfill";
 
 /**
  * Theme types
@@ -67,7 +65,7 @@ export class ThemeService {
       if (typeof browser !== 'undefined' && browser.storage) {
         const result = await browser.storage.local.get([THEME_STORAGE_KEY]);
         if (result[THEME_STORAGE_KEY]) {
-          this._theme.set(result[THEME_STORAGE_KEY]);
+          this._theme.set(result[THEME_STORAGE_KEY] as Theme);
         }
       }
     } catch (error) {

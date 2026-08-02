@@ -2,16 +2,15 @@
  * Summary Service for managing article summarization
  */
 
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
-import { catchError, map, switchMap, tap } from 'rxjs/operators';
+import { catchError, switchMap } from 'rxjs/operators';
 import { MessagingService, MessageResponse } from './messaging.service';
 import { SettingsService } from './settings.service';
 import {
   ArticleData,
   SummaryResult,
-  SummaryState, 
-  SummaryRequest 
+  SummaryState
 } from '../../public-api';
 
 @Injectable({
@@ -31,10 +30,10 @@ export class SummaryService {
   readonly article = this._article.asReadonly();
   readonly copyState = this._copyState.asReadonly();
 
-  constructor(
-    private messaging: MessagingService,
-    private settings: SettingsService
-  ) {}
+  private messaging = inject(MessagingService);
+  private settings = inject(SettingsService);
+
+  constructor() {}
 
   /**
    * Extract data from response, handling both wrapped (data property) and unwrapped formats
@@ -178,7 +177,7 @@ export class SummaryService {
       }, 2000);
       
       return true;
-    } catch (error) {
+    } catch /* (error) */ {
       this._copyState.set({ copying: false, copied: false });
       return false;
     }

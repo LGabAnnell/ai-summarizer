@@ -2,6 +2,88 @@
  * Models for summary functionality
  */
 import { ArticleData } from "./article.model";
+import {ExtensionSettings} from "./settings.model";
+
+export interface ExtractArticleRequest {
+  type: 'EXTRACT_ARTICLE';
+  tabId?: number;
+}
+
+export interface ExtractArticleResponse {
+  type: 'EXTRACT_ARTICLE_RESPONSE';
+  data?: ArticleData;
+  error?: string;
+  success: boolean;
+}
+
+export interface SummarizeRequest {
+  type: 'SUMMARIZE';
+  article: ArticleData;
+  provider?: string;
+  settings?: any;
+}
+
+export interface ExtractAndSummarizeRequest {
+  type: 'EXTRACT_AND_SUMMARIZE';
+}
+
+export interface ExtractArticleRequest {
+  type: 'EXTRACT_ARTICLE';
+}
+
+export interface CachedSummaryData {
+  summary: string;
+  timestamp: number;
+  url: string;
+  provider: string;
+  model: string;
+}
+
+export interface SummarizeResponse {
+  type: 'SUMMARIZE_RESPONSE';
+  summary?: string;
+  error?: string;
+  success: boolean;
+  cached?: boolean;
+  tokenCount?: number;
+}
+
+export interface GetSettingsRequest {
+  type: 'GET_SETTINGS';
+}
+
+export interface SaveSettingsRequest {
+  type: 'SAVE_SETTINGS';
+  settings: Partial<ExtensionSettings>;
+}
+
+export interface TestProviderRequest {
+  type: 'TEST_PROVIDER';
+  provider: string;
+  apiKey: string;
+}
+
+export interface RefreshModelsRequest {
+  type: 'REFRESH_MODELS';
+  provider: string;
+  apiKey: string;
+}
+
+export interface ClearCacheRequest {
+  type: 'CLEAR_CACHE';
+}
+
+// Discriminated union type for all possible incoming message types
+export type Message =
+  | ExtractAndSummarizeRequest
+  | SummarizeRequest
+  | GetSettingsRequest
+  | SaveSettingsRequest
+  | TestProviderRequest
+  | RefreshModelsRequest
+  | ClearCacheRequest
+  | ExtractArticleRequest;
+
 
 export interface SummaryResult {
   summary: string;

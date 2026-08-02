@@ -7,6 +7,11 @@ import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { ProviderType } from '../models/settings.model';
 
+// Interface for AI provider instances that can fetch models
+export interface ModelProvider {
+  fetchModels(apiKey: string): Promise<string[]>;
+}
+
 // Cache for fetched models
 interface ModelCacheEntry {
   models: string[];
@@ -94,7 +99,7 @@ export class ModelService {
    */
   clearAllCache(): void {
     this._modelsCache.update(cache => {
-      const newCache: Record<ProviderType, ModelCacheEntry> = {} as any;
+      const newCache: Record<ProviderType, ModelCacheEntry> = {} as Record<ProviderType, ModelCacheEntry>;
       Object.keys(cache).forEach(key => {
         newCache[key as ProviderType] = { models: [], timestamp: 0, loading: false, error: undefined };
       });
@@ -138,7 +143,7 @@ export class ModelService {
   async fetchModelsFromProvider(
     provider: ProviderType, 
     apiKey: string,
-    providerInstance: any
+    providerInstance: ModelProvider
   ): Promise<string[]> {
     // Set loading state
     this.setLoading(provider, true);
@@ -165,7 +170,7 @@ export class ModelService {
   refreshModels(
     provider: ProviderType, 
     apiKey: string,
-    providerInstance: any
+    providerInstance: ModelProvider
   ): Observable<string[]> {
     return of([]).pipe(
       map(() => {
