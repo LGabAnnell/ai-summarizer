@@ -1,4 +1,4 @@
-import { Component, signal, OnInit, computed, inject } from '@angular/core';
+import { Component, signal, OnInit, computed, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import {SettingsService, ExtensionSettings, ProviderType} from '@shared/public-api';
@@ -45,7 +45,39 @@ declare const browser: any;
       }
 
       <form [formGroup]="settingsForm" (ngSubmit)="saveSettings()" class="settings-form">
-        <!-- Provider Section -->
+        <!-- Sticky Save Bar -->
+        <div class="save-bar" [class.save-bar--compact]="isScrolled()">
+          <div class="save-bar-buttons">
+            <button 
+              type="submit" 
+              class="btn btn--primary"
+              [disabled]="isLoading() || settingsForm.invalid">
+              @if (isScrolled()) {
+                <span>Save</span>
+              } @else {
+                @if (isLoading()) {
+                  <span class="spinner"></span>
+                  Saving...
+                } @else {
+                  Save Settings
+                }
+              }
+            </button>
+            @if (!isScrolled()) {
+              <button 
+                type="button" 
+                class="btn btn--secondary"
+                (click)="resetToDefaults()"
+                [disabled]="isLoading()">
+                Reset to Defaults
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Form Content -->
+        <div class="form-content">
+          <!-- Provider Section -->
         <div class="section">
           <div class="section-header">
             <div class="section-title">
@@ -336,34 +368,6 @@ declare const browser: any;
           </div>
         </div>
 
-        <!-- Actions -->
-        <div class="section">
-          <div class="section-header">
-            <div class="section-title">Actions</div>
-          </div>
-
-          <div class="form-group">
-            <div class="flex gap-12">
-              <button 
-                type="submit" 
-                class="btn btn--primary"
-                [disabled]="isLoading() || settingsForm.invalid">
-                @if (isLoading()) {
-                  <span class="spinner"></span>
-                  Saving...
-                } @else {
-                  Save Settings
-                }
-              </button>
-              <button 
-                type="button" 
-                class="btn btn--secondary"
-                (click)="resetToDefaults()"
-                [disabled]="isLoading()">
-                Reset to Defaults
-              </button>
-            </div>
-          </div>
         </div>
       </form>
 
@@ -419,6 +423,49 @@ declare const browser: any;
         opacity: 1;
       }
     }
+
+    .form-content {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .save-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg-primary, #f8f9fa);
+      border-bottom: 1px solid var(--border-color, #e0e0e0);
+      padding: 12px 0;
+      transition: all 0.2s ease;
+      margin-bottom: 16px;
+    }
+
+    .save-bar--compact {
+      padding: 8px 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      background: var(--bg-primary, #f8f9fa);
+      border-bottom: 1px solid var(--border-color, #e0e0e0);
+    }
+
+    .save-bar--compact .btn {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+
+    .save-bar-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .save-bar-buttons .btn {
+      min-width: 120px;
+    }
+
+    .save-bar--compact .save-bar-buttons .btn:not(:first-child) {
+      display: none;
+    }
   `],
 })
 export class AppComponent implements OnInit {
@@ -435,6 +482,7 @@ export class AppComponent implements OnInit {
   showApiKey = signal<boolean>(false);
   modelsLoading = signal<boolean>(false);
   modelsError = signal<string | undefined>(undefined);
+  isScrolled = signal<boolean>(false);
   settingsForm!: FormGroup;
 
   providerTypes = computed(() => this.settingsService.getProviderTypes());
@@ -473,6 +521,11 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadSettings();
+  }
+
+  @HostListener('window:scroll')
+  onScroll(): void {
+    this.isScrolled.set(window.scrollY > 80);
   }
 
   loadSettings(): void {
