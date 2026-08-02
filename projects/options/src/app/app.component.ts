@@ -439,13 +439,17 @@ import {SettingsService, ExtensionSettings, ProviderType} from '@shared/public-a
       z-index: 100;
       background: var(--bg-primary, #f8f9fa);
       border-bottom: 1px solid var(--border-color, #e0e0e0);
-      padding: 12px 0;
+      padding-top: 16px;
+      padding-bottom: 16px;
+      padding-left: 12px;
       transition: all 0.2s ease;
       margin-bottom: 16px;
     }
 
     .save-bar--compact {
-      padding: 8px 0;
+      padding-top: 8px;
+      padding-bottom: 8px;
+      padding-left: 6px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       background: var(--bg-primary, #f8f9fa);
       border-bottom: 1px solid var(--border-color, #e0e0e0);

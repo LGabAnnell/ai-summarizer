@@ -4,14 +4,14 @@
  */
 
 // Import provider factory
-import { createProvider, getAvailableProviderTypes } from './providers';
+import { createProvider } from './providers';
 import browser from 'webextension-polyfill';
 import {ArticleData} from "@shared/lib/models/article.model";
 import {CachedSummaryData, Message, SummarizeResponse} from "@shared/lib/models/summary.model";
 
 // Cache configuration
 const CACHE_PREFIX = 'summary_cache_';
-const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+// const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
 // Settings type
 export interface ExtensionSettings {
@@ -97,7 +97,7 @@ async function cacheSummary(article: ArticleData, settings: Partial<ExtensionSet
  * Get extension settings from storage
  */
 async function getSettings(): Promise<ExtensionSettings> {
-  const result = await browser.storage.local.get('extension_settings') as { extension_settings?: ExtensionSettings };;
+  const result = await browser.storage.local.get('extension_settings') as { extension_settings?: ExtensionSettings };
   return { ...DEFAULT_SETTINGS, ...result.extension_settings };
 }
 

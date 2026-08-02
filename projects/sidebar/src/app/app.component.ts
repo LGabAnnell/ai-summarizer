@@ -422,7 +422,7 @@ export class AppComponent implements OnInit, OnDestroy {
       console.log('Browser extension context detected, setting up message listener');
       this.messageListener = (message: unknown) => {
         console.log('Sidebar received message:', message);
-        console.log('Message type:', message != null ? (message as any)['type'] : null);
+        console.log('Message type:', message != null ? (message as { type: string })['type'] : null);
         console.log('Message data:', JSON.stringify(message, null, 2));
         // Handle any relevant messages
       };

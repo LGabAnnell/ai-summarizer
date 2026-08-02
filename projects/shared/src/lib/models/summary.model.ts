@@ -20,7 +20,7 @@ export interface SummarizeRequest {
   type: 'SUMMARIZE';
   article: ArticleData;
   provider?: string;
-  settings?: any;
+  settings?: ExtensionSettings;
 }
 
 export interface ExtractAndSummarizeRequest {

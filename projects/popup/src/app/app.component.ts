@@ -2,7 +2,7 @@ import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MarkdownPipe } from '@shared/lib/pipes/markdown.pipe';
 import browser from 'webextension-polyfill';
-import {SummarizeResponse, SummaryResult} from "@shared/lib/models/summary.model";
+import {SummaryResult} from "@shared/lib/models/summary.model";
 
 @Component({
   selector: 'popup-root',
