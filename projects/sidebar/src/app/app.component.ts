@@ -172,65 +172,48 @@ type ViewMode = 'current' | 'history' | 'history-detail';
 
         <!-- Single History Detail View -->
         @if (currentView() === 'history-detail' && selectedHistoryItem()) {
-          <div class="single-history-view">
-            <button class="back-btn" (click)="setView('history')">
-              ← Back to History
-            </button>
-            <div class="history-detail-header">
-              <div class="history-detail-title">{{ selectedHistoryItem()?.title }}</div>
-              <div class="history-detail-actions">
-                <button
-                        class="copy-btn"
-                        [class.copy-btn--success]="detailCopySuccess()"
-                        (click)="copyHistoryToClipboard()"
-                        [disabled]="detailCopying()">
-                  @if (detailCopying()) {
-                    <span class="spinner"></span>
-                    Copying...
-                  } @else if (detailCopySuccess()) {
-                    ✓ Copied!
-                  } @else {
-                    Copy
-                  }
-                </button>
-                <button class="delete-btn" (click)="deleteSelectedHistoryItem()" title="Delete">
-                  🗑️ Delete
-                </button>
-              </div>
+          <button class="back-btn" (click)="setView('history')">
+            ← Back to History
+          </button>
+          <div class="summary-header">
+            <div class="summary-title">{{ selectedHistoryItem()?.title }}</div>
+            <div class="summary-actions">
+              <button
+                      class="copy-btn"
+                      [class.copy-btn--success]="detailCopySuccess()"
+                      (click)="copyHistoryToClipboard()"
+                      [disabled]="detailCopying()">
+                @if (detailCopying()) {
+                  <span class="spinner"></span>
+                  Copying...
+                } @else if (detailCopySuccess()) {
+                  ✓ Copied!
+                } @else {
+                  Copy
+                }
+              </button>
+              <button class="delete-btn" (click)="deleteSelectedHistoryItem()" title="Delete">
+                🗑️ Delete
+              </button>
             </div>
-            <div class="history-detail-content">
-              <div class="history-detail-text markdown-content"
-                   [innerHTML]="selectedHistoryItem()?.summary | markdown"></div>
+          </div>
+          <div class="summary-text markdown-content" [innerHTML]="selectedHistoryItem()?.summary | markdown"></div>
+          <div class="summary-meta">
+            <div class="meta-item">
+              <span>📅 {{ formatDate(selectedHistoryItem()!.timestamp) }}</span>
             </div>
-            <div class="history-detail-meta">
+            @if (selectedHistoryItem()?.articleUrl) {
               <div class="meta-item">
-                <span>📅 {{ formatDate(selectedHistoryItem()!.timestamp) }}</span>
+                <span>🔗 <a [href]="selectedHistoryItem()?.articleUrl" target="_blank"
+                           class="url-link">View Article</a></span>
               </div>
-              @if (selectedHistoryItem()?.articleUrl) {
-                <div class="meta-item">
-                  <span>🔗 <a [href]="selectedHistoryItem()?.articleUrl" target="_blank"
-                             class="url-link">View Article</a></span>
-                </div>
-              }
-              @if (selectedHistoryItem()?.provider) {
-                <div class="meta-item">
-                  <span>⚙️ {{ selectedHistoryItem()?.provider }} / {{ selectedHistoryItem()?.model }}</span>
-                </div>
-              }
-              @if (selectedHistoryItem()?.tokenCount) {
-                <div class="meta-item">
-                  <span>🪙 {{ selectedHistoryItem()?.tokenCount }} tokens</span>
-                </div>
-              }
-              <div class="meta-item">
-                <span>📊 {{ (selectedHistoryItem()?.summary || '').length }} characters</span>
-              </div>
-              @if (selectedHistoryItem()?.cached) {
-                <div class="meta-item">
-                  <span class="cached-badge">Cached</span>
-                </div>
-              }
-            </div>
+            }
+            @if (selectedHistoryItem()?.cached) {
+              <span class="cached-badge">Cached</span>
+            }
+            @if (selectedHistoryItem()?.provider) {
+              <span class="text-muted">{{ selectedHistoryItem()?.provider }} / {{ selectedHistoryItem()?.model }}</span>
+            }
           </div>
         }
       </div>
@@ -238,9 +221,6 @@ type ViewMode = 'current' | 'history' | 'history-detail';
       <!-- Footer -->
       <div class="footer">
         <div class="footer-left">
-          @if (summaryState().state === 'success' && currentArticleUrl()) {
-            <a [href]="currentArticleUrl()" target="_blank" class="settings-link">View article</a>
-          }
         </div>
         <div class="footer-right">
           @if (historyService.getCount() > 0) {
