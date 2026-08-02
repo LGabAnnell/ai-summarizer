@@ -96,7 +96,6 @@ type ViewMode = 'current' | 'history' | 'history-detail';
           }
 
           @if (summaryState().state === 'success' && currentSummary()) {
-            <div class="current-summary-view">
               <div class="summary-header">
                 <div class="summary-title">{{ currentSummary()?.title || 'Article Summary' }}</div>
                 <div class="summary-actions">
@@ -130,7 +129,6 @@ type ViewMode = 'current' | 'history' | 'history-detail';
                   <span class="text-muted">{{ currentSummary()?.provider }} / {{ currentSummary()?.model }}</span>
                 }
               </div>
-            </div>
           }
         }
 

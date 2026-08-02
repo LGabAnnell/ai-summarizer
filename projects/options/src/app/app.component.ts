@@ -448,15 +448,9 @@ export class AppComponent implements OnInit {
     if (!form) return undefined;
     
     const apiKey: string = form.get('apiKey')?.value;
-    const provider: ProviderType = form.get('provider')?.value || 'mistral';
     
     if (!apiKey || apiKey.trim() === '') {
       return 'API key is required';
-    }
-
-    const providerConfig = this.settingsService.getProviderConfigs()[provider];
-    if (providerConfig?.apiKeyPrefix && !apiKey.startsWith(providerConfig.apiKeyPrefix)) {
-      return `API key should start with ${providerConfig.apiKeyPrefix}`;
     }
 
     return undefined;
