@@ -212,11 +212,43 @@ async function handleSummarize(article: ArticleData, providerOverride?: string):
       });
       
       if (cachedSummary) {
+        // If ML is enabled, run classification on cached summary too
+        let classificationResult: ClassificationResult | undefined = undefined;
+        
+        if (settings.mlEnabled) {
+          try {
+            console.log('Background: Running classification on cached summary...');
+            const classification = await textClassifierService.classifyText(
+              cachedSummary,
+              {
+                timeout: settings.mlTimeout,
+                modelHub: settings.mlModelHub,
+                // NOTE: NOT passing modelId - using task-based approach
+              }
+            );
+            
+            if (classification.ok) {
+              classificationResult = classification;
+              console.log('Background: Classification completed for cached summary:', classificationResult);
+            } else {
+              console.warn('Background: Classification failed for cached summary:', classification.error);
+            }
+          } catch (classificationError) {
+            console.error('Background: Classification error for cached summary:', classificationError);
+          }
+        }
+        
         return {
           type: 'SUMMARIZE_RESPONSE',
           summary: cachedSummary,
           success: true,
           cached: true,
+          classification: classificationResult && classificationResult.ok ? {
+            label: classificationResult.label,
+            score: classificationResult.score,
+            modelId: classificationResult.modelId,
+            inferenceTime: classificationResult.inferenceTime,
+          } : undefined,
         };
       }
     }
@@ -237,12 +269,51 @@ async function handleSummarize(article: ArticleData, providerOverride?: string):
       await cacheSummary(article, settings, result.summary || '');
     }
     
+    // Run classification if ML is enabled
+    let classificationResult: ClassificationResult | undefined = undefined;
+    
+    if (settings.mlEnabled) {
+      try {
+        console.log('Background: Running classification on summary...');
+        // Use task-based classification (no modelId passed per user requirement)
+        const classification = await textClassifierService.classifyText(
+          result.summary || '',
+          {
+            timeout: settings.mlTimeout,
+            modelHub: settings.mlModelHub,
+            // NOTE: NOT passing modelId - using task-based approach
+          }
+        );
+        
+        if (classification.ok) {
+          classificationResult = classification;
+          console.log('Background: Classification completed:', classificationResult);
+        } else {
+          // Classification failed but we still return the summary
+          console.warn('Background: Classification failed:', classification.error);
+          classificationResult = classification;
+        }
+      } catch (classificationError) {
+        console.error('Background: Classification error:', classificationError);
+        classificationResult = {
+          ok: false,
+          error: classificationError instanceof Error ? classificationError.message : 'Classification failed',
+        };
+      }
+    }
+    
     return {
       type: 'SUMMARIZE_RESPONSE',
       summary: result.summary,
       success: true,
       cached: false,
       tokenCount: result.tokenCount,
+      classification: classificationResult && classificationResult.ok ? {
+        label: classificationResult.label,
+        score: classificationResult.score,
+        modelId: classificationResult.modelId,
+        inferenceTime: classificationResult.inferenceTime,
+      } : undefined, // Only include if successful
     };
   } catch (error) {
     return {

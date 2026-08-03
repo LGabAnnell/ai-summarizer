@@ -8,7 +8,8 @@ import {
   GetMLPermissionStatusRequest,
   NotifyMLPermissionGrantedRequest,
   ClearMLCacheRequest,
-  CheckMLAvailabilityRequest
+  CheckMLAvailabilityRequest,
+  ClassificationResult
 } from "./classification.model";
 
 export interface ExtractArticleRequest {
@@ -53,6 +54,8 @@ export interface SummarizeResponse {
   success: boolean;
   cached?: boolean;
   tokenCount?: number;
+  // NEW: Classification result (optional)
+  classification?: ClassificationResult;
 }
 
 export interface GetSettingsRequest {
@@ -107,6 +110,8 @@ export interface SummaryResult {
   provider?: string;
   model?: string;
   timestamp: Date;
+  // NEW: Classification result (optional)
+  classification?: ClassificationResult;
 }
 
 export interface SummaryRequest {

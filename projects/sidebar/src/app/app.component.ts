@@ -131,6 +131,15 @@ type ViewMode = 'current' | 'history' | 'history-detail';
                   <span class="text-muted">{{ currentSummary()?.provider }} / {{ currentSummary()?.model }}</span>
                 }
               </div>
+              <!-- NEW: Automatic classification display -->
+              @if (classificationFromSummary()) {
+                <div class="summary-classification">
+                  <div class="classification-badge">
+                    <span class="classification-label">{{ classificationFromSummary()?.label }}</span>
+                    <span class="classification-confidence">{{ (classificationFromSummary()?.score || 0) * 100 | number:'1.0-0' }}%</span>
+                  </div>
+                </div>
+              }
           }
         }
 
@@ -493,6 +502,33 @@ type ViewMode = 'current' | 'history' | 'history-detail';
         cursor: pointer;
         font-size: 12px;
       }
+      
+      /* NEW: Automatic classification display styles */
+      .summary-classification {
+        margin-top: 12px;
+        padding: 8px 0;
+      }
+      
+      .classification-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        background: var(--bg-primary, #f0f0f0);
+        border: 1px solid var(--border-color, #ddd);
+        border-radius: 16px;
+        font-size: 13px;
+      }
+      
+      .classification-label {
+        font-weight: 600;
+        color: var(--text-primary, #333);
+      }
+      
+      .classification-confidence {
+        color: var(--text-muted, #666);
+        font-size: 12px;
+      }
     `
   ],
 })
@@ -536,6 +572,12 @@ export class AppComponent implements OnInit, OnDestroy {
   currentSummary = computed<SummaryResult | null>(() => {
     const state = this.summaryState();
     return state.state === 'success' ? state.summary || null : null;
+  });
+
+  // NEW: Classification from summary (automatic classification result)
+  classificationFromSummary = computed<ClassificationResult | undefined>(() => {
+    const summary = this.currentSummary();
+    return summary?.classification;
   });
 
   currentArticleUrl = computed<string>(() => {

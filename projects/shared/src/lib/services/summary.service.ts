@@ -10,7 +10,8 @@ import { SettingsService } from './settings.service';
 import {
   ArticleData,
   SummaryResult,
-  SummaryState
+  SummaryState,
+  ClassificationResult
 } from '../../public-api';
 
 @Injectable({
@@ -63,6 +64,13 @@ export class SummaryService {
             title: string;
             articleUrl: string;
             cached: boolean;
+            classification?: {
+              label?: string;
+              score?: number;
+              modelId?: string;
+              inferenceTime?: number;
+              error?: string;
+            };
           }>(response);
           
           const result: SummaryResult = {
@@ -71,6 +79,15 @@ export class SummaryService {
             timestamp: new Date(),
             title: data.title,
             articleUrl: data.articleUrl,
+            // NEW: Include classification if present
+            classification: data.classification ? {
+              ok: true,
+              label: data.classification.label,
+              score: data.classification.score,
+              modelId: data.classification.modelId,
+              inferenceTime: data.classification.inferenceTime,
+              error: data.classification.error,
+            } : undefined,
           };
           
           console.log('Summary result created:', result.title, 'length:', result.summary.length);
@@ -121,6 +138,13 @@ export class SummaryService {
             summary: string;
             cached: boolean;
             tokenCount?: number;
+            classification?: {
+              label?: string;
+              score?: number;
+              modelId?: string;
+              inferenceTime?: number;
+              error?: string;
+            };
           }>(response);
           
           const result: SummaryResult = {
@@ -130,6 +154,15 @@ export class SummaryService {
             timestamp: new Date(),
             provider: settings.provider,
             model: settings.model,
+            // NEW: Include classification if present
+            classification: data.classification ? {
+              ok: true,
+              label: data.classification.label,
+              score: data.classification.score,
+              modelId: data.classification.modelId,
+              inferenceTime: data.classification.inferenceTime,
+              error: data.classification.error,
+            } : undefined,
           };
           
           console.log('Summary result created:', result.provider, result.model, 'length:', result.summary.length);

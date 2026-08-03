@@ -13,7 +13,7 @@ import { mlPermissionService } from './ml-permission.service';
 export interface MLEngineConfig {
   modelHub?: 'mozilla' | 'huggingface';
   taskName: 'text-classification';
-  modelId: string;
+  modelId?: string; // Make modelId optional for task-based approach
 }
 
 /**
@@ -56,12 +56,12 @@ export enum MLEngineError {
 
 /**
  * Default configuration for text classification
- * Using Mozilla's text-classification model
+ * Using task-based approach - Firefox will use default model for text-classification task
  */
 const DEFAULT_CONFIG: MLEngineConfig = {
   modelHub: 'mozilla',
   taskName: 'text-classification',
-  modelId: 'distilbert-base-uncased-finetuned-sst-2-english', // Explicit model ID
+  // NOTE: modelId intentionally omitted to use Firefox's default model for text-classification task
 };
 
 /**
@@ -208,11 +208,18 @@ export class MLEngineManager {
 
       console.log('MLEngineManager: Calling browser.trial.ml.createEngine with:', config);
 
-      const engine = await trialML.createEngine({
+      // Create engine config - only include modelId if provided (task-based approach)
+      const engineConfig: any = {
         modelHub: config.modelHub || 'mozilla',
         taskName: config.taskName,
-        modelId: config.modelId,
-      });
+      };
+      
+      // Only include modelId if provided - otherwise use Firefox's default model for the task
+      if (config.modelId) {
+        engineConfig.modelId = config.modelId;
+      }
+
+      const engine = await trialML.createEngine(engineConfig);
 
       if (!engine) {
         throw new Error('Engine creation returned null');
