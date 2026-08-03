@@ -346,30 +346,8 @@ type ViewMode = 'current' | 'history' | 'history-detail';
         height: 100%;
       }
 
-      .spinner {
-        display: inline-block;
-        width: 12px;
-        height: 12px;
-        border: 2px solid rgba(0, 0, 0, 0.1);
-        border-radius: 50%;
-        border-top-color: #666;
-        animation: spin 1s ease-in-out infinite;
-      }
 
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
 
-      button {
-        font-family: inherit;
-      }
-
-      .settings-link {
-        cursor: pointer;
-      }
-      
       .action-button {
         padding-top: 8px;
         padding-bottom: 8px;

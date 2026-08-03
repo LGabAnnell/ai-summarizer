@@ -1,0 +1,18 @@
+// Shared Styles Index
+// Main entry point for all shared SCSS styles
+// Import this file in each Angular project's styles.scss to access shared styles
+
+// 1. CSS Custom Properties (Variables)
+@use 'variables';
+
+// 2. SCSS Mixins
+@use 'mixins';
+
+// 3. Core Component Styles
+@use 'components';
+
+// 4. Utility Classes
+@use 'utilities';
+
+// 5. Markdown Content Styles
+@use 'markdown';

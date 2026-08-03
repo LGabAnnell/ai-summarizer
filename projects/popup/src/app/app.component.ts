@@ -48,7 +48,7 @@ import {SummaryResult} from "@shared/lib/models/summary.model";
               <div class="summary-title">{{ title() }}</div>
               <button class="copy-btn" (click)="copyToClipboard()" [disabled]="copying()">
                 @if (copying()) {
-                  <span class="spinner"></span>
+                  <span class="spinner-dark"></span>
                   Copying...
                 } @else if (copied()) {
                   ✓ Copied!
@@ -99,26 +99,7 @@ import {SummaryResult} from "@shared/lib/models/summary.model";
       height: 100%;
     }
     
-    button.btn--full-width {
-      margin-top: 12px;
-      margin-bottom: 12px;
-    }
-    
-    .spinner {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      border: 2px solid rgba(0, 0, 0, 0.1);
-      border-radius: 50%;
-      border-top-color: #666;
-      animation: spin 1s ease-in-out infinite;
-    }
-    
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
+
   `],
 })
 export class AppComponent implements OnInit {

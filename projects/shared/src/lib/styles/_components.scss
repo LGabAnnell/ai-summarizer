@@ -1,0 +1,443 @@
+// Shared Component Styles
+// Core component styles that are truly shared across popup, options, and sidebar
+
+// ============================================================================
+// ROOT ELEMENTS
+// ============================================================================
+
+popup-root,
+options-root,
+sidebar-root {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+// ============================================================================
+// GLOBAL RESET & BASE STYLES
+// ============================================================================
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+}
+
+// ============================================================================
+// LOGO & HEADER COMPONENTS
+// ============================================================================
+
+.logo {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// ============================================================================
+// BUTTON COMPONENTS
+// ============================================================================
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--border-radius);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  // Button variants
+  &--primary {
+    background-color: var(--primary-color);
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: var(--primary-hover);
+    }
+  }
+
+  &--secondary {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+
+    &:hover:not(:disabled) {
+      background-color: var(--bg-tertiary);
+    }
+  }
+
+  &--danger {
+    background-color: var(--error-color);
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: #dc2626;
+    }
+  }
+
+  &--ghost {
+    background: transparent;
+    color: var(--primary-color);
+
+    &:hover:not(:disabled) {
+      background-color: var(--primary-light);
+    }
+  }
+
+  &--full-width {
+    width: 100%;
+  }
+
+  &--small {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  &--with-icon {
+    padding: 8px 12px;
+  }
+}
+
+// ============================================================================
+// SPINNER COMPONENTS
+// ============================================================================
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+}
+
+// Spinner for dark backgrounds (used in buttons)
+.spinner-dark {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: #666;
+  animation: spin 1s ease-in-out infinite;
+}
+
+// Loading spinner
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--primary-light);
+  border-radius: 50%;
+  border-top-color: var(--primary-color);
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 12px;
+}
+
+// ============================================================================
+// STATUS INDICATORS
+// ============================================================================
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+
+  &.status-connected {
+    background-color: #D1FAE5;
+    color: #065F46;
+  }
+
+  &.status-disconnected {
+    background-color: #FEE2E2;
+    color: #991B1B;
+  }
+
+  &.status-loading {
+    background-color: #DBEAFE;
+    color: #1E40AF;
+  }
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+
+  &.status-connected {
+    background-color: #10B981;
+  }
+
+  &.status-disconnected {
+    background-color: #EF4444;
+  }
+
+  &.status-loading {
+    background-color: #3B82F6;
+    animation: pulse 2s infinite;
+  }
+}
+
+// ============================================================================
+// ANIMATION KEYFRAMES
+// ============================================================================
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+// ============================================================================
+// FOOTER COMPONENTS
+// ============================================================================
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+  font-size: 12px;
+
+  .footer-left,
+  .footer-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .settings-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .cached-badge {
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+}
+
+// ============================================================================
+// EMPTY, LOADING, ERROR STATES
+// ============================================================================
+
+.empty-state,
+.loading-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.empty-state,
+.error-state {
+  color: var(--text-secondary);
+}
+
+.loading-state {
+  color: var(--text-secondary);
+}
+
+// State icons
+.empty-icon,
+.error-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 12px;
+  background-color: var(--primary-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.error-icon {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+// Loading spinner in states
+.loading-state .loading-spinner {
+  margin-bottom: 12px;
+}
+
+// State titles
+.empty-title,
+.error-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+// State messages
+.empty-message,
+.error-message {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+// ============================================================================
+// SUMMARY COMPONENTS
+// ============================================================================
+
+.summary-view {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 16px;
+
+  .summary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+
+    .summary-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      word-break: break-word;
+    }
+  }
+
+  .summary-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .summary-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+}
+
+.copy-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  color: var(--text-secondary);
+
+  &:hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+  }
+
+  &--success {
+    background-color: var(--success-color) !important;
+    border-color: var(--success-color) !important;
+    color: white !important;
+  }
+}
+
+// Popup copy button (smaller)
+.popup .copy-btn {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+// ============================================================================
+// CONTAINER & LAYOUT
+// ============================================================================
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+}

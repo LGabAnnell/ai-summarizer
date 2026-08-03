@@ -1,0 +1,72 @@
+// Shared CSS Custom Properties (Variables)
+// These variables are used across all Angular projects: popup, options, sidebar
+
+// Color palette
+:root {
+  // Primary colors
+  --primary-color: #4F46E5;
+  --primary-hover: #4338CA;
+  --primary-light: #E0E7FF;
+  
+  // Text colors
+  --text-primary: #1E293B;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+  
+  // Background colors
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F8FAFC;
+  --bg-tertiary: #F1F5F9;
+  
+  // Border and divider colors
+  --border-color: #E2E8F0;
+  
+  // Status colors
+  --success-color: #10B981;
+  --error-color: #EF4444;
+  --warning-color: #F59E0B;
+  --info-color: #3B82F6;
+  
+  // Spacing and sizing
+  --border-radius: 8px;
+  --box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --transition: all 0.2s ease;
+}
+
+// Dark theme variables (for sidebar theme toggle)
+[data-theme="dark"] {
+  --primary-color: #6366F1;
+  --primary-hover: #4F46E5;
+  --primary-light: #312E81;
+  
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-muted: #94A3B8;
+  
+  --bg-primary: #1E293B;
+  --bg-secondary: #0F172A;
+  --bg-tertiary: #1E293B;
+  
+  --border-color: #334155;
+  
+  --success-color: #10B981;
+  --error-color: #EF4444;
+  --warning-color: #F59E0B;
+  
+  --border-radius: 8px;
+  --box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+// Sidebar-specific variables
+:root {
+  --sidebar-width: 380px;
+  --sidebar-bg: #FFFFFF;
+  --hover-bg: #F8FAFC;
+  --active-bg: #F1F5F9;
+}
+
+[data-theme="dark"] {
+  --sidebar-bg: #1E293B;
+  --hover-bg: #0F172A;
+  --active-bg: #1E293B;
+}

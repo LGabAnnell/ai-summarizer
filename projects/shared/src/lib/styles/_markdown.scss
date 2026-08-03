@@ -1,0 +1,119 @@
+// Shared Markdown Content Styles
+// Styles for markdown-rendered content used in popup and sidebar
+
+.markdown-content {
+  // Headings
+  h1, h2, h3, h4, h5, h6 {
+    margin: 16px 0 8px 0;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  h1 { font-size: 20px; }
+  h2 { font-size: 18px; }
+  h3 { font-size: 16px; }
+
+  // Sidebar larger headings
+  .sidebar & {
+    h1 { font-size: 24px; }
+    h2 { font-size: 20px; }
+    h3 { font-size: 18px; }
+  }
+
+  // Paragraphs
+  p {
+    margin: 8px 0;
+  }
+
+  // Text formatting
+  strong, b {
+    font-weight: 600;
+  }
+
+  em, i {
+    font-style: italic;
+  }
+
+  // Lists
+  ul, ol {
+    margin: 8px 0;
+    padding-left: 24px;
+  }
+
+  li {
+    margin: 4px 0;
+  }
+
+  // Code blocks
+  code {
+    background: var(--bg-secondary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 13px;
+  }
+
+  // Sidebar code
+  .sidebar & code {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+
+  pre {
+    background: var(--bg-secondary);
+    padding: 12px;
+    border-radius: var(--border-radius);
+    overflow-x: auto;
+    margin: 8px 0;
+    font-family: monospace;
+    font-size: 13px;
+  }
+
+  // Sidebar pre with border
+  .sidebar & pre {
+    padding: 12px;
+    border-radius: var(--border-radius);
+    margin: 12px 0;
+    font-size: 14px;
+    border: 1px solid var(--border-color);
+  }
+
+  // Blockquotes
+  blockquote {
+    border-left: 3px solid var(--primary-light);
+    padding-left: 12px;
+    margin: 8px 0;
+    color: var(--text-secondary);
+  }
+
+  // Sidebar blockquote
+  .sidebar & blockquote {
+    border-left: 4px solid var(--primary-light);
+    padding-left: 16px;
+    margin: 12px 0;
+  }
+
+  // Links
+  a {
+    color: var(--primary-color);
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  // Horizontal rules
+  hr {
+    border: 0;
+    border-top: 1px solid var(--border-color);
+    margin: 16px 0;
+  }
+
+  // Sidebar hr
+  .sidebar & hr {
+    margin: 20px 0;
+  }
+}

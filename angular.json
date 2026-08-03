@@ -49,7 +49,7 @@
                 "output": "/assets"
               }
             ],
-            "styles": ["projects/popup/src/styles.scss"],
+            "styles": ["projects/shared/src/lib/styles/index.scss", "projects/popup/src/styles.scss"],
             "scripts": [],
             "optimization": {
               "scripts": true,
@@ -109,7 +109,7 @@
                 "output": "/assets"
               }
             ],
-            "styles": ["projects/popup/src/styles.scss"],
+            "styles": ["projects/shared/src/lib/styles/index.scss", "projects/popup/src/styles.scss"],
             "scripts": []
           }
         },
@@ -158,7 +158,7 @@
                 "output": "/assets"
               }
             ],
-            "styles": ["projects/options/src/styles.scss"],
+            "styles": ["projects/shared/src/lib/styles/index.scss", "projects/options/src/styles.scss"],
             "scripts": [],
             "optimization": {
               "scripts": true,
@@ -218,7 +218,7 @@
                 "output": "/assets"
               }
             ],
-            "styles": ["projects/options/src/styles.scss"],
+            "styles": ["projects/shared/src/lib/styles/index.scss", "projects/options/src/styles.scss"],
             "scripts": []
           }
         },
@@ -267,7 +267,7 @@
                 "output": "/assets"
               }
             ],
-            "styles": ["projects/sidebar/src/styles.scss"],
+            "styles": ["projects/shared/src/lib/styles/index.scss", "projects/sidebar/src/styles.scss"],
             "scripts": [],
             "optimization": {
               "scripts": true,
@@ -328,7 +328,7 @@
                 "output": "/assets"
               }
             ],
-            "styles": ["projects/sidebar/src/styles.scss"],
+            "styles": ["projects/shared/src/lib/styles/index.scss", "projects/sidebar/src/styles.scss"],
             "scripts": []
           }
         },
