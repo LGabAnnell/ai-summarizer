@@ -604,29 +604,36 @@ options-root {
 .form-switch {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   cursor: pointer;
 
   .switch {
     position: relative;
-    width: 40px;
-    height: 20px;
-    background-color: var(--bg-secondary);
-    border-radius: 10px;
     cursor: pointer;
-    transition: var(--transition);
+    display: inline-block;
 
-    &::before {
-      content: '';
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 16px;
-      height: 16px;
-      background-color: white;
-      border-radius: 50%;
+    span.switch {
+      position: relative;
+      width: 40px;
+      height: 20px;
+      background-color: var(--bg-tertiary);
+      border-radius: 10px;
+      cursor: pointer;
       transition: var(--transition);
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+
+      &::before {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        background-color: var(--bg-primary);
+        border-radius: 50%;
+        transition: var(--transition);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      }
     }
 
     input[type="checkbox"] {
@@ -638,12 +645,14 @@ options-root {
       z-index: 10;
     }
 
-    input[type="checkbox"]:checked + &::before {
-      transform: translateX(20px);
+    input[type="checkbox"]:checked + span.switch {
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
     }
 
-    input[type="checkbox"]:checked + & {
-      background-color: var(--primary-color);
+    input[type="checkbox"]:checked + span.switch::before {
+      transform: translateX(20px);
+      background-color: white;
     }
   }
 
