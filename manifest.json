@@ -24,9 +24,12 @@
     "open_at_install": false
   },
   "commands": {
-    "_execute_sidebar_action": {
-      "suggested_keyboard_shortcuts": ["Ctrl+Shift+Y"],
-      "description": "Toggle Article Summarizer sidebar"
+    "toggle-sidebar": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "MacCtrl+Shift+Y"
+      },
+      "description": "Toggle the sidebar"
     }
   },
   "options_ui": {

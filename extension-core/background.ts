@@ -763,4 +763,11 @@ function setupMLProgressBroadcasting() {
 // Initialize ML progress broadcasting
 setupMLProgressBroadcasting();
 
+// Set up keyboard shortcut command listener for sidebar toggle
+browser.commands.onCommand.addListener((command) => {
+  if (command === "toggle-sidebar") {
+    browser.sidebarAction.toggle();
+  }
+});
+
 console.log('Article Summarizer background service worker loaded');
