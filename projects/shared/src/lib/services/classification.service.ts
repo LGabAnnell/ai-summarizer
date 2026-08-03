@@ -95,6 +95,9 @@ export class ClassificationService {
   /**
    * Request ML permission from user - MUST be called from a user gesture context (e.g., button click)
    * This calls browser.permissions.request() directly in the UI context, then notifies the background script
+   * 
+   * NOTE: This method should be called directly from a user gesture context (button click handler).
+   * For the Options page, use the requestMLPermission() method which handles this properly.
    */
   requestMLPermissionFromUserGesture(): Observable<{ granted: boolean; error?: string }> {
     console.log('ClassificationService.requestMLPermissionFromUserGesture: Called - This must be from a user gesture');

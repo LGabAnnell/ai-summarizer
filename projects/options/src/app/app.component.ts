@@ -2,7 +2,7 @@ import {Component, signal, OnInit, OnDestroy, computed, inject, HostListener} fr
 import {CommonModule} from '@angular/common';
 import {FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators} from '@angular/forms';
 import * as browser from 'webextension-polyfill';
-import {SettingsService, ExtensionSettings, ProviderType, ClassificationService, ClassificationResult, ModelDownloadProgress} from '@shared/public-api';
+import {SettingsService, ExtensionSettings, ProviderType, ClassificationService, ClassificationResult, ModelDownloadProgress, MessagingService} from '@shared/public-api';
 
 @Component({
   selector: 'options-root',
@@ -801,6 +801,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private settingsService = inject(SettingsService);
   private classificationService = inject(ClassificationService);
+  private messagingService = inject(MessagingService);
 
   // State
   settings = signal<Partial<ExtensionSettings>>(
@@ -1239,7 +1240,7 @@ export class AppComponent implements OnInit, OnDestroy {
           
           // Notify background script that permission was granted
           console.log('OptionsApp.requestMLPermission: Notifying background script');
-          this.classificationService.requestMLPermissionFromUserGesture().subscribe({
+          this.messagingService.notifyMLPermissionGranted().subscribe({
             next: () => {
               console.log('OptionsApp.requestMLPermission: Background script notified successfully');
               setTimeout(() => this.clearSuccess(), 3000);
