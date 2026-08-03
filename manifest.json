@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Article Summarizer",
   "version": "1.0.0",
-  "description": "Extracts article content and summarizes it using configurable AI providers (Mistral, OpenAI, Anthropic, Qwen, DeepSeek, Custom)",
+  "description": "Extracts article content and summarizes it using configurable AI providers (Mistral, OpenAI, Anthropic, Qwen, DeepSeek, Custom). Includes local text classification using Firefox's built-in AI runtime.",
   "icons": {
     "48": "icons/icon-48.svg",
     "96": "icons/icon-96.svg"
@@ -48,6 +48,9 @@
     "activeTab",
     "scripting",
     "storage"
+  ],
+  "optional_permissions": [
+    "trialML"
   ],
   "host_permissions": [
     "<all_urls>"

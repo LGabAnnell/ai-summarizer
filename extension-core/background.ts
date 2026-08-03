@@ -9,6 +9,35 @@ import browser from 'webextension-polyfill';
 import {ArticleData} from "@shared/lib/models/article.model";
 import {CachedSummaryData, Message, SummarizeResponse} from "@shared/lib/models/summary.model";
 
+// Import ML services
+import { textClassifierService, ClassificationResult } from './ml/text-classifier.service';
+import { mlPermissionService } from './ml/ml-permission.service';
+import { ModelDownloadProgressEvent } from './ml/text-classifier.service';
+
+// ML-related types for message handling
+export interface ClassifyTextRequest {
+  type: 'CLASSIFY_TEXT';
+  text: string;
+  modelId?: string;
+  timeout?: number;
+}
+
+export interface GetMLPermissionStatusRequest {
+  type: 'GET_ML_PERMISSION_STATUS';
+}
+
+export interface NotifyMLPermissionGrantedRequest {
+  type: 'NOTIFY_ML_PERMISSION_GRANTED';
+}
+
+export interface ClearMLCacheRequest {
+  type: 'CLEAR_ML_CACHE';
+}
+
+export interface CheckMLAvailabilityRequest {
+  type: 'CHECK_ML_AVAILABILITY';
+}
+
 // Cache configuration
 const CACHE_PREFIX = 'summary_cache_';
 // const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
@@ -25,6 +54,10 @@ export interface ExtensionSettings {
   temperature?: number;
   cacheEnabled?: boolean;
   cacheTTL?: number;
+  // ML settings
+  mlEnabled?: boolean;
+  mlModelHub?: 'mozilla' | 'huggingface';
+  mlModelId?: string;
 }
 
 // Default settings
@@ -38,6 +71,10 @@ const DEFAULT_SETTINGS: ExtensionSettings = {
   temperature: 0.7,
   cacheEnabled: true,
   cacheTTL: 7,
+  // ML settings (disabled by default)
+  mlEnabled: false,
+  mlModelHub: 'mozilla',
+  mlModelId: 'distilbert-base-uncased-finetuned-sst-2-english',
 };
 
 /**
@@ -415,6 +452,169 @@ async function testProviderConnection(providerType: string, apiKey: string): Pro
   }
 }
 
+// ============================================================================
+// ML Classification Message Handlers
+// ============================================================================
+
+/**
+ * Handle CLASSIFY_TEXT request
+ */
+async function handleClassifyText(request: ClassifyTextRequest): Promise<ClassificationResult & { type: string }> {
+  try {
+    console.log('Background: Handling CLASSIFY_TEXT request');
+    
+    // Check if ML is enabled in settings
+    const settings = await getSettings();
+    if (settings.mlEnabled === false) {
+      console.log('Background: ML is disabled in settings');
+      return {
+        type: 'CLASSIFY_RESULT',
+        ok: false,
+        error: 'ML classification is disabled. Enable in Options page.',
+      };
+    }
+
+    // Use ML service for classification
+    const result = await textClassifierService.classifyText(
+      request.text,
+      {
+        modelId: request.modelId,
+        timeout: request.timeout,
+        modelHub: settings.mlModelHub,
+      }
+    );
+
+    console.log('Background: Classification result:', result);
+    return {
+      type: 'CLASSIFY_RESULT',
+      ...result,
+    };
+  } catch (error) {
+    console.error('Background: Classification failed:', error);
+    return {
+      type: 'CLASSIFY_RESULT',
+      ok: false,
+      error: `Classification error: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/**
+ * Handle GET_ML_PERMISSION_STATUS request
+ */
+async function handleGetMLPermissionStatus(): Promise<{ type: string; granted: boolean }> {
+  try {
+    const granted = await mlPermissionService.checkPermission();
+    console.log('Background: ML permission status:', granted);
+    return {
+      type: 'ML_PERMISSION_STATUS',
+      granted,
+    };
+  } catch (error) {
+    console.error('Background: Error checking ML permission:', error);
+    return {
+      type: 'ML_PERMISSION_STATUS',
+      granted: false,
+    };
+  }
+}
+
+/**
+ * Handle NOTIFY_ML_PERMISSION_GRANTED notification
+ * This is called from the UI after the user has granted permission via browser.permissions.request()
+ */
+async function handleNotifyMLPermissionGranted(): Promise<{ type: string; success: boolean; error?: string }> {
+  try {
+    console.log('Background.handleNotifyMLPermissionGranted: Received NOTIFY_ML_PERMISSION_GRANTED message');
+    console.log('Background.handleNotifyMLPermissionGranted: Calling mlPermissionService.notifyPermissionGranted()');
+    
+    // Update the cached permission state in the background script
+    mlPermissionService.notifyPermissionGranted();
+    
+    console.log('Background: ML permission notification processed successfully');
+    return {
+      type: 'NOTIFY_ML_PERMISSION_GRANTED_RESPONSE',
+      success: true,
+    };
+  } catch (error) {
+    console.error('Background: Error processing ML permission notification:', error);
+    return {
+      type: 'NOTIFY_ML_PERMISSION_GRANTED_RESPONSE',
+      success: false,
+      error: `Notification processing failed: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/**
+ * Handle CLEAR_ML_CACHE request
+ */
+async function handleClearMLCache(): Promise<{ type: string; success: boolean; error?: string }> {
+  try {
+    console.log('Background: Clearing ML model cache...');
+    const result = await textClassifierService.clearCache();
+    
+    if (result.success) {
+      console.log('Background: ML cache cleared successfully');
+      return {
+        type: 'CLEAR_ML_CACHE_RESPONSE',
+        success: true,
+      };
+    } else {
+      console.log('Background: ML cache clear failed:', result.error);
+      return {
+        type: 'CLEAR_ML_CACHE_RESPONSE',
+        success: false,
+        error: result.error,
+      };
+    }
+  } catch (error) {
+    console.error('Background: Error clearing ML cache:', error);
+    return {
+      type: 'CLEAR_ML_CACHE_RESPONSE',
+      success: false,
+      error: `Cache clear failed: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/**
+ * Handle CHECK_ML_AVAILABILITY request
+ */
+async function handleCheckMLAvailability(): Promise<{ 
+  type: string; 
+  available: boolean; 
+  apiAvailable: boolean;
+  permissionGranted: boolean; 
+}> {
+  try {
+    const apiAvailable = mlPermissionService.isAPIAvailable();
+    const permissionGranted = await mlPermissionService.checkPermission();
+    const available = apiAvailable && permissionGranted;
+
+    console.log('Background: ML availability check:', {
+      apiAvailable,
+      permissionGranted,
+      available,
+    });
+
+    return {
+      type: 'ML_AVAILABILITY_RESPONSE',
+      available,
+      apiAvailable,
+      permissionGranted,
+    };
+  } catch (error) {
+    console.error('Background: Error checking ML availability:', error);
+    return {
+      type: 'ML_AVAILABILITY_RESPONSE',
+      available: false,
+      apiAvailable: false,
+      permissionGranted: false,
+    };
+  }
+}
+
 /**
  * Main message handler
  */
@@ -478,6 +678,23 @@ async function handleMessage(request: Message, sender: any): Promise<any> {
         };
       }
 
+    // ML Classification cases
+    case 'CLASSIFY_TEXT':
+      return handleClassifyText(request);
+
+    case 'GET_ML_PERMISSION_STATUS':
+      return handleGetMLPermissionStatus();
+
+    case 'NOTIFY_ML_PERMISSION_GRANTED':
+      console.log('Background.handleMessage: Processing NOTIFY_ML_PERMISSION_GRANTED case');
+      return handleNotifyMLPermissionGranted();
+
+    case 'CLEAR_ML_CACHE':
+      return handleClearMLCache();
+
+    case 'CHECK_ML_AVAILABILITY':
+      return handleCheckMLAvailability();
+
     default:
       return {
         type: 'UNKNOWN_REQUEST',
@@ -500,5 +717,50 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Return true to indicate we will send a response asynchronously
   return true;
 });
+
+// Set up ML progress event broadcasting
+// This sends progress events to all connected front-ends (popup, sidebar, options)
+function setupMLProgressBroadcasting() {
+  try {
+    const trialML = (browser as any).trial?.ml;
+    if (!trialML || typeof trialML.onProgress !== 'function') {
+      console.log('Background: ML progress API not available, skipping progress broadcasting');
+      return;
+    }
+
+    console.log('Background: Setting up ML progress event broadcasting');
+    
+    trialML.onProgress.addListener((progressEvent: any) => {
+      console.log('Background: ML progress event received:', progressEvent);
+      
+      // Broadcast progress to all connected front-ends
+      const progressMessage = {
+        type: 'MODEL_DOWNLOAD_PROGRESS',
+        progress: Math.round(progressEvent.progress * 100) || 0,
+        modelId: progressEvent.modelId || 'unknown',
+        status: progressEvent.status || 'downloading',
+        message: progressEvent.message,
+      };
+
+      // Send to all tabs that might be listening
+      browser.tabs.query({}).then(tabs => {
+        tabs.forEach(tab => {
+          if (tab.id) {
+            browser.tabs.sendMessage(tab.id, progressMessage).catch(() => {
+              // Ignore errors - tab might not have our content script
+            });
+          }
+        });
+      });
+    });
+    
+    console.log('Background: ML progress broadcasting enabled');
+  } catch (error) {
+    console.error('Background: Error setting up ML progress broadcasting:', error);
+  }
+}
+
+// Initialize ML progress broadcasting
+setupMLProgressBroadcasting();
 
 console.log('Article Summarizer background service worker loaded');

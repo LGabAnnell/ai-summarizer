@@ -11,6 +11,7 @@ import * as browser from 'webextension-polyfill';
 import { ExtensionSettings } from '../models/settings.model';
 import { ArticleData } from '../models/article.model';
 import {Message} from "../models/summary.model";
+import {ClassificationResult, ModelDownloadProgress, ModelDownloadProgressMessage} from "../models/classification.model";
 
 export interface MessageResponse<T = unknown> {
   type: string;
@@ -226,5 +227,216 @@ export class MessagingService {
         return throwError(() => error);
       })
     );
+  }
+
+  // ============================================================================
+  // ML Classification Methods
+  // ============================================================================
+
+  /**
+   * Classify text using ML
+   */
+  classifyText(text: string, modelId?: string, timeout?: number): Observable<ClassificationResult> {
+    console.log('MessagingService.classifyText: Called with text length:', text.length);
+    return this.sendMessage<ClassificationResult>({
+      type: 'CLASSIFY_TEXT',
+      text,
+      modelId,
+      timeout
+    }).pipe(
+      map(response => {
+        console.log('MessagingService.classifyText: Response:', response);
+        // Handle both direct response and wrapped response formats
+        let classificationData: ClassificationResult;
+        if (response.data && typeof response.data === 'object') {
+          classificationData = response.data as ClassificationResult;
+        } else {
+          classificationData = response as unknown as ClassificationResult;
+        }
+        return {
+          ok: classificationData.ok || false,
+          label: classificationData.label,
+          score: classificationData.score,
+          error: classificationData.error,
+          modelId: classificationData.modelId,
+          inferenceTime: classificationData.inferenceTime,
+        };
+      }),
+      catchError((error) => {
+        console.error('MessagingService.classifyText: Error:', error);
+        return of({
+          ok: false,
+          error: error instanceof Error ? error.message : 'Classification failed',
+        });
+      })
+    );
+  }
+
+  /**
+   * Notify background script that ML permission has been granted
+   * This is called from the UI after the user has granted permission via browser.permissions.request()
+   */
+  notifyMLPermissionGranted(): Observable<{ success: boolean; error?: string }> {
+    console.log('MessagingService.notifyMLPermissionGranted: Called - Sending NOTIFY_ML_PERMISSION_GRANTED message to background');
+    return this.sendMessage<{ success: boolean; error?: string }>({
+      type: 'NOTIFY_ML_PERMISSION_GRANTED'
+    }).pipe(
+      map(response => {
+        console.log('MessagingService.notifyMLPermissionGranted: Response received:', response);
+        let result: { success: boolean; error?: string };
+        if (response.data && typeof response.data === 'object') {
+          result = response.data as { success: boolean; error?: string };
+        } else {
+          result = response as unknown as { success: boolean; error?: string };
+        }
+        return {
+          success: result.success || false,
+          error: result.error,
+        };
+      }),
+      catchError((error) => {
+        console.error('MessagingService.notifyMLPermissionGranted: Error:', error);
+        return of({
+          success: false,
+          error: error instanceof Error ? error.message : 'Notification failed',
+        });
+      })
+    );
+  }
+
+  /**
+   * Check ML permission status
+   */
+  getMLPermissionStatus(): Observable<boolean> {
+    console.log('MessagingService.getMLPermissionStatus: Called');
+    return this.sendMessage<{ granted: boolean }>({
+      type: 'GET_ML_PERMISSION_STATUS'
+    }).pipe(
+      map(response => {
+        console.log('MessagingService.getMLPermissionStatus: Response:', response);
+        let result: { granted: boolean };
+        if (response.data && typeof response.data === 'object') {
+          result = response.data as { granted: boolean };
+        } else {
+          result = response as unknown as { granted: boolean };
+        }
+        return result.granted || false;
+      }),
+      catchError((error) => {
+        console.error('MessagingService.getMLPermissionStatus: Error:', error);
+        return of(false);
+      })
+    );
+  }
+
+  /**
+   * Check if ML is available
+   */
+  checkMLAvailability(): Observable<{ 
+    available: boolean; 
+    apiAvailable: boolean; 
+    permissionGranted: boolean; 
+  }> {
+    console.log('MessagingService.checkMLAvailability: Called');
+    return this.sendMessage<{ 
+      available: boolean; 
+      apiAvailable: boolean; 
+      permissionGranted: boolean; 
+    }>({
+      type: 'CHECK_ML_AVAILABILITY'
+    }).pipe(
+      map(response => {
+        console.log('MessagingService.checkMLAvailability: Response:', response);
+        let result: { available: boolean; apiAvailable: boolean; permissionGranted: boolean };
+        if (response.data && typeof response.data === 'object') {
+          result = response.data as { available: boolean; apiAvailable: boolean; permissionGranted: boolean };
+        } else {
+          result = response as unknown as { available: boolean; apiAvailable: boolean; permissionGranted: boolean };
+        }
+        return {
+          available: result.available || false,
+          apiAvailable: result.apiAvailable || false,
+          permissionGranted: result.permissionGranted || false,
+        };
+      }),
+      catchError((error) => {
+        console.error('MessagingService.checkMLAvailability: Error:', error);
+        return of({
+          available: false,
+          apiAvailable: false,
+          permissionGranted: false,
+        });
+      })
+    );
+  }
+
+  /**
+   * Clear ML model cache
+   */
+  clearMLCache(): Observable<{ success: boolean; error?: string }> {
+    console.log('MessagingService.clearMLCache: Called');
+    return this.sendMessage<{ success: boolean; error?: string }>({
+      type: 'CLEAR_ML_CACHE'
+    }).pipe(
+      map(response => {
+        console.log('MessagingService.clearMLCache: Response:', response);
+        let result: { success: boolean; error?: string };
+        if (response.data && typeof response.data === 'object') {
+          result = response.data as { success: boolean; error?: string };
+        } else {
+          result = response as unknown as { success: boolean; error?: string };
+        }
+        return {
+          success: result.success || false,
+          error: result.error,
+        };
+      }),
+      catchError((error) => {
+        console.error('MessagingService.clearMLCache: Error:', error);
+        return of({
+          success: false,
+          error: error instanceof Error ? error.message : 'Cache clear failed',
+        });
+      })
+    );
+  }
+
+  /**
+   * Get model download progress as observable
+   */
+  onModelDownloadProgress(): Observable<ModelDownloadProgress> {
+    console.log('MessagingService.onModelDownloadProgress: Setting up listener');
+    
+    if (typeof browser === 'undefined') {
+      console.error('MessagingService.onModelDownloadProgress: Not running in browser extension context');
+      return throwError(() => new Error('Not running in browser extension context'));
+    }
+
+    // Return an observable that listens for progress messages
+    return new Observable<ModelDownloadProgress>(subscriber => {
+      const listener = (message: unknown) => {
+        console.log('MessagingService.onModelDownloadProgress: Message received:', message);
+        
+        const progressMessage = message as ModelDownloadProgressMessage;
+        if (progressMessage && progressMessage.type === 'MODEL_DOWNLOAD_PROGRESS') {
+          const progress: ModelDownloadProgress = {
+            progress: progressMessage.progress || 0,
+            modelId: progressMessage.modelId || 'unknown',
+            status: progressMessage.status || 'downloading',
+            message: progressMessage.message,
+          };
+          subscriber.next(progress);
+        }
+      };
+
+      // Add listener
+      browser.runtime.onMessage.addListener(listener);
+
+      // Cleanup on unsubscribe
+      return () => {
+        console.log('MessagingService.onModelDownloadProgress: Cleaning up listener');
+        browser.runtime.onMessage.removeListener(listener);
+      };
+    });
   }
 }

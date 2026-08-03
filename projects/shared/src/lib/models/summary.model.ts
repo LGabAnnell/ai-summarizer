@@ -3,6 +3,13 @@
  */
 import { ArticleData } from "./article.model";
 import {ExtensionSettings} from "./settings.model";
+import {
+  ClassifyTextRequest,
+  GetMLPermissionStatusRequest,
+  NotifyMLPermissionGrantedRequest,
+  ClearMLCacheRequest,
+  CheckMLAvailabilityRequest
+} from "./classification.model";
 
 export interface ExtractArticleRequest {
   type: 'EXTRACT_ARTICLE';
@@ -82,7 +89,12 @@ export type Message =
   | TestProviderRequest
   | RefreshModelsRequest
   | ClearCacheRequest
-  | ExtractArticleRequest;
+  | ExtractArticleRequest
+  | ClassifyTextRequest
+  | GetMLPermissionStatusRequest
+  | NotifyMLPermissionGrantedRequest
+  | ClearMLCacheRequest
+  | CheckMLAvailabilityRequest;
 
 
 export interface SummaryResult {

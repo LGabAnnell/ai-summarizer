@@ -9,7 +9,11 @@ import {
   ThemeService,
   SummaryState,
   SummaryResult,
-  HistoryItem
+  HistoryItem,
+  ClassificationService,
+  ClassificationResult,
+  ClassificationState,
+  MLSettings
 } from '@shared/public-api';
 import browser from "webextension-polyfill";
 
@@ -233,6 +237,82 @@ type ViewMode = 'current' | 'history' | 'history-detail';
         </div>
       </div>
 
+      <!-- Classification Section -->
+      @if (isMLAvailable()) {
+        <div class="classification-section">
+          <div class="classification-header">
+            <span>🤖</span>
+            Local AI Classification
+          </div>
+          
+          @if (classificationState().state === 'idle') {
+            <button
+                    class="btn btn--secondary btn--classification"
+                    (click)="classifyArticle()"
+                    [disabled]="!canClassify() || classificationState().state === 'loading'">
+              @if (classificationState().state === 'loading') {
+                <span class="spinner"></span>
+                Classifying...
+              } @else {
+                Classify Article Content
+              }
+            </button>
+            @if (classificationState().state === 'permission_required') {
+              <div class="classification-hint">
+                Enable ML in Options to use classification
+              </div>
+            }
+            @if (classificationState().state === 'not_available') {
+              <div class="classification-hint">
+                Firefox ML API not available
+              </div>
+            }
+          }
+          
+          @if (classificationState().state === 'loading') {
+            <div class="classification-loading">
+              <div class="spinner"></div>
+              <div>Classifying article...</div>
+              @if (classificationProgress() > 0) {
+                <div class="classification-progress">
+                  Downloading model: {{ classificationProgress() }}%
+                </div>
+              }
+            </div>
+          }
+          
+          @if (classificationState().state === 'success' && classificationResult()) {
+            <div class="classification-result-card">
+              <div class="classification-result-header">
+                <span>Classification Result</span>
+                <button class="close-btn" (click)="clearClassification()">×</button>
+              </div>
+              <div class="classification-result-content">
+                <div class="classification-label">
+                  {{ classificationResult()?.label || 'Unknown' }}
+                </div>
+                <div class="classification-score">
+                  Confidence: {{ (classificationResult()?.score || 0) * 100 | number:'1.0-0' }}%
+                </div>
+                @if (classificationResult()?.inferenceTime) {
+                  <div class="classification-time">
+                    Processed in {{ classificationResult()?.inferenceTime }}ms
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          
+          @if (classificationState().state === 'error') {
+            <div class="classification-error">
+              <span class="error-icon">⚠️</span>
+              <div class="error-message">{{ classificationState().error || 'Classification failed' }}</div>
+              <button class="retry-btn" (click)="classifyArticle()">Retry</button>
+            </div>
+          }
+        </div>
+      }
+
       <!-- Action Button -->
       <div class="action-button">
         <button
@@ -285,6 +365,134 @@ type ViewMode = 'current' | 'history' | 'history-detail';
         padding-top: 8px;
         padding-bottom: 8px;
       }
+
+      /* Classification Styles */
+      .classification-section {
+        margin: 16px 0;
+        padding: 12px;
+        border-top: 1px solid var(--border-color, #e0e0e0);
+        background: var(--bg-secondary, #f8f9fa);
+        border-radius: 8px;
+      }
+
+      .classification-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        font-size: 16px;
+      }
+
+      .btn--classification {
+        width: 100%;
+        margin-bottom: 8px;
+      }
+
+      .classification-hint {
+        font-size: 12px;
+        color: var(--text-muted, #6c757d);
+        text-align: center;
+        padding: 8px;
+        background: var(--bg-primary, #fff);
+        border-radius: 4px;
+        margin-bottom: 8px;
+      }
+
+      .classification-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 16px;
+        color: var(--text-muted, #6c757d);
+      }
+
+      .classification-progress {
+        font-size: 12px;
+        color: var(--text-muted, #6c757d);
+        margin-top: 8px;
+      }
+
+      .classification-result-card {
+        background: var(--bg-primary, #fff);
+        border: 1px solid #d4edda;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+
+      .classification-result-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #155724;
+      }
+
+      .close-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 18px;
+        color: var(--text-muted, #6c757d);
+        padding: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .classification-result-content {
+        text-align: center;
+      }
+
+      .classification-label {
+        font-size: 20px;
+        font-weight: bold;
+        color: #155724;
+        margin: 8px 0;
+      }
+
+      .classification-score {
+        font-size: 14px;
+        color: #28a745;
+        margin: 4px 0;
+      }
+
+      .classification-time {
+        font-size: 12px;
+        color: var(--text-muted, #6c757d);
+        margin: 4px 0;
+      }
+
+      .classification-error {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px;
+        background: #f8d7da;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        color: #721c24;
+      }
+
+      .error-icon {
+        font-size: 18px;
+      }
+
+      .retry-btn {
+        margin-left: auto;
+        background: #721c24;
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+      }
     `
   ],
 })
@@ -293,6 +501,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private summaryService = inject(SummaryService);
   private messagingService = inject(MessagingService);
   private settingsService = inject(SettingsService);
+  private classificationService = inject(ClassificationService);
   public historyService = inject(HistoryService);
   public themeService = inject(ThemeService);
 
@@ -305,6 +514,15 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // Store message listener for cleanup
   private messageListener: ((message: unknown) => void) | null = null;
+
+  // Classification state
+  classificationState = signal<ClassificationState>({ state: 'idle' });
+  classificationResult = signal<ClassificationResult | undefined>(undefined);
+  classificationProgress = signal<number>(0);
+  mlSettings = signal<MLSettings | undefined>(undefined);
+
+  // Private variables for cleanup
+  private classificationSubscription: { unsubscribe: () => void } | null = null;
 
   // Copy state for current summary
   copying = signal<boolean>(false);
@@ -343,6 +561,17 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!currentUrl) return false;
     const items = this.historyItems();
     return items.some(item => item.articleUrl === currentUrl);
+  });
+
+  // Classification computed properties
+  isMLAvailable = computed<boolean>(() => {
+    const mlSettings = this.mlSettings();
+    return mlSettings?.mlEnabled === true;
+  });
+
+  canClassify = computed<boolean>(() => {
+    const state = this.classificationState();
+    return this.isMLAvailable() && state.state === 'idle';
   });
 
   constructor() {
@@ -387,6 +616,12 @@ export class AppComponent implements OnInit, OnDestroy {
         console.log('Summary service entered loading state:', state.loadingMessage);
       }
     });
+
+    // Load ML settings on startup
+    effect(() => {
+      this.loadMLSettings();
+      this.checkMLAvailability();
+    });
   }
 
   ngOnInit(): void {
@@ -424,6 +659,9 @@ export class AppComponent implements OnInit, OnDestroy {
     } else {
       console.log('No message listener to remove');
     }
+    
+    // Clean up classification progress listener
+    this.cleanupClassificationProgressListener();
   }
 
   /**
@@ -694,4 +932,143 @@ export class AppComponent implements OnInit, OnDestroy {
       console.log('Cannot open options page: not in browser extension context');
     }
   }
+
+  // ============================================================================
+  // ML Classification Methods
+  // ============================================================================
+
+  /**
+   * Load ML settings
+   */
+  loadMLSettings(): void {
+    const mlSettings = this.settingsService.getMLSettings();
+    this.mlSettings.set(mlSettings);
+    console.log('Sidebar: ML settings loaded:', mlSettings);
+  }
+
+  /**
+   * Check ML availability
+   */
+  checkMLAvailability(): void {
+    console.log('Sidebar: Checking ML availability...');
+    
+    this.classificationService.checkMLAvailability().subscribe({
+      next: (result) => {
+        console.log('Sidebar: ML availability result:', result);
+        
+        if (result.available) {
+          this.classificationState.set({ state: 'idle' });
+        } else if (!result.apiAvailable) {
+          this.classificationState.set({ state: 'not_available' });
+        } else if (!result.permissionGranted) {
+          this.classificationState.set({ state: 'permission_required' });
+        } else {
+          this.classificationState.set({ state: 'idle' });
+        }
+      },
+      error: (error) => {
+        console.error('Sidebar: Error checking ML availability:', error);
+        this.classificationState.set({ state: 'not_available', error: 'API not available' });
+      }
+    });
+  }
+
+  /**
+   * Classify the current article
+   */
+  classifyArticle(): void {
+    console.log('Sidebar: Classifying article...');
+    
+    const currentSummary = this.currentSummary();
+    if (!currentSummary?.summary) {
+      console.log('Sidebar: No article content to classify');
+      this.classificationState.set({ state: 'error', error: 'No article content available' });
+      return;
+    }
+
+    this.classificationState.set({ state: 'loading' });
+    this.classificationResult.set(undefined);
+
+    // Use the article text for classification
+    const articleText = currentSummary.summary;
+    
+    // Set up progress listener
+    this.setupClassificationProgressListener();
+
+    this.classificationService.classifyText(articleText).subscribe({
+      next: (result) => {
+        console.log('Sidebar: Classification result:', result);
+        
+        this.classificationState.set({
+          state: result.ok ? 'success' : 'error',
+          result,
+          error: result.ok ? undefined : result.error,
+        });
+        
+        if (result.ok) {
+          this.classificationResult.set(result);
+        } else {
+          this.classificationResult.set(undefined);
+        }
+
+        // Clean up progress listener
+        this.cleanupClassificationProgressListener();
+      },
+      error: (error) => {
+        console.error('Sidebar: Classification error:', error);
+        this.classificationState.set({ 
+          state: 'error', 
+          error: error instanceof Error ? error.message : 'Classification failed' 
+        });
+        this.classificationResult.set(undefined);
+        this.cleanupClassificationProgressListener();
+      }
+    });
+  }
+
+  /**
+   * Set up classification progress listener
+   */
+  setupClassificationProgressListener(): void {
+    this.cleanupClassificationProgressListener();
+    
+    this.classificationSubscription = this.classificationService.onModelDownloadProgress().subscribe({
+      next: (progress) => {
+        console.log('Sidebar: Classification progress:', progress);
+        this.classificationProgress.set(progress.progress);
+        
+        if (progress.status === 'complete') {
+          // Progress is complete, don't reset yet as classification might still be running
+          console.log('Sidebar: Model download complete');
+        }
+      },
+      error: (error) => {
+        console.error('Sidebar: Progress listener error:', error);
+      }
+    });
+  }
+
+  /**
+   * Clean up classification progress listener
+   */
+  cleanupClassificationProgressListener(): void {
+    if (this.classificationSubscription) {
+      this.classificationSubscription.unsubscribe();
+      this.classificationSubscription = null;
+    }
+    this.classificationProgress.set(0);
+  }
+
+  /**
+   * Clear classification result
+   */
+  clearClassification(): void {
+    this.classificationState.set({ state: 'idle' });
+    this.classificationResult.set(undefined);
+    this.classificationProgress.set(0);
+  }
+
+  /**
+   * Clean up on destroy
+   */
 }

@@ -25,6 +25,14 @@ export interface ExtensionSettings {
   cacheEnabled: boolean;
   /** Cache TTL in days */
   cacheTTL: number;
+  
+  // ML Classification Settings
+  /** Enable/disable ML classification (default: false) */
+  mlEnabled?: boolean;
+  /** Model hub to use for ML (default: 'mozilla') */
+  mlModelHub?: 'mozilla' | 'huggingface';
+  /** Specific model ID for text-classification */
+  mlModelId?: string;
 }
 
 export interface SettingsState {
@@ -50,6 +58,10 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   temperature: 0.7,
   cacheEnabled: true,
   cacheTTL: 7,
+  // ML Classification Settings (disabled by default)
+  mlEnabled: false,
+  mlModelHub: 'mozilla',
+  mlModelId: 'distilbert-base-uncased-finetuned-sst-2-english',
 };
 
 /**

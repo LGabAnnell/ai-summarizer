@@ -290,4 +290,93 @@ export class SettingsService {
   resetToDefaults(): Observable<ExtensionSettings> {
     return this.saveSettings(DEFAULT_SETTINGS);
   }
+
+  // ============================================================================
+  // ML Classification Settings Methods
+  // ============================================================================
+
+  /**
+   * Get ML-specific settings
+   */
+  getMLSettings() {
+    const settings = this._settings();
+    return {
+      mlEnabled: settings.mlEnabled,
+      mlModelHub: settings.mlModelHub,
+      mlModelId: settings.mlModelId,
+    };
+  }
+
+  /**
+   * Check if ML is enabled
+   */
+  isMLEnabled(): boolean {
+    return this._settings().mlEnabled === true;
+  }
+
+  /**
+   * Enable ML classification
+   */
+  enableML(): Observable<ExtensionSettings> {
+    return this.saveSettings({ mlEnabled: true });
+  }
+
+  /**
+   * Disable ML classification
+   */
+  disableML(): Observable<ExtensionSettings> {
+    return this.saveSettings({ mlEnabled: false });
+  }
+
+  /**
+   * Set ML model hub
+   */
+  setMLModelHub(hub: 'mozilla' | 'huggingface'): Observable<ExtensionSettings> {
+    return this.saveSettings({ mlModelHub: hub });
+  }
+
+  /**
+   * Set ML model ID
+   */
+  setMLModelId(modelId: string): Observable<ExtensionSettings> {
+    return this.saveSettings({ mlModelId: modelId });
+  }
+
+  /**
+   * Get available model hubs for ML
+   */
+  getMLModelHubs(): ('mozilla' | 'huggingface')[] {
+    return ['mozilla', 'huggingface'];
+  }
+
+  /**
+   * Get default ML model ID for a hub
+   */
+  getDefaultMLModelId(hub: 'mozilla' | 'huggingface'): string {
+    const models = {
+      mozilla: 'distilbert-base-uncased-finetuned-sst-2-english',
+      huggingface: 'distilbert-base-uncased-finetuned-sst-2-english',
+    };
+    return models[hub] || models.mozilla;
+  }
+
+  /**
+   * Validate ML settings
+   */
+  validateMLSettings(settings: Partial<ExtensionSettings>): { valid: boolean; errors: Record<string, string> } {
+    const errors: Record<string, string> = {};
+    
+    if (settings.mlModelHub && !['mozilla', 'huggingface'].includes(settings.mlModelHub)) {
+      errors['mlModelHub'] = 'Invalid model hub. Must be "mozilla" or "huggingface"';
+    }
+
+    if (settings.mlModelId && settings.mlModelId.trim() === '') {
+      errors['mlModelId'] = 'Model ID cannot be empty';
+    }
+
+    return {
+      valid: Object.keys(errors).length === 0,
+      errors,
+    };
+  }
 }

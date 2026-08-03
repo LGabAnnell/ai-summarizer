@@ -12,4 +12,6 @@ export * from './lib/services/model.service';
 export * from './lib/services/history.service';
 export * from './lib/services/theme.service';
 export * from './lib/pipes/markdown.pipe';
+export * from './lib/models/classification.model';
+export * from './lib/services/classification.service';
 

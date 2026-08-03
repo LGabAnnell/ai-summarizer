@@ -1,7 +1,8 @@
-import {Component, signal, OnInit, computed, inject, HostListener} from '@angular/core';
+import {Component, signal, OnInit, OnDestroy, computed, inject, HostListener} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators} from '@angular/forms';
-import {SettingsService, ExtensionSettings, ProviderType} from '@shared/public-api';
+import * as browser from 'webextension-polyfill';
+import {SettingsService, ExtensionSettings, ProviderType, ClassificationService, ClassificationResult, ModelDownloadProgress} from '@shared/public-api';
 
 @Component({
   selector: 'options-root',
@@ -371,6 +372,206 @@ import {SettingsService, ExtensionSettings, ProviderType} from '@shared/public-a
             </div>
           </div>
 
+          <!-- Local AI Classification Section -->
+          <div class="section">
+            <div class="section-header">
+              <div class="section-title">
+                <span>🤖</span>
+                Local AI Classification
+              </div>
+            </div>
+            <div class="section-description">
+              Use Firefox's built-in AI runtime for text classification (sentiment analysis, content categorization)
+              <span class="ml-requirement-badge">Requires Firefox Nightly or Beta with extensions.ml.enabled=true</span>
+            </div>
+
+            <div class="form-group">
+              <div class="form-switch">
+                <label class="switch">
+                  <input
+                          type="checkbox"
+                          [checked]="mlEnabled()"
+                          (change)="toggleMLEnabled($event)"
+                          [disabled]="isLoading()">
+                  <span class="switch"></span>
+                </label>
+                <span class="switch-label">Enable Local AI Classification</span>
+              </div>
+              <div class="form-description">
+                Enable local text classification using Firefox's ML runtime. No external API calls required.
+              </div>
+            </div>
+
+            @if (mlEnabled()) {
+              <div class="ml-settings-subgroup">
+                <!-- Permission Status -->
+                <div class="form-group">
+                  <div class="permission-status">
+                    @if (mlPermissionStatus() === 'granted') {
+                      <span class="status-badge status-connected">
+                        <span class="status-dot"></span>
+                        ML Permission Granted
+                      </span>
+                    } @else if (mlPermissionStatus() === 'not_granted') {
+                      <span class="status-badge status-disconnected">
+                        <span class="status-dot"></span>
+                        ML Permission Required
+                      </span>
+                    } @else {
+                      <span class="status-badge status-unknown">
+                        <span class="status-dot"></span>
+                        Checking Permission...
+                      </span>
+                    }
+                  </div>
+                  <div class="form-description">
+                    @if (mlPermissionStatus() === 'not_granted') {
+                      Click the button below to grant ML permission (requires user gesture)
+                    } @else {
+                      ML permission is granted. You can classify text locally.
+                    }
+                  </div>
+                </div>
+
+                <!-- Permission Request Button -->
+                @if (mlPermissionStatus() !== 'granted') {
+                  <div class="form-group">
+                    <button
+                            type="button"
+                            class="btn btn--primary"
+                            (click)="requestMLPermission()"
+                            [disabled]="isRequestingPermission()">
+                      @if (isRequestingPermission()) {
+                        <span class="spinner"></span>
+                        Requesting Permission...
+                      } @else {
+                        Grant ML Permission
+                      }
+                    </button>
+                    <div class="form-description">
+                      This will request permission to use Firefox's built-in AI runtime for local classification.
+                    </div>
+                    @if (permissionRequestError()) {
+                      <div class="form-error">{{ permissionRequestError() }}</div>
+                    }
+                  </div>
+                }
+
+                <!-- Model Hub Selection -->
+                <div class="form-group">
+                  <label class="form-label" for="mlModelHub">Model Hub</label>
+                  <select
+                          id="mlModelHub"
+                          [ngModel]="mlModelHub()"
+                          (ngModelChange)="setMLModelHub($event)"
+                          class="form-select"
+                          [disabled]="isLoading()">
+                    @for (hub of mlModelHubs(); track hub) {
+                      <option [value]="hub">{{ hub === 'mozilla' ? 'Mozilla' : 'Hugging Face' }}</option>
+                    }
+                  </select>
+                  <div class="form-description">
+                    Select the model hub for text classification models
+                  </div>
+                </div>
+
+                <!-- Model ID -->
+                <div class="form-group">
+                  <label class="form-label" for="mlModelId">Model ID</label>
+                  <input
+                          id="mlModelId"
+                          type="text"
+                          [ngModel]="mlModelId()"
+                          (ngModelChange)="setMLModelId($event)"
+                          class="form-input"
+                          placeholder="distilbert-base-uncased-finetuned-sst-2-english"
+                          [disabled]="isLoading()">
+                  <div class="form-description">
+                    Specific text-classification model ID from the selected hub
+                  </div>
+                </div>
+
+                <!-- Test Classification Button -->
+                <div class="form-group">
+                  <button
+                          type="button"
+                          class="btn btn--secondary"
+                          (click)="testClassification()"
+                          [disabled]="isTestingClassification() || mlPermissionStatus() !== 'granted'">
+                    @if (isTestingClassification()) {
+                      <span class="spinner"></span>
+                      Testing Classification...
+                    } @else {
+                      Test Classification
+                    }
+                  </button>
+                  <div class="form-description">
+                    Test the classification with a sample text to verify it's working
+                  </div>
+                </div>
+
+                <!-- Classification Test Result -->
+                @if (classificationTestResult()) {
+                  <div class="form-group">
+                    <div class="classification-result">
+                      @if (classificationTestResult()?.ok) {
+                        <div class="result-success">
+                          <strong>Classification Result:</strong>
+                          <div class="result-label">{{ classificationTestResult()?.label || 'Unknown' }}</div>
+                          <div class="result-score">
+                            Confidence: {{ (classificationTestResult()?.score || 0) | number:'1.0-2' }}%
+                          </div>
+                          @if (classificationTestResult()?.inferenceTime) {
+                            <div class="result-time">
+                              Time: {{ classificationTestResult()?.inferenceTime }}ms
+                            </div>
+                          }
+                        </div>
+                      } @else {
+                        <div class="result-error">
+                          <strong>Classification Error:</strong>
+                          <div>{{ classificationTestResult()?.error || 'Unknown error' }}</div>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <!-- Model Download Progress -->
+                @if (mlModelDownloadProgress() > 0 && mlModelDownloadProgress() < 100) {
+                  <div class="form-group">
+                    <div class="progress-container">
+                      <div class="progress-bar">
+                        <div class="progress-fill" [style.width.%]="mlModelDownloadProgress()"></div>
+                      </div>
+                      <div class="progress-text">
+                        Downloading ML model: {{ mlModelDownloadProgress() }}%
+                        @if (mlDownloadStatus()) {
+                          <span>({{ mlDownloadStatus() }})</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+
+                <!-- Clear ML Cache Button -->
+                <div class="form-group">
+                  <button
+                          type="button"
+                          class="btn btn--secondary"
+                          (click)="clearMLCache()"
+                          [disabled]="isLoading()">
+                    Clear ML Model Cache
+                  </button>
+                  <div class="form-description">
+                    Remove downloaded ML models and free up storage space
+                  </div>
+                </div>
+              </div>
+            }
+
+          </div>
+
         </div>
       </form>
 
@@ -473,11 +674,133 @@ import {SettingsService, ExtensionSettings, ProviderType} from '@shared/public-a
     .save-bar--compact .save-bar-buttons .btn:not(:first-child) {
       display: none;
     }
+
+    /* ML Classification Styles */
+    .ml-requirement-badge {
+      display: inline-block;
+      background: var(--bg-secondary, #e8e8e8);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      margin-left: 8px;
+      color: var(--text-secondary, #666);
+    }
+
+    .ml-settings-subgroup {
+      margin-left: 20px;
+      border-left: 2px solid var(--border-color, #e0e0e0);
+      padding-left: 20px;
+      margin-top: 16px;
+    }
+
+    .permission-status {
+      margin-bottom: 8px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .status-badge.status-connected {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-badge.status-disconnected {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .status-badge.status-unknown {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .status-dot.status-connected {
+      background: #155724;
+    }
+
+    .status-dot.status-disconnected {
+      background: #721c24;
+    }
+
+    .status-dot.status-unknown {
+      background: #856404;
+    }
+
+    .classification-result {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      background: var(--bg-secondary, #f8f9fa);
+      border: 1px solid var(--border-color, #e0e0e0);
+    }
+
+    .result-success {
+      color: #155724;
+    }
+
+    .result-error {
+      color: #721c24;
+    }
+
+    .result-label {
+      font-size: 18px;
+      font-weight: bold;
+      margin: 8px 0;
+    }
+
+    .result-score {
+      font-size: 14px;
+      margin: 4px 0;
+    }
+
+    .result-time {
+      font-size: 12px;
+      color: var(--text-muted, #6c757d);
+      margin: 4px 0;
+    }
+
+    .progress-container {
+      margin-top: 12px;
+    }
+
+    .progress-bar {
+      height: 20px;
+      background: var(--border-color, #e0e0e0);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #28a745;
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      font-size: 14px;
+      color: var(--text-muted, #6c757d);
+    }
   `],
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private settingsService = inject(SettingsService);
+  private classificationService = inject(ClassificationService);
 
   // State
   settings = signal<Partial<ExtensionSettings>>(
@@ -495,6 +818,25 @@ export class AppComponent implements OnInit {
   modelsError = signal<string | undefined>(undefined);
   isScrolled = signal<boolean>(false);
   settingsForm!: FormGroup;
+
+  // ML State
+  mlEnabled = signal<boolean>(false);
+  mlModelHub = signal<'mozilla' | 'huggingface'>('mozilla');
+  mlModelId = signal<string>('');
+  mlPermissionStatus = signal<'granted' | 'not_granted' | 'checking'>('checking');
+  isRequestingPermission = signal<boolean>(false);
+  permissionRequestError = signal<string | undefined>(undefined);
+  isTestingClassification = signal<boolean>(false);
+  classificationTestResult = signal<ClassificationResult | undefined>(undefined);
+  mlModelDownloadProgress = signal<number>(0);
+  mlDownloadStatus = signal<string | undefined>(undefined);
+  mlAvailabilityChecked = signal<boolean>(false);
+
+  // Computed properties for ML
+  mlModelHubs = computed(() => this.settingsService.getMLModelHubs());
+
+  // Private variables for cleanup
+  private progressSubscription: { unsubscribe: () => void } | null = null;
 
   providerTypes = computed(() => this.settingsService.getProviderTypes());
   availableModels = computed(() => {
@@ -532,6 +874,9 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadSettings();
+    this.loadMLSettings();
+    this.checkMLPermissionStatus();
+    this.setupMLProgressListener();
   }
 
   @HostListener('window:scroll')
@@ -772,5 +1117,247 @@ export class AppComponent implements OnInit {
   openPrivacyPolicy(): void {
     // This will be implemented later
     alert('Privacy Policy will be shown here');
+  }
+
+  // ============================================================================
+  // ML Classification Methods
+  // ============================================================================
+
+  /**
+   * Load ML-specific settings
+   */
+  loadMLSettings(): void {
+    const mlSettings = this.settingsService.getMLSettings();
+    this.mlEnabled.set(mlSettings.mlEnabled === true);
+    this.mlModelHub.set(mlSettings.mlModelHub as 'mozilla' | 'huggingface' || 'mozilla');
+    this.mlModelId.set(mlSettings.mlModelId || 'distilbert-base-uncased-finetuned-sst-2-english');
+  }
+
+  /**
+   * Check ML permission status on load
+   */
+  checkMLPermissionStatus(): void {
+    this.mlPermissionStatus.set('checking');
+    this.classificationService.getMLPermissionStatus().subscribe({
+      next: (granted) => {
+        this.mlPermissionStatus.set(granted ? 'granted' : 'not_granted');
+      },
+      error: () => {
+        this.mlPermissionStatus.set('not_granted');
+      }
+    });
+  }
+
+  /**
+   * Set up listener for ML model download progress
+   */
+  setupMLProgressListener(): void {
+    if (this.progressSubscription) {
+      this.progressSubscription.unsubscribe();
+    }
+
+    this.progressSubscription = this.classificationService.onModelDownloadProgress().subscribe({
+      next: (progress: ModelDownloadProgress) => {
+        console.log('Options: ML download progress:', progress);
+        this.mlModelDownloadProgress.set(progress.progress);
+        this.mlDownloadStatus.set(progress.status === 'downloading' ? 'Downloading...' : 
+                               progress.status === 'extracting' ? 'Extracting...' :
+                               progress.status === 'complete' ? 'Complete!' :
+                               'Error');
+      },
+      error: (error) => {
+        console.error('Options: Error in ML progress listener:', error);
+        this.mlDownloadStatus.set('Error: ' + (error.message || 'Unknown error'));
+      }
+    });
+  }
+
+  /**
+   * Toggle ML enabled/disabled
+   */
+  toggleMLEnabled(event: Event): void {
+    const enabled = (event.target as HTMLInputElement).checked;
+    this.mlEnabled.set(enabled);
+    
+    if (enabled) {
+      this.settingsService.enableML().subscribe({
+        next: () => {
+          this.successMessage.set('Local AI Classification enabled!');
+          setTimeout(() => this.clearSuccess(), 3000);
+        },
+        error: (error) => {
+          this.error.set('Failed to enable ML: ' + (error.message || 'Unknown error'));
+          this.mlEnabled.set(false);
+        }
+      });
+    } else {
+      this.settingsService.disableML().subscribe({
+        next: () => {
+          this.successMessage.set('Local AI Classification disabled!');
+          setTimeout(() => this.clearSuccess(), 3000);
+        },
+        error: (error) => {
+          this.error.set('Failed to disable ML: ' + (error.message || 'Unknown error'));
+          this.mlEnabled.set(true);
+        }
+      });
+    }
+  }
+
+  /**
+   * Request ML permission from user - called directly from user gesture (button click)
+   * This calls browser.permissions.request() directly in the options page context
+   */
+  requestMLPermission(): void {
+    console.log('OptionsApp.requestMLPermission: User clicked "Grant ML Permission" button');
+    this.isRequestingPermission.set(true);
+    this.permissionRequestError.set(undefined);
+
+    console.log('OptionsApp.requestMLPermission: Checking if browser.permissions API is available');
+    
+    // Check if browser.permissions is available
+    if (typeof browser === 'undefined' || typeof browser.permissions === 'undefined') {
+      console.error('OptionsApp.requestMLPermission: browser.permissions API not available');
+      this.isRequestingPermission.set(false);
+      this.mlPermissionStatus.set('not_granted');
+      this.permissionRequestError.set('browser.permissions API not available');
+      return;
+    }
+
+    console.log('OptionsApp.requestMLPermission: Calling browser.permissions.request() directly from user gesture');
+    
+    // Call browser.permissions.request() directly from the user gesture context
+    browser.permissions.request({ permissions: ['trialML'] })
+      .then((granted: boolean) => {
+        console.log('OptionsApp.requestMLPermission: Permission result:', granted);
+        this.isRequestingPermission.set(false);
+        
+        if (granted) {
+          console.log('OptionsApp.requestMLPermission: Permission GRANTED');
+          this.mlPermissionStatus.set('granted');
+          this.successMessage.set('ML permission granted! You can now use local classification.');
+          
+          // Notify background script that permission was granted
+          console.log('OptionsApp.requestMLPermission: Notifying background script');
+          this.classificationService.requestMLPermissionFromUserGesture().subscribe({
+            next: () => {
+              console.log('OptionsApp.requestMLPermission: Background script notified successfully');
+              setTimeout(() => this.clearSuccess(), 3000);
+            },
+            error: (error) => {
+              console.error('OptionsApp.requestMLPermission: Failed to notify background script:', error);
+              // Permission was granted even if we couldn't notify background
+              setTimeout(() => this.clearSuccess(), 3000);
+            }
+          });
+        } else {
+          console.log('OptionsApp.requestMLPermission: Permission DENIED');
+          this.mlPermissionStatus.set('not_granted');
+          this.permissionRequestError.set('Permission request was denied by user');
+        }
+      })
+      .catch((error: unknown) => {
+        console.error('OptionsApp.requestMLPermission: Error requesting permission:', error);
+        this.isRequestingPermission.set(false);
+        this.mlPermissionStatus.set('not_granted');
+        const errorMessage = error instanceof Error ? error.message : 'Permission request failed';
+        this.permissionRequestError.set(errorMessage);
+      });
+  }
+
+  /**
+   * Set ML model hub
+   */
+  setMLModelHub(hub: 'mozilla' | 'huggingface'): void {
+    this.mlModelHub.set(hub);
+    this.settingsService.setMLModelHub(hub).subscribe({
+      next: () => {
+        console.log('ML model hub saved:', hub);
+      },
+      error: (error) => {
+        console.error('Failed to save ML model hub:', error);
+        this.error.set('Failed to save model hub: ' + (error.message || 'Unknown error'));
+      }
+    });
+  }
+
+  /**
+   * Set ML model ID
+   */
+  setMLModelId(modelId: string): void {
+    this.mlModelId.set(modelId);
+    this.settingsService.setMLModelId(modelId).subscribe({
+      next: () => {
+        console.log('ML model ID saved:', modelId);
+      },
+      error: (error) => {
+        console.error('Failed to save ML model ID:', error);
+        this.error.set('Failed to save model ID: ' + (error.message || 'Unknown error'));
+      }
+    });
+  }
+
+  /**
+   * Test classification with sample text
+   */
+  testClassification(): void {
+    this.isTestingClassification.set(true);
+    this.classificationTestResult.set(undefined);
+
+    const sampleText = `Local AI classification is an amazing feature that allows you to run machine learning models directly in Firefox without sending your data to external services. This provides better privacy and works offline once models are downloaded.`;
+
+    this.classificationService.classifyText(sampleText).subscribe({
+      next: (result) => {
+        this.isTestingClassification.set(false);
+        this.classificationTestResult.set(result);
+        
+        if (result.ok) {
+          this.successMessage.set('Classification test successful!');
+        } else {
+          this.error.set('Classification test failed: ' + (result.error || 'Unknown error'));
+        }
+      },
+      error: (error) => {
+        this.isTestingClassification.set(false);
+        this.error.set('Classification test failed: ' + (error.message || 'Unknown error'));
+      }
+    });
+  }
+
+  /**
+   * Clear ML model cache
+   */
+  clearMLCache(): void {
+    if (confirm('Are you sure you want to clear all ML model cache? This will remove downloaded models and you will need to re-download them for classification.')) {
+      this.isLoading.set(true);
+      
+      this.classificationService.clearMLCache().subscribe({
+        next: (result) => {
+          this.isLoading.set(false);
+          if (result.success) {
+            this.mlModelDownloadProgress.set(0);
+            this.mlDownloadStatus.set(undefined);
+            this.successMessage.set('ML model cache cleared successfully!');
+          } else {
+            this.error.set('Failed to clear ML cache: ' + (result.error || 'Unknown error'));
+          }
+          setTimeout(() => this.clearSuccess(), 3000);
+        },
+        error: (error) => {
+          this.isLoading.set(false);
+          this.error.set('Failed to clear ML cache: ' + (error.message || 'Unknown error'));
+        }
+      });
+    }
+  }
+
+  /**
+   * Clean up on destroy
+   */
+  ngOnDestroy(): void {
+    if (this.progressSubscription) {
+      this.progressSubscription.unsubscribe();
+      this.progressSubscription = null;
+    }
   }
 }
