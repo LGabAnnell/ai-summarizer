@@ -13,7 +13,15 @@ import {
   ClassificationService,
   ClassificationResult,
   ClassificationState,
-  MLSettings
+  MLSettings,
+  HeaderComponent,
+  EmptyStateComponent,
+  LoadingStateComponent,
+  ErrorStateComponent,
+  SummaryHeaderComponent,
+  SummaryMetaComponent,
+  FooterComponent,
+  SummarizeButtonComponent
 } from '@shared/public-api';
 import browser from "webextension-polyfill";
 
@@ -25,30 +33,10 @@ type ViewMode = 'current' | 'history' | 'history-detail';
 @Component({
   selector: 'sidebar-root',
   standalone: true,
-  imports: [CommonModule, MarkdownPipe],
+  imports: [CommonModule, MarkdownPipe, HeaderComponent, EmptyStateComponent, LoadingStateComponent, ErrorStateComponent, SummaryHeaderComponent, SummaryMetaComponent, FooterComponent, SummarizeButtonComponent],
   template: `
     <div class="container" [class.dark-theme]="themeService.isDarkTheme()">
-      <!-- Header -->
-      <div class="header">
-        <div class="logo">
-          <div class="icon">AS</div>
-          <span>Article Summarizer</span>
-        </div>
-        <div class="header-controls">
-          <button
-                  class="theme-toggle"
-                  [class.theme-toggle--active]="themeService.getTheme() !== 'light'"
-                  (click)="toggleTheme()"
-                  [attr.aria-label]="themeService.isDarkTheme() ? 'Switch to light mode' : 'Switch to dark mode'"
-                  title="Toggle theme">
-            @if (themeService.isDarkTheme()) {
-              <span>☀️</span>
-            } @else {
-              <span>🌙</span>
-            }
-          </button>
-        </div>
-      </div>
+      <shared-header></shared-header>
 
       <!-- Tabs -->
       <div class="tabs">
@@ -74,63 +62,47 @@ type ViewMode = 'current' | 'history' | 'history-detail';
         <!-- Current Summary View -->
         @if (currentView() === 'current') {
           @if (summaryState().state === 'idle') {
-            <div class="empty-state">
-              <div class="empty-icon">📰</div>
-              <div class="empty-title">Ready to summarize</div>
-              <div class="empty-message">Click the button below to summarize the current article</div>
-            </div>
+            <shared-empty-state
+              icon="📰"
+              title="Ready to summarize"
+              message="Click the button below to summarize the current article">
+            </shared-empty-state>
           }
 
           @if (summaryState().state === 'loading') {
-            <div class="loading-state">
-              <div class="loading-spinner"></div>
-              <div class="loading-text">{{ summaryState().loadingMessage || 'Processing...' }}</div>
-            </div>
+            <shared-loading-state [message]="summaryState().loadingMessage || 'Processing...'"></shared-loading-state>
           }
 
           @if (summaryState().state === 'error') {
-            <div class="error-state">
-              <div class="error-icon">⚠️</div>
-              <div class="error-title">Error</div>
-              <div class="error-message">{{ summaryState().error || 'Failed to summarize article' }}</div>
-              <button class="retry-btn" (click)="retry()">Retry</button>
-            </div>
+            <shared-error-state
+              [error]="summaryState().error || 'Failed to summarize article'"
+              [showRetry]="true"
+              [retryText]="'Retry'"
+              (retry)="retry()">
+            </shared-error-state>
           }
 
           @if (summaryState().state === 'success' && currentSummary()) {
-              <div class="summary-header">
-                <div class="summary-title">{{ currentSummary()?.title || 'Article Summary' }}</div>
-                <div class="summary-actions">
-                  <button
-                          class="copy-btn"
-                          [class.copy-btn--success]="copySuccess()"
-                          (click)="copyToClipboard()"
-                          [disabled]="copying()">
-                    @if (copying()) {
-                      <span class="spinner"></span>
-                      Copying...
-                    } @else if (copySuccess()) {
-                      ✓ Copied!
-                    } @else {
-                      Copy
-                    }
-                  </button>
-                  <button class="expand-btn" (click)="addToHistory()" title="Save to history"
-                          [disabled]="isArticleInHistory()">
-                    💾 Save
-                  </button>
-                </div>
-              </div>
+            <div class="summary-view">
+              <shared-summary-header
+                [title]="currentSummary()?.title || 'Article Summary'"
+                [showActions]="true"
+                [showCopyButton]="true"
+                [copying]="copying()"
+                [copied]="copySuccess()"
+                [copyDisabled]="false"
+                (copyClick)="copyToClipboard()">
+                <button class="expand-btn" slot="additional-actions" (click)="addToHistory()" title="Save to history" [disabled]="isArticleInHistory()">
+                  💾 Save
+                </button>
+              </shared-summary-header>
               <div class="summary-text markdown-content" [innerHTML]="currentSummary()?.summary | markdown"></div>
-              <div class="summary-meta">
-                <span>{{ characterCount() }} characters</span>
-                @if (isCached()) {
-                  <span class="cached-badge">Cached</span>
-                }
-                @if (currentSummary()?.provider) {
-                  <span class="text-muted">{{ currentSummary()?.provider }} / {{ currentSummary()?.model }}</span>
-                }
-              </div>
+              <shared-summary-meta
+                [characterCount]="characterCount()"
+                [cached]="isCached()"
+                [provider]="currentSummary()?.provider || ''"
+                [model]="currentSummary()?.model || ''">
+              </shared-summary-meta>
               <!-- NEW: Automatic classification display -->
               @if (classificationFromSummary()) {
                 <div class="summary-classification">
@@ -140,17 +112,18 @@ type ViewMode = 'current' | 'history' | 'history-detail';
                   </div>
                 </div>
               }
+            </div>
           }
         }
 
         <!-- History List View -->
         @if (currentView() === 'history') {
           @if (historyItems().length === 0) {
-            <div class="empty-history">
-              <div class="empty-icon">📜</div>
-              <div class="empty-title">No history yet</div>
-              <div class="empty-message">Summarize articles to save them to your history</div>
-            </div>
+            <shared-empty-state
+              icon="📜"
+              title="No history yet"
+              message="Summarize articles to save them to your history">
+            </shared-empty-state>
           } @else {
             <div class="history-list">
               @for (item of historyItems(); track item.id) {
@@ -188,29 +161,25 @@ type ViewMode = 'current' | 'history' | 'history-detail';
           <button class="back-btn" (click)="setView('history')">
             ← Back to History
           </button>
-          <div class="summary-header">
-            <div class="summary-title">{{ selectedHistoryItem()?.title }}</div>
-            <div class="summary-actions">
-              <button
-                      class="copy-btn"
-                      [class.copy-btn--success]="detailCopySuccess()"
-                      (click)="copyHistoryToClipboard()"
-                      [disabled]="detailCopying()">
-                @if (detailCopying()) {
-                  <span class="spinner"></span>
-                  Copying...
-                } @else if (detailCopySuccess()) {
-                  ✓ Copied!
-                } @else {
-                  Copy
-                }
-              </button>
-              <button class="delete-btn" (click)="deleteSelectedHistoryItem()" title="Delete">
-                🗑️ Delete
-              </button>
-            </div>
-          </div>
+          <shared-summary-header
+            [title]="selectedHistoryItem()?.title || 'History Item'"
+            [showActions]="true"
+            [showCopyButton]="true"
+            [copying]="detailCopying()"
+            [copied]="detailCopySuccess()"
+            [copyDisabled]="false"
+            (copyClick)="copyHistoryToClipboard()">
+            <button class="delete-btn" slot="additional-actions" (click)="deleteSelectedHistoryItem()" title="Delete">
+              🗑️ Delete
+            </button>
+          </shared-summary-header>
           <div class="summary-text markdown-content" [innerHTML]="selectedHistoryItem()?.summary | markdown"></div>
+          <shared-summary-meta
+            [characterCount]="selectedHistoryItem()?.summary?.length || 0"
+            [cached]="selectedHistoryItem()?.cached || false"
+            [provider]="selectedHistoryItem()?.provider || ''"
+            [model]="selectedHistoryItem()?.model || ''">
+          </shared-summary-meta>
           <div class="summary-meta">
             <div class="meta-item">
               <span>📅 {{ formatDate(selectedHistoryItem()!.timestamp) }}</span>
@@ -221,30 +190,19 @@ type ViewMode = 'current' | 'history' | 'history-detail';
                            class="url-link">View Article</a></span>
               </div>
             }
-            @if (selectedHistoryItem()?.cached) {
-              <span class="cached-badge">Cached</span>
-            }
-            @if (selectedHistoryItem()?.provider) {
-              <span class="text-muted">{{ selectedHistoryItem()?.provider }} / {{ selectedHistoryItem()?.model }}</span>
-            }
           </div>
         }
       </div>
 
-      <!-- Footer -->
-      <div class="footer">
-        <div class="footer-left">
-        </div>
-        <div class="footer-right">
-          @if (historyService.getCount() > 0) {
-            <button class="settings-link" (click)="clearAllHistory()"
-                    style="background: none; border: none; cursor: pointer; color: var(--text-muted);">
-              Clear History
-            </button>
-          }
-          <button class="settings-link" (click)="openOptions()" (keyup.enter)="openOptions()" (keyup.space)="openOptions()">Settings</button>
-        </div>
-      </div>
+      <shared-footer
+        [showViewArticle]="false"
+        [articleUrl]="''"
+        [showClearHistory]="historyService.getCount() > 0"
+        [historyCount]="historyService.getCount()"
+        (viewArticle)="viewArticle()"
+        (clearHistory)="clearAllHistory()"
+        (openSettings)="openOptions()">
+      </shared-footer>
 
       <!-- Classification Section -->
       @if (isMLAvailable()) {
@@ -322,20 +280,13 @@ type ViewMode = 'current' | 'history' | 'history-detail';
         </div>
       }
 
-      <!-- Action Button -->
-      <div class="action-button">
-        <button
-                class="btn btn--primary btn--full-width"
-                (click)="summarize()"
-                [disabled]="summaryState().state === 'loading'">
-          @if (summaryState().state === 'loading') {
-            <span class="spinner"></span>
-            Summarizing...
-          } @else {
-            Summarize Current Article
-          }
-        </button>
-      </div>
+      <shared-summarize-button
+        [loading]="summaryState().state === 'loading'"
+        [disabled]="false"
+        [text]="'Summarize Current Article'"
+        [loadingText]="'Summarizing...'"
+        (buttonClick)="summarize()">
+      </shared-summarize-button>
     </div>
   `,
   styles: [
@@ -933,6 +884,14 @@ export class AppComponent implements OnInit, OnDestroy {
     console.log('Clear all history requested');
     await this.historyService.clearAll();
     console.log('All history cleared');
+  }
+
+  /**
+   * View article
+   */
+  viewArticle(): void {
+    // Implementation for viewing article
+    console.log('View article clicked');
   }
 
   /**

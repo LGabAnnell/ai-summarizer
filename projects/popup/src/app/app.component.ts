@@ -3,93 +3,84 @@ import { CommonModule } from '@angular/common';
 import { MarkdownPipe } from '@shared/lib/pipes/markdown.pipe';
 import browser from 'webextension-polyfill';
 import {SummaryResult} from "@shared/lib/models/summary.model";
+import {
+  HeaderComponent,
+  EmptyStateComponent,
+  LoadingStateComponent,
+  ErrorStateComponent,
+  SummaryHeaderComponent,
+  SummaryMetaComponent,
+  FooterComponent,
+  SummarizeButtonComponent
+} from '@shared/public-api';
 
 @Component({
   selector: 'popup-root',
   standalone: true,
-  imports: [CommonModule, MarkdownPipe],
+  imports: [CommonModule, MarkdownPipe, HeaderComponent, EmptyStateComponent, LoadingStateComponent, ErrorStateComponent, SummaryHeaderComponent, SummaryMetaComponent, FooterComponent, SummarizeButtonComponent],
   template: `
     <div class="container">
-      <div class="header">
-        <div class="logo">
-          <div class="icon">AS</div>
-          <span>Article Summarizer</span>
-        </div>
-      </div>
+      <shared-header></shared-header>
       
       <div class="main-content">
         @if (state() === 'idle') {
-          <div class="empty-state">
-            <div class="empty-icon">📰</div>
-            <div class="empty-title">Ready to summarize</div>
-            <div class="empty-message">Click the button below to summarize the current article</div>
-          </div>
+          <shared-empty-state
+            icon="📰"
+            title="Ready to summarize"
+            message="Click the button below to summarize the current article">
+          </shared-empty-state>
         }
         
         @if (state() === 'loading') {
-          <div class="loading-state">
-            <div class="loading-spinner"></div>
-            <div class="loading-text">{{ loadingMessage() }}</div>
-          </div>
+          <shared-loading-state [message]="loadingMessage()"></shared-loading-state>
         }
         
         @if (state() === 'error') {
-          <div class="error-state">
-            <div class="error-icon">⚠️</div>
-            <div class="error-title">Error</div>
-            <div class="error-message">{{ errorMessage() }}</div>
-            <button class="btn btn--primary" (click)="retry()">Retry</button>
-          </div>
+          <shared-error-state 
+            [error]="errorMessage()" 
+            [showRetry]="true" 
+            [retryText]="'Retry'" 
+            (retry)="retry()">
+          </shared-error-state>
         }
         
         @if (state() === 'success' && summary()) {
           <div class="summary-view">
-            <div class="summary-header">
-              <div class="summary-title">{{ title() }}</div>
-              <button class="copy-btn" (click)="copyToClipboard()" [disabled]="copying()">
-                @if (copying()) {
-                  <span class="spinner-dark"></span>
-                  Copying...
-                } @else if (copied()) {
-                  ✓ Copied!
-                } @else {
-                  Copy
-                }
-              </button>
-            </div>
+            <shared-summary-header
+              [title]="title()"
+              [showActions]="true"
+              [showCopyButton]="true"
+              [copying]="copying()"
+              [copied]="copied()"
+              [copyDisabled]="false"
+              (copyClick)="copyToClipboard()">
+            </shared-summary-header>
             <div class="summary-text markdown-content" [innerHTML]="summary() | markdown"></div>
-            <div class="summary-meta">
-              <span>{{ characterCount() }} characters</span>
-              @if (cached()) {
-                <span class="cached-badge">Cached</span>
-              }
-            </div>
+            <shared-summary-meta
+              [characterCount]="characterCount()"
+              [cached]="cached()">
+            </shared-summary-meta>
           </div>
         }
       </div>
       
-      <div class="footer">
-        <div class="footer-left">
-          @if (state() === 'success' && articleUrl()) {
-            <a [href]="articleUrl()" target="_blank" class="settings-link">View article</a>
-          }
-        </div>
-        <div class="footer-right">
-          <button class="settings-link" type="button" (click)="openOptions()">Settings</button>
-        </div>
-      </div>
+      <shared-footer
+        [showViewArticle]="state() === 'success' && !!articleUrl()"
+        [articleUrl]="articleUrl()"
+        [showClearHistory]="false"
+        [historyCount]="0"
+        (viewArticle)="viewArticle()"
+        (clearHistory)="clearHistory()"
+        (openSettings)="openOptions()">
+      </shared-footer>
       
-      <button 
-        class="btn btn--primary btn--full-width"
-        (click)="summarize()"
-        [disabled]="state() === 'loading'">
-        @if (state() === 'loading') {
-          <span class="spinner"></span>
-          Summarizing...
-        } @else {
-          Summarize Article
-        }
-      </button>
+      <shared-summarize-button
+        [loading]="state() === 'loading'"
+        [disabled]="false"
+        [text]="'Summarize Article'"
+        [loadingText]="'Summarizing...'"
+        (buttonClick)="summarize()">
+      </shared-summarize-button>
     </div>
   `,
   styles: [`
@@ -209,6 +200,22 @@ export class AppComponent implements OnInit {
     } finally {
       this.copying.set(false);
     }
+  }
+
+  /**
+   * View article
+   */
+  viewArticle(): void {
+    // Implementation for viewing article
+    console.log('View article clicked');
+  }
+
+  /**
+   * Clear history
+   */
+  clearHistory(): void {
+    // Implementation for clearing history
+    console.log('Clear history clicked');
   }
 
   /**

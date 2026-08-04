@@ -10,8 +10,7 @@ import { SettingsService } from './settings.service';
 import {
   ArticleData,
   SummaryResult,
-  SummaryState,
-  ClassificationResult
+  SummaryState
 } from '../../public-api';
 
 @Injectable({
