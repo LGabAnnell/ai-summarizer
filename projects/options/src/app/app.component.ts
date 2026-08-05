@@ -318,8 +318,8 @@ import {SettingsService, ExtensionSettings, ProviderType, ClassificationService,
                           [checked]="settingsForm.get('cacheEnabled')?.value"
                   >
                   <span class="switch"></span>
+                  <span class="switch-label">Enable Summary Caching</span>
                 </label>
-                <span class="switch-label">Enable Summary Caching</span>
               </div>
               <div class="form-description">
                 Cache summaries to avoid re-processing the same articles
@@ -396,8 +396,8 @@ import {SettingsService, ExtensionSettings, ProviderType, ClassificationService,
                           (change)="toggleMLEnabled($event)"
                           [disabled]="isLoading()">
                   <span class="switch"></span>
+                  <span class="switch-label">Enable Local AI Classification</span>
                 </label>
-                <span class="switch-label">Enable Local AI Classification</span>
               </div>
               <div class="form-description">
                 Enable local text classification using Firefox's ML runtime. No external API calls required.
