@@ -310,9 +310,10 @@ import {SettingsService, ExtensionSettings, ProviderType, ClassificationService,
 
             <div class="form-group">
               <div class="form-switch">
-                <label class="switch">
+                <label class="switch" for="cacheEnabled">
                   <input
                           type="checkbox"
+                          id="cacheEnabled"
                           formControlName="cacheEnabled"
                           [checked]="settingsForm.get('cacheEnabled')?.value"
                   >
@@ -387,9 +388,10 @@ import {SettingsService, ExtensionSettings, ProviderType, ClassificationService,
 
             <div class="form-group">
               <div class="form-switch">
-                <label class="switch">
+                <label class="switch" for="mlEnabled">
                   <input
                           type="checkbox"
+                          id="mlEnabled"
                           [checked]="mlEnabled()"
                           (change)="toggleMLEnabled($event)"
                           [disabled]="isLoading()">
