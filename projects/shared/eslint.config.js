@@ -1,11 +1,10 @@
 #!/usr/bin/env node
-// @ts-check
 const eslint = require('@eslint/js');
 const tseslint = require('typescript-eslint');
 const angular = require('angular-eslint');
 
 module.exports = tseslint.config(
-  { ignores: ['projects/shared/src/**/*spec.ts', 'projects/shared/src/**/*.d.ts'] },
+  { ignores: ['projects/shared/**/*spec.ts', 'projects/shared/**/*.d.ts'] },
   {
     files: ['**/*.ts'],
     extends: [
@@ -13,9 +12,18 @@ module.exports = tseslint.config(
       ...tseslint.configs.recommended,
       ...angular.configs.tsRecommended,
     ],
+    processor: angular.processInlineTemplates,
     rules: {
       '@angular-eslint/component-selector': ['error', { type: 'element', prefix: 'shared', style: 'kebab-case' }],
       '@angular-eslint/directive-selector': ['error', { type: 'attribute', prefix: 'shared', style: 'camelCase' }]
     }
+  },
+  {
+    files: ['**/*.html'],
+    extends: [
+      ...angular.configs.templateRecommended,
+      ...angular.configs.templateAccessibility,
+    ],
+    rules: {}
   }
 );

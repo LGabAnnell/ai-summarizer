@@ -153,7 +153,7 @@ export class SettingsService {
    * Get all provider types
    */
   getProviderTypes(): ProviderType[] {
-    return ['mistral', 'openai', 'anthropic', 'qwen', 'deepseek', 'custom'];
+    return ['mistral', 'openai', 'anthropic', 'qwen', 'deepseek', 'custom', 'firefox-ml'];
   }
 
   /**
@@ -165,15 +165,19 @@ export class SettingsService {
     const mergedSettings = { ...currentSettings, ...settings };
 
     // Validate API key if provider requires it
-    if (mergedSettings.apiKey && mergedSettings.apiKey.trim() === '') {
-      errors['apiKey'] = 'API key is required';
-    }
-
-    // Validate API key format if provided
     const providerConfig = PROVIDER_CONFIGS[mergedSettings.provider];
-    if (mergedSettings.apiKey && providerConfig?.apiKeyPrefix) {
-      if (!mergedSettings.apiKey.startsWith(providerConfig.apiKeyPrefix)) {
-        errors['apiKey'] = `API key should start with ${providerConfig.apiKeyPrefix}`;
+    const providerRequiresApiKey = providerConfig && providerConfig.apiKeyPrefix !== null;
+    
+    if (providerRequiresApiKey) {
+      if (mergedSettings.apiKey && mergedSettings.apiKey.trim() === '') {
+        errors['apiKey'] = 'API key is required';
+      }
+      
+      // Validate API key format if provided
+      if (mergedSettings.apiKey && providerConfig?.apiKeyPrefix) {
+        if (!mergedSettings.apiKey.startsWith(providerConfig.apiKeyPrefix)) {
+          errors['apiKey'] = `API key should start with ${providerConfig.apiKeyPrefix}`;
+        }
       }
     }
 

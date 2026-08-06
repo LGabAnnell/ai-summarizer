@@ -1,6 +1,6 @@
 import {Component, signal, OnInit, OnDestroy, computed, inject, HostListener} from '@angular/core';
 import {CommonModule} from '@angular/common';
-import {FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators} from '@angular/forms';
+import {FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl} from '@angular/forms';
 import * as browser from 'webextension-polyfill';
 import {SettingsService, ExtensionSettings, ProviderType, ClassificationService, ClassificationResult, ModelDownloadProgress, MessagingService} from '@shared/public-api';
 
@@ -144,35 +144,49 @@ import {SettingsService, ExtensionSettings, ProviderType, ClassificationService,
               </div>
             </div>
 
-            <div class="form-group">
-              <label class="form-label" for="apiKey">API Key</label>
-              <div class="password-container">
-                <input
-                        id="apiKey"
-                        type="password"
-                        formControlName="apiKey"
-                        class="form-input"
-                        placeholder="Enter your API key..."
-                >
-                <button
-                        type="button"
-                        class="password-toggle"
-                        (click)="toggleShowApiKey()"
-                        [attr.aria-label]="showApiKey() ? 'Hide API key' : 'Show API key'">
-                  @if (showApiKey()) {
-                    👁️
-                  } @else {
-                    🔒
-                  }
-                </button>
+            @if (isFirefoxMLProvider()) {
+              <div class="form-group">
+                <span class="form-label">Firefox ML Information</span>
+                <div class="firefox-ml-info">
+                  <div class="info-icon">🤖</div>
+                  <div class="info-content">
+                    <p><strong>Firefox ML (Local)</strong> uses Firefox's built-in machine learning runtime for offline summarization.</p>
+                    <p><strong>Requirements:</strong> Firefox Nightly or Beta with <code>browser.ml.enable</code> and <code>extensions.ml.enabled</code> set to <code>true</code> in <code>about:config</code>.</p>
+                    <p><strong>Features:</strong> No API key required, works offline after initial model download, privacy-friendly.</p>
+                  </div>
+                </div>
               </div>
-              <div class="form-description">
-                Your API key will be stored locally and never sent to third parties
+            } @else {
+              <div class="form-group">
+                <label class="form-label" for="apiKey">API Key</label>
+                <div class="password-container">
+                  <input
+                          id="apiKey"
+                          type="password"
+                          formControlName="apiKey"
+                          class="form-input"
+                          placeholder="Enter your API key..."
+                  >
+                  <button
+                          type="button"
+                          class="password-toggle"
+                          (click)="toggleShowApiKey()"
+                          [attr.aria-label]="showApiKey() ? 'Hide API key' : 'Show API key'">
+                    @if (showApiKey()) {
+                      👁️
+                    } @else {
+                      🔒
+                    }
+                  </button>
+                </div>
+                <div class="form-description">
+                  Your API key will be stored locally and never sent to third parties
+                </div>
+                @if (apiKeyError()) {
+                  <div class="form-error">{{ apiKeyError() }}</div>
+                }
               </div>
-              @if (apiKeyError()) {
-                <div class="form-error">{{ apiKeyError() }}</div>
-              }
-            </div>
+            }
 
             @if (settings().provider === 'custom') {
               <div class="form-group">
@@ -466,6 +480,7 @@ import {SettingsService, ExtensionSettings, ProviderType, ClassificationService,
                           id="mlModelHub"
                           [ngModel]="mlModelHub()"
                           (ngModelChange)="setMLModelHub($event)"
+                          [ngModelOptions]="{standalone: true}"
                           class="form-select"
                           [disabled]="isLoading()">
                     @for (hub of mlModelHubs(); track hub) {
@@ -485,6 +500,7 @@ import {SettingsService, ExtensionSettings, ProviderType, ClassificationService,
                           type="text"
                           [ngModel]="mlModelId()"
                           (ngModelChange)="setMLModelId($event)"
+                          [ngModelOptions]="{standalone: true}"
                           class="form-input"
                           placeholder="distilbert-base-uncased-finetuned-sst-2-english"
                           [disabled]="isLoading()">
@@ -797,6 +813,49 @@ import {SettingsService, ExtensionSettings, ProviderType, ClassificationService,
       font-size: 14px;
       color: var(--text-muted, #6c757d);
     }
+
+    /* Firefox ML Info Styles */
+    .firefox-ml-info {
+      display: flex;
+      gap: 16px;
+      padding: 12px;
+      background: var(--bg-secondary, #f8f9fa);
+      border-radius: 8px;
+      border: 1px solid var(--border-color, #e0e0e0);
+      align-items: flex-start;
+    }
+
+    .firefox-ml-info .info-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .firefox-ml-info .info-content {
+      flex: 1;
+    }
+
+    .firefox-ml-info .info-content p {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .firefox-ml-info .info-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .firefox-ml-info .info-content strong {
+      color: var(--text-primary, #333);
+    }
+
+    .firefox-ml-info .info-content code {
+      background: var(--bg-primary, #fff);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+      border: 1px solid var(--border-color, #e0e0e0);
+    }
   `],
 })
 export class AppComponent implements OnInit, OnDestroy {
@@ -852,6 +911,12 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!form) return undefined;
 
     const apiKey: string = form.get('apiKey')?.value;
+    const currentProvider = form.get('provider')?.value;
+
+    // Firefox ML doesn't require an API key
+    if (currentProvider === 'firefox-ml') {
+      return undefined;
+    }
 
     if (!apiKey || apiKey.trim() === '') {
       return 'API key is required';
@@ -860,11 +925,16 @@ export class AppComponent implements OnInit, OnDestroy {
     return undefined;
   });
 
+  isFirefoxMLProvider = computed(() => {
+    const provider = this.settingsForm?.get('provider')?.value || this.settings().provider;
+    return provider === 'firefox-ml';
+  });
+
   constructor() {
     this.settingsForm = this.fb.group({
       provider: ['mistral', Validators.required],
       model: ['mistral-tiny', Validators.required],
-      apiKey: ['', Validators.required],
+      apiKey: ['', this.getApiKeyValidators()],
       customEndpoint: [''],
       summaryStyle: ['concise', Validators.required],
       customPrompt: [''],
@@ -917,6 +987,27 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.settingsService.getProviderDisplayName(provider as ProviderType);
   }
 
+  /**
+   * Get validators for API key field based on current provider
+   */
+  getApiKeyValidators() {
+    return (control: FormControl<string>) => {
+      const provider = this.settingsForm?.get('provider')?.value || 'mistral';
+      
+      // Firefox ML doesn't require an API key
+      if (provider === 'firefox-ml') {
+        return null; // No validation required
+      }
+      
+      // All other providers require API key
+      if (!control.value || control.value.trim() === '') {
+        return { required: true };
+      }
+      
+      return null;
+    };
+  }
+
   onProviderChange(event: Event): void {
     const provider = (event.target as HTMLSelectElement).value as ProviderType;
     const models = this.settingsService.getAvailableModelsForProvider(provider);
@@ -929,6 +1020,18 @@ export class AppComponent implements OnInit, OnDestroy {
     // Reset custom endpoint if not custom provider
     if (provider !== 'custom') {
       this.settingsForm.patchValue({customEndpoint: ''});
+    }
+
+    // Update API key validators based on provider
+    const apiKeyControl = this.settingsForm.get('apiKey');
+    if (apiKeyControl) {
+      if (provider === 'firefox-ml') {
+        apiKeyControl.clearValidators();
+        apiKeyControl.updateValueAndValidity();
+      } else {
+        apiKeyControl.setValidators(Validators.required);
+        apiKeyControl.updateValueAndValidity();
+      }
     }
   }
 

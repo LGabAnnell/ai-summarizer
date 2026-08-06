@@ -13,6 +13,7 @@ export * from './anthropic';
 export * from './qwen';
 export * from './deepseek';
 export * from './custom';
+export * from './firefox-ml';
 
 import type { AIProvider, ProviderType } from './provider.model';
 import { MistralProvider, createMistralProvider } from './mistral';
@@ -21,6 +22,7 @@ import { AnthropicProvider, createAnthropicProvider } from './anthropic';
 import { QwenProvider, createQwenProvider } from './qwen';
 import { DeepSeekProvider, createDeepSeekProvider } from './deepseek';
 import { CustomProvider, createCustomProvider } from './custom';
+import { FirefoxMLProvider, createFirefoxMLProvider } from './firefox-ml';
 
 /**
  * Provider factory to create the appropriate provider instance
@@ -31,7 +33,7 @@ import { CustomProvider, createCustomProvider } from './custom';
 export function createProvider(
   providerType: ProviderType,
   apiKey: string,
-  settings?: Record<string, any>
+  settings?: { endpoint?: string, customEndpoint?: string }
 ): AIProvider {
   switch (providerType) {
     case 'mistral':
@@ -48,6 +50,9 @@ export function createProvider(
       // For custom provider, get endpoint from settings
       const endpoint = settings?.endpoint || settings?.customEndpoint;
       return createCustomProvider(apiKey, endpoint);
+    case 'firefox-ml':
+      // Firefox ML provider doesn't need API key or endpoint
+      return createFirefoxMLProvider(apiKey);
     default:
       throw new Error(`Unknown provider type: ${providerType}`);
   }
@@ -57,7 +62,7 @@ export function createProvider(
  * Get all available provider types
  */
 export function getAvailableProviderTypes(): ProviderType[] {
-  return ['mistral', 'openai', 'anthropic', 'qwen', 'deepseek', 'custom'];
+  return ['mistral', 'openai', 'anthropic', 'qwen', 'deepseek', 'custom', 'firefox-ml'];
 }
 
 /**
@@ -71,6 +76,7 @@ export function getProviderDisplayNames(): Record<ProviderType, string> {
     qwen: 'Qwen (DashScope)',
     deepseek: 'DeepSeek',
     custom: 'Custom',
+    'firefox-ml': 'Firefox ML (Local)',
   };
 }
 
@@ -85,6 +91,7 @@ export function getDefaultModel(providerType: ProviderType): string {
     qwen: 'qwen-plus',
     deepseek: 'deepseek-chat',
     custom: '',
+    'firefox-ml': 'Xenova/distilbart-cnn-6-6',
   };
   return models[providerType];
 }
@@ -135,6 +142,10 @@ export function getAvailableModels(providerType: ProviderType): string[] {
       'deepseek-coder',
     ],
     custom: [], // Custom provider models are user-defined
+    'firefox-ml': [
+      'Xenova/distilbart-cnn-6-6',
+      'Xenova/distilbart-cnn-12-6',
+    ],
   };
   return models[providerType];
 }

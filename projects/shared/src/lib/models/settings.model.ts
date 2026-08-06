@@ -2,7 +2,7 @@
  * Models for extension settings
  */
 
-export type ProviderType = 'mistral' | 'openai' | 'anthropic' | 'qwen' | 'deepseek' | 'custom';
+export type ProviderType = 'mistral' | 'openai' | 'anthropic' | 'qwen' | 'deepseek' | 'custom' | 'firefox-ml';
 
 export interface ExtensionSettings {
   /** Selected AI provider */
@@ -44,6 +44,24 @@ export interface SettingsState {
 export interface SettingsValidation {
   valid: boolean;
   errors: Record<string, string>;
+}
+export interface AIRequestSettings {
+  /** Model to use for completion */
+  model?: string;
+  /** Sampling temperature (0-1) */
+  temperature?: number;
+  /** Maximum tokens to generate */
+  maxTokens?: number;
+  /** Summary style (e.g., 'concise', 'detailed', 'bullet_points') */
+  summaryStyle?: string;
+  /** Custom system prompt */
+  customPrompt?: string;
+  /** Request format (for custom providers) */
+  requestFormat?: 'openai' | 'custom';
+  /** Custom request body (for custom providers) */
+  customBody?: Record<string, any>;
+  /** Custom endpoint URL (for custom providers) */
+  customEndpoint?: string;
 }
 
 /**
@@ -99,6 +117,10 @@ export const PROVIDER_MODELS: Record<ProviderType, string[]> = {
     'deepseek-coder',
   ],
   custom: [], // Custom provider models are user-defined
+  'firefox-ml': [
+    'Xenova/distilbart-cnn-6-6',
+    'Xenova/distilbart-cnn-12-6',
+  ],
 };
 
 /**
@@ -166,6 +188,15 @@ export const PROVIDER_CONFIGS: Record<ProviderType, ProviderConfig> = {
     endpoint: '',
     authHeader: 'Authorization',
     useBearerToken: true,
+    supportsStreaming: false,
+    apiKeyPrefix: null,
+  },
+  'firefox-ml': {
+    name: 'firefox-ml',
+    displayName: 'Firefox ML (Local)',
+    endpoint: '',
+    authHeader: '',
+    useBearerToken: false,
     supportsStreaming: false,
     apiKeyPrefix: null,
   },

@@ -113,7 +113,7 @@ export interface AIProvider {
 /**
  * Provider types supported by the extension
  */
-export type ProviderType = 'mistral' | 'openai' | 'anthropic' | 'qwen' | 'deepseek' | 'custom';
+export type ProviderType = 'mistral' | 'openai' | 'anthropic' | 'qwen' | 'deepseek' | 'custom' | 'firefox-ml';
 
 /**
  * Settings for a specific provider
@@ -155,6 +155,8 @@ export function createProvider(providerType: ProviderType, settings: ProviderSet
     case 'deepseek':
       return null as any; // Placeholder
     case 'custom':
+      return null as any; // Placeholder
+    case 'firefox-ml':
       return null as any; // Placeholder
     default:
       throw new Error(`Unknown provider type: ${providerType}`);

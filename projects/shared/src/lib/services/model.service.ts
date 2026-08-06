@@ -35,6 +35,7 @@ export class ModelService {
     qwen: { models: [], timestamp: 0, loading: false },
     deepseek: { models: [], timestamp: 0, loading: false },
     custom: { models: [], timestamp: 0, loading: false },
+    'firefox-ml': { models: [], timestamp: 0, loading: false },
   });
 
   // Public readonly signals

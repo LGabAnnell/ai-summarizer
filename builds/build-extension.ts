@@ -13,27 +13,35 @@ const buildConfig: esbuild.BuildOptions = {
 };
 
 // Build background service worker
-const backgroundConfig: esbuild.BuildOptions = {
-  ...buildConfig,
-  entryPoints: [path.join(__dirname, 'extension-core/background.ts')],
-  outfile: path.join(__dirname, 'dist/background.js'),
-  define: {
-    global: 'globalThis',
-  },
-};
+function getBackgroundConfig(debug: boolean): esbuild.BuildOptions {
+  return {
+    ...buildConfig,
+    entryPoints: [path.join(__dirname, 'extension-core/background.ts')],
+    outfile: path.join(__dirname, 'dist/background.js'),
+    sourcemap: debug,
+    define: {
+      global: 'globalThis',
+    },
+  };
+}
 
 // Build content script
-const contentConfig: esbuild.BuildOptions = {
-  ...buildConfig,
-  entryPoints: [path.join(__dirname, 'extension-core/content/content.ts')],
-  outfile: path.join(__dirname, 'dist/content.js'),
-  define: {
-    global: 'globalThis',
-  },
-};
+function getContentConfig(debug: boolean): esbuild.BuildOptions {
+  return {
+    ...buildConfig,
+    entryPoints: [path.join(__dirname, 'extension-core/content/content.ts')],
+    outfile: path.join(__dirname, 'dist/content.js'),
+    define: {
+      global: 'globalThis',
+    },
+  };
+}
 
-async function buildExtension() {
-  console.log('Building extension core...');
+async function buildExtension(debug: boolean = false) {
+  console.log(`Building extension core... (debug: ${debug})`);
+  
+  const backgroundConfig = getBackgroundConfig(debug);
+  const contentConfig = getContentConfig(debug);
   
   try {
     // Build background
@@ -53,4 +61,8 @@ async function buildExtension() {
   }
 }
 
-buildExtension();
+// Check for debug mode via environment variable or CLI argument
+const args = process.argv.slice(2);
+const debugMode = args.includes('--debug') || process.env.DEBUG_BUILD === 'true';
+
+buildExtension(debugMode);
