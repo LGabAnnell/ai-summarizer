@@ -59,7 +59,7 @@ export interface AIRequestSettings {
   /** Request format (for custom providers) */
   requestFormat?: 'openai' | 'custom';
   /** Custom request body (for custom providers) */
-  customBody?: Record<string, any>;
+  customBody?: Record<string, string>;
   /** Custom endpoint URL (for custom providers) */
   customEndpoint?: string;
 }
@@ -117,10 +117,7 @@ export const PROVIDER_MODELS: Record<ProviderType, string[]> = {
     'deepseek-coder',
   ],
   custom: [], // Custom provider models are user-defined
-  'firefox-ml': [
-    'Xenova/distilbart-cnn-6-6',
-    'Xenova/distilbart-cnn-12-6',
-  ],
+  'firefox-ml': [],
 };
 
 /**

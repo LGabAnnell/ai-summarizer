@@ -100,20 +100,9 @@
           "defaultConfiguration": "production"
         },
         "test": {
-          "builder": "@angular-devkit/build-angular:karma",
+          "builder": "@angular/build:unit-test",
           "options": {
-            "polyfills": ["zone.js", "zone.js/testing"],
-            "tsConfig": "projects/popup/tsconfig.spec.json",
-            "inlineStyleLanguage": "scss",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "projects/popup/src/assets",
-                "output": "/assets"
-              }
-            ],
-            "styles": ["projects/shared/src/lib/styles/index.scss", "projects/popup/src/styles.scss"],
-            "scripts": []
+            "runnerConfig": true
           }
         },
         "lint": {
@@ -212,20 +201,9 @@
           "defaultConfiguration": "production"
         },
         "test": {
-          "builder": "@angular-devkit/build-angular:karma",
+          "builder": "@angular/build:unit-test",
           "options": {
-            "polyfills": ["zone.js", "zone.js/testing"],
-            "tsConfig": "projects/options/tsconfig.spec.json",
-            "inlineStyleLanguage": "scss",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "projects/options/src/assets",
-                "output": "/assets"
-              }
-            ],
-            "styles": ["projects/shared/src/lib/styles/index.scss", "projects/options/src/styles.scss"],
-            "scripts": []
+            "runnerConfig": true
           }
         },
         "lint": {
@@ -325,20 +303,9 @@
           "defaultConfiguration": "production"
         },
         "test": {
-          "builder": "@angular-devkit/build-angular:karma",
+          "builder": "@angular/build:unit-test",
           "options": {
-            "polyfills": ["zone.js", "zone.js/testing"],
-            "tsConfig": "projects/sidebar/tsconfig.spec.json",
-            "inlineStyleLanguage": "scss",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "projects/sidebar/src/assets",
-                "output": "/assets"
-              }
-            ],
-            "styles": ["projects/shared/src/lib/styles/index.scss", "projects/sidebar/src/styles.scss"],
-            "scripts": []
+            "runnerConfig": true
           }
         },
         "lint": {

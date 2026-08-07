@@ -110,26 +110,40 @@
 
           <div class="form-group">
             <label class="form-label" for="model">Model</label>
-            <div class="model-select-wrapper">
-              <select id="model" formControlName="model" class="form-select">
-                @for (model of availableModels(); track model) {
-                  <option [value]="model">{{ model }}</option>
-                }
-              </select>
-              <button
-                      type="button"
-                      class="btn btn--refresh"
-                      (click)="refreshModels()"
-                      [disabled]="modelsLoading()"
-                      title="Refresh model list">
-                @if (modelsLoading()) {
-                  <span class="spinner"></span>
-                } @else {
-                  🔄
-                }
-              </button>
-            </div>
-            <div class="form-description">Select the model to use for summarization</div>
+            @if (isFirefoxMLProvider()) {
+              <input
+                      id="model"
+                      type="text"
+                      formControlName="model"
+                      class="form-input"
+                      placeholder="Enter model name (e.g., Xenova/distilbart-cnn-6-6)"
+              />
+            } @else {
+              <div class="model-select-wrapper">
+                <select id="model" formControlName="model" class="form-select">
+                  @for (model of availableModels(); track model) {
+                    <option [value]="model">{{ model }}</option>
+                  }
+                </select>
+                <button
+                        type="button"
+                        class="btn btn--refresh"
+                        (click)="refreshModels()"
+                        [disabled]="modelsLoading()"
+                        title="Refresh model list">
+                  @if (modelsLoading()) {
+                    <span class="spinner"></span>
+                  } @else {
+                    🔄
+                  }
+                </button>
+              </div>
+            }
+            @if (isFirefoxMLProvider()) {
+              <div class="form-description">Enter the Hugging Face model identifier for offline summarization</div>
+            } @else {
+              <div class="form-description">Select the model to use for summarization</div>
+            }
             @if (modelsError()) {
               <div class="form-error">{{ modelsError() }}</div>
             }

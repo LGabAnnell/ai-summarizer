@@ -166,7 +166,8 @@ export class AppComponent implements OnInit, OnDestroy {
     const models = this.settingsService.getAvailableModelsForProvider(provider);
 
     // Update the model to the first available model for this provider
-    if (models.length > 0) {
+    // Skip for firefox-ml as it uses a text input
+    if (models.length > 0 && provider !== 'firefox-ml') {
       this.settingsForm.patchValue({model: models[0]});
     }
 

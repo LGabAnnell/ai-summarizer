@@ -4,7 +4,7 @@ const tseslint = require('typescript-eslint');
 const angular = require('angular-eslint');
 
 module.exports = tseslint.config(
-  { ignores: ['projects/shared/**/*spec.ts', 'projects/shared/**/*.d.ts'] },
+  { ignores: ['**/*spec.ts', '**/*.d.ts'] },
   {
     files: ['**/*.ts'],
     extends: [
