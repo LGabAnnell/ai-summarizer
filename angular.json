@@ -79,7 +79,10 @@
                   "maximumError": "1MB"
                 }
               ],
-              "outputHashing": "none"
+              "outputHashing": "none",
+              "allowedCommonJsDependencies": [
+                "webextension-polyfill"
+              ]
             },
             "development": {
               "optimization": false,
@@ -188,7 +191,10 @@
                   "maximumError": "1MB"
                 }
               ],
-              "outputHashing": "none"
+              "outputHashing": "none",
+              "allowedCommonJsDependencies": [
+                "webextension-polyfill"
+              ]
             },
             "development": {
               "optimization": false,
@@ -298,7 +304,10 @@
                   "maximumError": "1MB"
                 }
               ],
-              "outputHashing": "none"
+              "outputHashing": "none",
+              "allowedCommonJsDependencies": [
+                "webextension-polyfill"
+              ]
             },
             "development": {
               "optimization": false,
