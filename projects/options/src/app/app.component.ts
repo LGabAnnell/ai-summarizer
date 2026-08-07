@@ -1,8 +1,19 @@
-import {Component, signal, OnInit, OnDestroy, computed, inject, HostListener} from '@angular/core';
+import {Component, computed, DestroyRef, HostListener, inject, OnInit, signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
-import {FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormControl} from '@angular/forms';
+import {FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
 import * as browser from 'webextension-polyfill';
-import {SettingsService, ExtensionSettings, ProviderType, ClassificationService, ClassificationResult, ModelDownloadProgress, MessagingService} from '@shared/public-api';
+import {
+  ClassificationResult,
+  ClassificationService,
+  ExtensionSettings,
+  MessagingService,
+  ModelDownloadProgress,
+  ProviderType,
+  SettingsService
+} from '@shared/public-api';
+import {takeUntilDestroyed} from "@angular/core/rxjs-interop";
+import {distinctUntilChanged} from "rxjs";
+import {map} from "rxjs/operators";
 
 @Component({
   selector: 'options-root',
@@ -11,18 +22,7 @@ import {SettingsService, ExtensionSettings, ProviderType, ClassificationService,
   templateUrl: 'app.component.html',
   styleUrl: 'app.component.scss',
 })
-export class AppComponent implements OnInit, OnDestroy {
-  private fb = inject(FormBuilder);
-  private settingsService = inject(SettingsService);
-  private classificationService = inject(ClassificationService);
-  private messagingService = inject(MessagingService);
-
-  // State
-  settings = signal<Partial<ExtensionSettings>>(
-    this.settingsService.getSetting('provider') != null ? {
-      provider: this.settingsService.getSetting('provider')
-    } : {}
-  );
+export class AppComponent implements OnInit {
   isLoading = signal<boolean>(false);
   isTesting = signal<boolean>(false);
   error = signal<string | undefined>(undefined);
@@ -33,7 +33,6 @@ export class AppComponent implements OnInit, OnDestroy {
   modelsError = signal<string | undefined>(undefined);
   isScrolled = signal<boolean>(false);
   settingsForm!: FormGroup;
-
   // ML State
   mlEnabled = signal<boolean>(false);
   mlModelHub = signal<'mozilla' | 'huggingface'>('mozilla');
@@ -46,19 +45,6 @@ export class AppComponent implements OnInit, OnDestroy {
   mlModelDownloadProgress = signal<number>(0);
   mlDownloadStatus = signal<string | undefined>(undefined);
   mlAvailabilityChecked = signal<boolean>(false);
-
-  // Computed properties for ML
-  mlModelHubs = computed(() => this.settingsService.getMLModelHubs());
-
-  // Private variables for cleanup
-  private progressSubscription: { unsubscribe: () => void } | null = null;
-
-  providerTypes = computed(() => this.settingsService.getProviderTypes());
-  availableModels = computed(() => {
-    const provider = this.settingsForm?.get('provider')?.value || 'mistral';
-    return this.settingsService.getAvailableModelsForProvider(provider);
-  });
-
   apiKeyError = computed(() => {
     const form = this.settingsForm;
     if (!form) return undefined;
@@ -77,13 +63,26 @@ export class AppComponent implements OnInit, OnDestroy {
 
     return undefined;
   });
-
-  isFirefoxMLProvider = computed(() => {
-    const provider = this.settingsForm?.get('provider')?.value || this.settings().provider;
-    return provider === 'firefox-ml';
+  isFirefoxMLProvider = signal(false);
+  private fb = inject(FormBuilder);
+  private settingsService = inject(SettingsService);
+  // State
+  settings = signal<Partial<ExtensionSettings>>(
+    this.settingsService.getSetting('provider') != null ? {
+      provider: this.settingsService.getSetting('provider')
+    } : {}
+  );
+  // Computed properties for ML
+  mlModelHubs = computed(() => this.settingsService.getMLModelHubs());
+  providerTypes = computed(() => this.settingsService.getProviderTypes());
+  availableModels = computed(() => {
+    const provider = this.settingsForm?.get('provider')?.value || 'mistral';
+    return this.settingsService.getAvailableModelsForProvider(provider);
   });
+  private classificationService = inject(ClassificationService);
+  private messagingService = inject(MessagingService);
 
-  constructor() {
+  constructor(private destroyRef: DestroyRef) {
     this.settingsForm = this.fb.group({
       provider: ['mistral', Validators.required],
       model: ['mistral-tiny', Validators.required],
@@ -96,6 +95,11 @@ export class AppComponent implements OnInit, OnDestroy {
       cacheEnabled: [true],
       cacheTTL: [7, [Validators.required, Validators.min(1), Validators.max(30)]],
     });
+    this.settingsForm.get('provider')?.valueChanges?.pipe(
+      distinctUntilChanged(),
+      map(provider => provider === 'firefox-ml'),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(value => this.isFirefoxMLProvider.set(value));
   }
 
   ngOnInit(): void {
@@ -146,17 +150,17 @@ export class AppComponent implements OnInit, OnDestroy {
   getApiKeyValidators() {
     return (control: FormControl<string>) => {
       const provider = this.settingsForm?.get('provider')?.value || 'mistral';
-      
+
       // Firefox ML doesn't require an API key
       if (provider === 'firefox-ml') {
         return null; // No validation required
       }
-      
+
       // All other providers require API key
       if (!control.value || control.value.trim() === '') {
-        return { required: true };
+        return {required: true};
       }
-      
+
       return null;
     };
   }
@@ -426,24 +430,22 @@ export class AppComponent implements OnInit, OnDestroy {
    * Set up listener for ML model download progress
    */
   setupMLProgressListener(): void {
-    if (this.progressSubscription) {
-      this.progressSubscription.unsubscribe();
-    }
-
-    this.progressSubscription = this.classificationService.onModelDownloadProgress().subscribe({
-      next: (progress: ModelDownloadProgress) => {
-        console.log('Options: ML download progress:', progress);
-        this.mlModelDownloadProgress.set(progress.progress);
-        this.mlDownloadStatus.set(progress.status === 'downloading' ? 'Downloading...' : 
-                               progress.status === 'extracting' ? 'Extracting...' :
-                               progress.status === 'complete' ? 'Complete!' :
-                               'Error');
-      },
-      error: (error) => {
-        console.error('Options: Error in ML progress listener:', error);
-        this.mlDownloadStatus.set('Error: ' + (error.message || 'Unknown error'));
-      }
-    });
+    this.classificationService.onModelDownloadProgress()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (progress: ModelDownloadProgress) => {
+          console.log('Options: ML download progress:', progress);
+          this.mlModelDownloadProgress.set(progress.progress);
+          this.mlDownloadStatus.set(progress.status === 'downloading' ? 'Downloading...' :
+            progress.status === 'extracting' ? 'Extracting...' :
+              progress.status === 'complete' ? 'Complete!' :
+                'Error');
+        },
+        error: (error) => {
+          console.error('Options: Error in ML progress listener:', error);
+          this.mlDownloadStatus.set('Error: ' + (error.message || 'Unknown error'));
+        }
+      });
   }
 
   /**
@@ -452,7 +454,7 @@ export class AppComponent implements OnInit, OnDestroy {
   toggleMLEnabled(event: Event): void {
     const enabled = (event.target as HTMLInputElement).checked;
     this.mlEnabled.set(enabled);
-    
+
     if (enabled) {
       this.settingsService.enableML().subscribe({
         next: () => {
@@ -488,7 +490,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.permissionRequestError.set(undefined);
 
     console.log('OptionsApp.requestMLPermission: Checking if browser.permissions API is available');
-    
+
     // Check if browser.permissions is available
     if (typeof browser === 'undefined' || typeof browser.permissions === 'undefined') {
       console.error('OptionsApp.requestMLPermission: browser.permissions API not available');
@@ -499,18 +501,18 @@ export class AppComponent implements OnInit, OnDestroy {
     }
 
     console.log('OptionsApp.requestMLPermission: Calling browser.permissions.request() directly from user gesture');
-    
+
     // Call browser.permissions.request() directly from the user gesture context
-    browser.permissions.request({ permissions: ['trialML'] })
+    browser.permissions.request({permissions: ['trialML']})
       .then((granted: boolean) => {
         console.log('OptionsApp.requestMLPermission: Permission result:', granted);
         this.isRequestingPermission.set(false);
-        
+
         if (granted) {
           console.log('OptionsApp.requestMLPermission: Permission GRANTED');
           this.mlPermissionStatus.set('granted');
           this.successMessage.set('ML permission granted! You can now use local classification.');
-          
+
           // Notify background script that permission was granted
           console.log('OptionsApp.requestMLPermission: Notifying background script');
           this.messagingService.notifyMLPermissionGranted().subscribe({
@@ -584,7 +586,7 @@ export class AppComponent implements OnInit, OnDestroy {
       next: (result) => {
         this.isTestingClassification.set(false);
         this.classificationTestResult.set(result);
-        
+
         if (result.ok) {
           this.successMessage.set('Classification test successful!');
         } else {
@@ -604,7 +606,7 @@ export class AppComponent implements OnInit, OnDestroy {
   clearMLCache(): void {
     if (confirm('Are you sure you want to clear all ML model cache? This will remove downloaded models and you will need to re-download them for classification.')) {
       this.isLoading.set(true);
-      
+
       this.classificationService.clearMLCache().subscribe({
         next: (result) => {
           this.isLoading.set(false);
@@ -622,16 +624,6 @@ export class AppComponent implements OnInit, OnDestroy {
           this.error.set('Failed to clear ML cache: ' + (error.message || 'Unknown error'));
         }
       });
-    }
-  }
-
-  /**
-   * Clean up on destroy
-   */
-  ngOnDestroy(): void {
-    if (this.progressSubscription) {
-      this.progressSubscription.unsubscribe();
-      this.progressSubscription = null;
     }
   }
 }
