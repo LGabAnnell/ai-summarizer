@@ -20,27 +20,30 @@ import {SettingsService, ExtensionSettings, ProviderType, ClassificationService,
         <div class="header-title">Settings</div>
       </div>
 
-      <!-- Error Alert -->
-      @if (error()) {
-        <div class="alert alert--error">
-          <span class="alert-icon">⚠️</span>
-          <div class="alert-content">
-            <div class="alert-message">{{ error() }}</div>
+      <!-- Toast Notifications Container -->
+      <div class="toast-container">
+        <!-- Error Toast -->
+        @if (error()) {
+          <div class="toast toast--error">
+            <span class="toast-icon">⚠️</span>
+            <div class="toast-content">
+              <div class="toast-message">{{ error() }}</div>
+            </div>
+            <button class="toast-close" (click)="clearError()">×</button>
           </div>
-          <button class="alert-close" (click)="clearError()">×</button>
-        </div>
-      }
+        }
 
-      <!-- Success Alert -->
-      @if (successMessage()) {
-        <div class="alert alert--success">
-          <span class="alert-icon">✓</span>
-          <div class="alert-content">
-            <div class="alert-message">{{ successMessage() }}</div>
+        <!-- Success Toast -->
+        @if (successMessage()) {
+          <div class="toast toast--success">
+            <span class="toast-icon">✓</span>
+            <div class="toast-content">
+              <div class="toast-message">{{ successMessage() }}</div>
+            </div>
+            <button class="toast-close" (click)="clearSuccess()">×</button>
           </div>
-          <button class="alert-close" (click)="clearSuccess()">×</button>
-        </div>
-      }
+        }
+      </div>
 
       <form [formGroup]="settingsForm" (ngSubmit)="saveSettings()" class="settings-form">
         <!-- Sticky Save Bar -->
@@ -1182,6 +1185,20 @@ export class AppComponent implements OnInit, OnDestroy {
 
   clearSuccess(): void {
     this.successMessage.set(undefined);
+  }
+
+  showError(message: string, autoDismiss: boolean = true): void {
+    this.error.set(message);
+    if (autoDismiss) {
+      setTimeout(() => this.clearError(), 5000);
+    }
+  }
+
+  showSuccess(message: string, autoDismiss: boolean = true): void {
+    this.successMessage.set(message);
+    if (autoDismiss) {
+      setTimeout(() => this.clearSuccess(), 5000);
+    }
   }
 
   /**
