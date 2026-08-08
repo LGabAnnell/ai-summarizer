@@ -11,7 +11,7 @@ import {
   ProviderType,
   SettingsService
 } from '@shared/public-api';
-import {takeUntilDestroyed} from "@angular/core/rxjs-interop";
+import {takeUntilDestroyed, toSignal} from "@angular/core/rxjs-interop";
 import {distinctUntilChanged} from "rxjs";
 import {map} from "rxjs/operators";
 
@@ -46,11 +46,11 @@ export class AppComponent implements OnInit {
   mlDownloadStatus = signal<string | undefined>(undefined);
   mlAvailabilityChecked = signal<boolean>(false);
   apiKeyError = computed(() => {
-    const form = this.settingsForm;
+    const form = this.formValueSignal();
     if (!form) return undefined;
 
-    const apiKey: string = form.get('apiKey')?.value;
-    const currentProvider = form.get('provider')?.value;
+    const apiKey: string = form?.apiKey;
+    const currentProvider: string = form?.provider;
 
     // Firefox ML doesn't require an API key
     if (currentProvider === 'firefox-ml') {
@@ -81,6 +81,7 @@ export class AppComponent implements OnInit {
   });
   private classificationService = inject(ClassificationService);
   private messagingService = inject(MessagingService);
+  private formValueSignal;
 
   constructor(private destroyRef: DestroyRef) {
     this.settingsForm = this.fb.group({
@@ -100,6 +101,7 @@ export class AppComponent implements OnInit {
       map(provider => provider === 'firefox-ml'),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(value => this.isFirefoxMLProvider.set(value));
+    this.formValueSignal = toSignal(this.settingsForm.valueChanges, {initialValue: this.settingsForm.value});
   }
 
   ngOnInit(): void {
