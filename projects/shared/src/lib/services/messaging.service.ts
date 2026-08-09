@@ -8,7 +8,7 @@ import { Observable, from, of, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import * as browser from 'webextension-polyfill';
-import { ExtensionSettings } from '../models/settings.model';
+import {ExtensionSettings, ProviderType} from '../models/settings.model';
 import { ArticleData } from '../models/article.model';
 import {Message} from "../models/summary.model";
 import {ClassificationResult, ModelDownloadProgress, ModelDownloadProgressMessage} from "../models/classification.model";
@@ -146,7 +146,7 @@ export class MessagingService {
   /**
    * Summarize with specific article data
    */
-  summarizeArticle(article: ArticleData, provider?: string): Observable<MessageResponse<{
+  summarizeArticle(article: ArticleData, provider?: ProviderType): Observable<MessageResponse<{
     summary: string;
     cached: boolean;
     tokenCount?: number;
@@ -176,7 +176,7 @@ export class MessagingService {
   /**
    * Refresh models for a specific provider
    */
-  refreshModels(provider: string, apiKey: string): Observable<MessageResponse<{ models: string[] }>> {
+  refreshModels(provider: ProviderType, apiKey: string): Observable<MessageResponse<{ models: string[] }>> {
     console.log('MessagingService.refreshModels: Called for provider:', provider);
     return this.sendMessage<{ models: string[] }>({ 
       type: 'REFRESH_MODELS', 

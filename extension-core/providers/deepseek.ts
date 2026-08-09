@@ -6,13 +6,13 @@
 import type {AIProviderConfig, AIProviderSettings} from './provider.model';
 import { OpenAICompatibleProvider } from './openai-compatible-provider';
 import {
-  validateRequiredApiKey,
+  type ValidationResult,
   validateApiKeyFormat,
   validateApiKeyLength,
-  validateModel,
-  validateTemperature,
   validateMaxTokens,
-  type ValidationResult,
+  validateModel,
+  validateRequiredApiKey,
+  validateTemperature,
 } from './provider.utils';
 
 // DeepSeek API configuration

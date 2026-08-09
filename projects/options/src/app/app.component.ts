@@ -82,8 +82,9 @@ export class AppComponent implements OnInit {
   private classificationService = inject(ClassificationService);
   private messagingService = inject(MessagingService);
   private formValueSignal;
+  private destroyRef = inject(DestroyRef);
 
-  constructor(private destroyRef: DestroyRef) {
+  constructor() {
     this.settingsForm = this.fb.group({
       provider: ['mistral', Validators.required],
       model: ['mistral-tiny', Validators.required],

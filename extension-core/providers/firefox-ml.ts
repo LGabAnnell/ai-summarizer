@@ -10,16 +10,16 @@ import type {
   AIProviderRequest,
   AIProviderResponse,
   AIProviderSettings,
-  ProviderSettings
+  ProviderSettings,
 } from './provider.model';
 import {
-  estimateTokenCount,
+  type ValidationResult,
   buildBaseHeaders,
+  estimateTokenCount,
   getSystemPrompt as getSystemPromptUtil,
   getTokenCount as getTokenCountUtil,
-  type ValidationResult,
 } from './provider.utils';
-import {AIRequestSettings} from "@shared/lib/models/settings.model";
+import {AIRequestSettings} from '@shared/lib/models/settings.model';
 
 // Firefox ML API configuration
 const FIREFOX_ML_CONFIG: AIProviderConfig = {
@@ -55,7 +55,7 @@ export class FirefoxMLProvider implements AIProvider {
   buildRequest(
     articleText: string,
     title?: string,
-    settings?: AIRequestSettings
+    settings?: AIRequestSettings,
   ): AIProviderRequest {
     // Firefox ML doesn't use HTTP requests, but we return a minimal structure
     // for compatibility with the provider interface
@@ -143,7 +143,7 @@ export class FirefoxMLProvider implements AIProvider {
       if (!availableModels.includes(settings.model)) {
         return {
           valid: false,
-          error: `Invalid model: ${settings.model}. Available Firefox ML models: ${availableModels.join(', ')}`
+          error: `Invalid model: ${settings.model}. Available Firefox ML models: ${availableModels.join(', ')}`,
         };
       }
     }

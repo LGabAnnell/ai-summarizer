@@ -3,16 +3,16 @@
  * Extends BaseProvider — implements DashScope body shape and response parsing.
  */
 
-import type { AIProviderConfig, AIProviderResponse } from './provider.model';
+import type {AIProviderConfig, AIProviderResponse, ProviderSettings} from './provider.model';
 import { BaseProvider } from './base-provider';
 import {
-  buildUserMessage,
-  validateRequiredApiKey,
-  validateApiKeyLength,
-  validateModel,
-  validateTemperature,
-  validateMaxTokens,
   type ValidationResult,
+  buildUserMessage,
+  validateApiKeyLength,
+  validateMaxTokens,
+  validateModel,
+  validateRequiredApiKey,
+  validateTemperature,
 } from './provider.utils';
 
 // Qwen API configuration
@@ -51,7 +51,7 @@ export class QwenProvider extends BaseProvider {
   buildRequestBody(
     articleText: string,
     title?: string,
-    settings?: Record<string, any>
+    settings?: Record<string, any>,
   ): Record<string, any> {
     const {
       model = this.config.defaultModel,
@@ -59,7 +59,7 @@ export class QwenProvider extends BaseProvider {
       maxTokens = 500,
       summaryStyle = 'concise',
       customPrompt,
-    } = settings || {};
+    } = settings ?? {};
 
     const systemPrompt = this.getSystemPrompt(summaryStyle, customPrompt);
     const userMessage = buildUserMessage(articleText, title);
@@ -85,10 +85,10 @@ export class QwenProvider extends BaseProvider {
   parseResponseBody(response: any): AIProviderResponse {
     try {
       // Qwen API response format
-      if (response.output && response.output.choices && response.output.choices.length > 0) {
+      if (response.output?.choices && response.output.choices.length > 0) {
         const firstChoice = response.output.choices[0];
 
-        if (firstChoice.message && firstChoice.message.content) {
+        if (firstChoice.message?.content) {
           return {
             summary: firstChoice.message.content,
             rawResponse: response,
@@ -101,7 +101,7 @@ export class QwenProvider extends BaseProvider {
       // Alternative response format
       if (response.choices && response.choices.length > 0) {
         const firstChoice = response.choices[0];
-        if (firstChoice.message && firstChoice.message.content) {
+        if (firstChoice.message?.content) {
           return {
             summary: firstChoice.message.content,
             rawResponse: response,
@@ -125,7 +125,7 @@ export class QwenProvider extends BaseProvider {
     }
   }
 
-  validateConfig(apiKey: string, settings?: Record<string, any>): ValidationResult {
+  validateConfig(apiKey: string, settings?: ProviderSettings): ValidationResult {
     const apiKeyCheck = validateRequiredApiKey(apiKey);
     if (!apiKeyCheck.valid) return apiKeyCheck;
 
@@ -160,7 +160,7 @@ export class QwenProvider extends BaseProvider {
     }
 
     try {
-      const headers = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
       
@@ -179,7 +179,7 @@ export class QwenProvider extends BaseProvider {
       if (!response.ok) {
         // If API call fails, fall back to hardcoded models
         console.warn(`Failed to fetch models from ${modelsEndpoint}: ${response.status} ${response.statusText}`);
-        return this.config.availableModels || [];
+        return this.config.availableModels ?? [];
       }
 
       const data = await response.json();
@@ -195,11 +195,11 @@ export class QwenProvider extends BaseProvider {
       }
 
       console.warn('Unexpected models API response format from DashScope', data);
-      return this.config.availableModels || [];
+      return this.config.availableModels ?? [];
     } catch (error) {
       console.error('Error fetching Qwen models:', error);
       // Fall back to hardcoded models on any error
-      return this.config.availableModels || [];
+      return this.config.availableModels ?? [];
     }
   }
 }

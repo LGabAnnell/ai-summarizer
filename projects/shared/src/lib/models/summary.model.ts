@@ -2,7 +2,7 @@
  * Models for summary functionality
  */
 import { ArticleData } from "./article.model";
-import {ExtensionSettings} from "./settings.model";
+import {ExtensionSettings, ProviderType} from "./settings.model";
 import {
   ClassifyTextRequest,
   GetMLPermissionStatusRequest,
@@ -11,6 +11,7 @@ import {
   CheckMLAvailabilityRequest,
   ClassificationResult
 } from "./classification.model";
+import {Provider} from "@angular/core";
 
 export interface ExtractArticleRequest {
   type: 'EXTRACT_ARTICLE';
@@ -27,7 +28,7 @@ export interface ExtractArticleResponse {
 export interface SummarizeRequest {
   type: 'SUMMARIZE';
   article: ArticleData;
-  provider?: string;
+  provider?: ProviderType;
   settings?: ExtensionSettings;
 }
 
@@ -75,7 +76,7 @@ export interface TestProviderRequest {
 
 export interface RefreshModelsRequest {
   type: 'REFRESH_MODELS';
-  provider: string;
+  provider: ProviderType;
   apiKey: string;
 }
 

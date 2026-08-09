@@ -6,13 +6,13 @@
 import type {AIProviderConfig, AIProviderResponse, AIProviderSettings} from './provider.model';
 import { BaseProvider } from './base-provider';
 import {
-  buildUserMessage,
-  validateRequiredApiKey,
-  validateApiKeyFormat,
-  validateModel,
-  validateTemperature,
-  validateMaxTokens,
   type ValidationResult,
+  buildUserMessage,
+  validateApiKeyFormat,
+  validateMaxTokens,
+  validateModel,
+  validateRequiredApiKey,
+  validateTemperature,
 } from './provider.utils';
 
 // Anthropic API configuration
@@ -62,7 +62,7 @@ export class AnthropicProvider extends BaseProvider {
   buildRequestBody(
     articleText: string,
     title?: string,
-    settings?: Record<string, any>
+    settings?: Record<string, any>,
   ): Record<string, any> {
     const {
       model = this.config.defaultModel,

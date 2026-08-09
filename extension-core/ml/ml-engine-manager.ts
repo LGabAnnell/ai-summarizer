@@ -5,15 +5,28 @@
  */
 
 import browser from 'webextension-polyfill';
-import { mlPermissionService } from './ml-permission.service';
+import {mlPermissionService} from './ml-permission.service';
+
+/**
+ * Firefox ML createEngine request type
+ */
+interface MLCreateEngineRequest {
+  modelHub?: 'mozilla' | 'huggingface';
+  taskName: string;
+  modelId?: string;
+  model?: string;
+  options?: Record<string, any>;
+}
 
 /**
  * Configuration for ML engine
  */
 export interface MLEngineConfig {
   modelHub?: 'mozilla' | 'huggingface';
-  taskName: 'text-classification';
+  taskName: 'text-classification' | 'summarization';
   modelId?: string; // Make modelId optional for task-based approach
+  maxTextLength?: number;
+  taskOptions?: Record<string, any>; // Task-specific options (e.g., max_length, temperature for summarization)
 }
 
 /**
@@ -65,16 +78,23 @@ const DEFAULT_CONFIG: MLEngineConfig = {
 };
 
 /**
+ * Generate a unique engine key based on task type and model
+ */
+function generateEngineKey(config: MLEngineConfig): string {
+  return `${config.taskName}_${config.modelHub || 'mozilla'}_${config.modelId || 'default'}`;
+}
+
+/**
  * Manager for ML engine lifecycle
  * Implements lazy initialization with promise caching
+ * Supports multiple engines keyed by task type + model configuration
  */
 export class MLEngineManager {
-  private engine: MLEngine | null = null;
-  private enginePromise: Promise<MLEngine> | null = null;
+  private static instance: MLEngineManager | null = null;
+  private engines: Map<string, MLEngine> = new Map();
+  private enginePromises: Map<string, Promise<MLEngine>> = new Map();
   private progressCallbacks: ProgressCallback[] = [];
   private isProgressListenerAdded = false;
-
-  private static instance: MLEngineManager | null = null;
 
   /**
    * Singleton instance
@@ -90,7 +110,7 @@ export class MLEngineManager {
    * Get the default configuration
    */
   getDefaultConfig(): MLEngineConfig {
-    return { ...DEFAULT_CONFIG };
+    return {...DEFAULT_CONFIG};
   }
 
   /**
@@ -103,48 +123,208 @@ export class MLEngineManager {
   }
 
   /**
-   * Check if engine is available and ready
+   * Check if engine is available and ready for a specific config
    */
-  isEngineAvailable(): boolean {
-    return this.engine !== null && this.engine.engine !== null;
+  isEngineAvailable(config?: Partial<MLEngineConfig>): boolean {
+    const key = this.getEngineKey(config);
+    const engine = this.engines.get(key);
+    return engine !== undefined && engine.engine !== null;
   }
 
   /**
-   * Check if engine creation is in progress
+   * Check if engine creation is in progress for a specific config
    */
-  isCreating(): boolean {
-    return this.enginePromise !== null && !this.isEngineAvailable();
+  isCreating(config?: Partial<MLEngineConfig>): boolean {
+    const key = this.getEngineKey(config);
+    return this.enginePromises.has(key) && !this.isEngineAvailable(config);
   }
 
   /**
-   * Get the current engine or create it if not exists
-   * Uses lazy initialization with promise caching
+   * Get the engine for a specific config or create it if not exists
+   * Uses lazy initialization with promise caching per config
    */
   async getEngine(config?: Partial<MLEngineConfig>): Promise<MLEngine> {
+    const key = this.getEngineKey(config);
+
     // Return existing engine if available
-    if (this.isEngineAvailable()) {
-      console.log('MLEngineManager: Returning existing engine');
+    const existingEngine = this.engines.get(key);
+    if (existingEngine) {
+      console.log(`MLEngineManager: Returning existing engine for key: ${key}`);
       // Update last used timestamp
-      this.engine!.lastUsedAt = Date.now();
-      return this.engine!;
+      existingEngine.lastUsedAt = Date.now();
+      return existingEngine;
     }
 
-    // If creation is already in progress, return the existing promise
-    if (this.enginePromise) {
-      console.log('MLEngineManager: Returning existing engine promise');
-      return this.enginePromise;
+    // If creation is already in progress for this key, return the existing promise
+    const existingPromise = this.enginePromises.get(key);
+    if (existingPromise) {
+      console.log(`MLEngineManager: Returning existing engine promise for key: ${key}`);
+      return existingPromise;
     }
 
     // Create new engine
-    console.log('MLEngineManager: Creating new engine...');
-    this.enginePromise = this.createEngineInternal(config);
-    
+    console.log(`MLEngineManager: Creating new engine for key: ${key}...`);
+    const promise = this.createEngineInternal(config);
+    this.enginePromises.set(key, promise);
+
     try {
-      this.engine = await this.enginePromise;
-      return this.engine;
+      const engine = await promise;
+      this.engines.set(key, engine);
+      return engine;
     } finally {
-      this.enginePromise = null;
+      this.enginePromises.delete(key);
     }
+  }
+
+  /**
+   * Register a progress callback
+   */
+  onProgress(callback: ProgressCallback): void {
+    this.progressCallbacks.push(callback);
+    console.log('MLEngineManager: Progress callback registered');
+  }
+
+  /**
+   * Remove a progress callback
+   */
+  offProgress(callback: ProgressCallback): void {
+    this.progressCallbacks = this.progressCallbacks.filter(cb => cb !== callback);
+    console.log('MLEngineManager: Progress callback removed');
+  }
+
+  /**
+   * Run the engine with text input
+   * Accepts optional config to specify which engine to use
+   * Note: Task-specific options should be passed in the config parameter
+   */
+  async runEngine(text: string, timeoutMs = 30000, config?: Partial<MLEngineConfig>): Promise<any> {
+    try {
+      const engine = await this.getEngine(config);
+      const trialML = (browser as any).trial.ml;
+
+      if (typeof trialML.runEngine !== 'function') {
+        throw new Error('browser.trial.ml.runEngine is not available');
+      }
+
+      // Add timeout handling
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`ML engine timeout after ${timeoutMs}ms: ${MLEngineError.TIMEOUT}`));
+        }, timeoutMs);
+      });
+
+      console.log(`MLEngineManager: Running engine ${engine.id} with text length:`, text.length);
+
+      // For Firefox ML API, we need to call runEngine with the engine and text
+      // The API signature is: runEngine(engine, inputText)
+      const result = await Promise.race([
+        trialML.runEngine(engine.engine, text),
+        timeoutPromise,
+      ]);
+
+      console.log(`MLEngineManager: Engine ${engine.id} run completed`);
+      return result;
+    } catch (error) {
+      console.error('MLEngineManager: Engine run failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Dispose of a specific engine or all engines
+   */
+  async disposeEngine(config?: Partial<MLEngineConfig>): Promise<void> {
+    const key = config ? this.getEngineKey(config) : undefined;
+
+    if (key) {
+      // Dispose specific engine
+      const engine = this.engines.get(key);
+      if (engine?.engine) {
+        try {
+          const trialML = (browser as any).trial.ml;
+          if (typeof trialML.deleteEngine === 'function') {
+            console.log(`MLEngineManager: Disposing engine ${key}`);
+            await trialML.deleteEngine(engine.engine);
+          }
+          this.engines.delete(key);
+          console.log(`MLEngineManager: Engine ${key} disposed`);
+        } catch (error) {
+          console.error(`MLEngineManager: Error disposing engine ${key}:`, error);
+          this.engines.delete(key);
+        }
+      }
+    } else {
+      // Dispose all engines
+      const disposalPromises: Promise<void>[] = [];
+
+      for (const [engineKey, engine] of this.engines.entries()) {
+        if (engine.engine) {
+          disposalPromises.push(
+            (async () => {
+              try {
+                const trialML = (browser as any).trial.ml;
+                if (typeof trialML.deleteEngine === 'function') {
+                  console.log(`MLEngineManager: Disposing engine ${engineKey}`);
+                  await trialML.deleteEngine(engine.engine);
+                }
+              } catch (error) {
+                console.error(`MLEngineManager: Error disposing engine ${engineKey}:`, error);
+              }
+            })(),
+          );
+        }
+      }
+
+      await Promise.all(disposalPromises);
+      this.engines.clear();
+      this.enginePromises.clear();
+      this.cleanupProgressListener();
+      console.log('MLEngineManager: All engines disposed');
+    }
+  }
+
+  /**
+   * Clear ML model cache
+   */
+  async clearModelCache(): Promise<void> {
+    try {
+      const trialML = (browser as any).trial.ml;
+      if (typeof trialML.deleteCachedModels === 'function') {
+        console.log('MLEngineManager: Clearing model cache');
+        await trialML.deleteCachedModels();
+        console.log('MLEngineManager: Model cache cleared');
+      } else {
+        console.log('MLEngineManager: deleteCachedModels not available');
+      }
+
+      // Also dispose current engine
+      await this.disposeEngine();
+    } catch (error) {
+      console.error('MLEngineManager: Error clearing model cache:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Reset the manager (for testing or cleanup)
+   */
+  async reset(): Promise<void> {
+    await this.disposeEngine();
+    this.enginePromises.clear();
+    this.progressCallbacks = [];
+    this.isProgressListenerAdded = false;
+    console.log('MLEngineManager: Reset complete');
+  }
+
+  /**
+   * Generate engine key from config
+   */
+  private getEngineKey(config?: Partial<MLEngineConfig>): string {
+    const mergedConfig: MLEngineConfig = {
+      ...DEFAULT_CONFIG,
+      ...config,
+    };
+    return generateEngineKey(mergedConfig);
   }
 
   /**
@@ -178,14 +358,14 @@ export class MLEngineManager {
       const engineObj = await this.createBrowserEngine(engineConfig);
 
       const engine: MLEngine = {
-        id: this.generateEngineId(engineConfig),
+        id: generateEngineKey(engineConfig),
         config: engineConfig,
         engine: engineObj,
         createdAt: Date.now(),
         lastUsedAt: Date.now(),
       };
 
-      console.log('MLEngineManager: Engine created successfully');
+      console.log(`MLEngineManager: Engine created successfully for key: ${engine.id}`);
       return engine;
     } catch (error) {
       console.error('MLEngineManager: Failed to create engine:', error);
@@ -200,28 +380,39 @@ export class MLEngineManager {
    */
   private async createBrowserEngine(config: MLEngineConfig): Promise<any> {
     try {
-      const trialML = (browser as any).trial.ml;
-      
+      const trialML = browser.trial.ml;
+
       if (typeof trialML.createEngine !== 'function') {
         throw new Error('browser.trial.ml.createEngine is not available');
       }
 
       console.log('MLEngineManager: Calling browser.trial.ml.createEngine with:', config);
 
-      // Create engine config - only include modelId if provided (task-based approach)
-      const engineConfig: any = {
+      // Create engine config - include model identifier if provided (task-based approach)
+      // Firefox ML API uses 'model' for summarization and 'modelId' for classification
+      const engineConfig: MLCreateEngineRequest = {
         modelHub: config.modelHub || 'mozilla',
         taskName: config.taskName,
       };
-      
-      // Only include modelId if provided - otherwise use Firefox's default model for the task
+
+      // Include model identifier - use 'model' for summarization, 'modelId' for classification
+      // For compatibility, we'll use the model field for summarization tasks
       if (config.modelId) {
-        engineConfig.modelId = config.modelId;
+        if (config.taskName === 'summarization') {
+          engineConfig.model = config.modelId;
+        } else {
+          engineConfig.modelId = config.modelId;
+        }
       }
 
-      const engine = await trialML.createEngine(engineConfig);
+      // Include task-specific options if provided
+      if (config.taskOptions) {
+        engineConfig.options = config.taskOptions;
+      }
 
-      if (!engine) {
+      const engine = await trialML.createEngine(engineConfig as unknown as { [p: string]: string });
+
+      if (engine == null) {
         throw new Error('Engine creation returned null');
       }
 
@@ -242,23 +433,17 @@ export class MLEngineManager {
       return;
     }
 
-    const trialML = (browser as any).trial?.ml;
-    if (!trialML || typeof trialML.onProgress !== 'function') {
-      console.log('MLEngineManager: onProgress not available');
-      return;
-    }
-
     console.log('MLEngineManager: Adding progress listener');
-    
-    trialML.onProgress.addListener((progressEvent: any) => {
+
+    browser.trial.ml.onProgress.addListener((progressEvent: { [p: string]: unknown }) => {
       console.log('MLEngineManager: Progress event received:', progressEvent);
-      
+
       // Notify all registered callbacks
       const event: MLEngineProgressEvent = {
-        modelId: progressEvent.modelId || 'unknown',
-        progress: Math.round(progressEvent.progress * 100) || 0,
+        modelId: progressEvent['modelId'] as string ?? 'unknown',
+        progress: Math.round(progressEvent['progress'] as number * 100) || 0,
         status: this.mapProgressStatus(progressEvent),
-        message: progressEvent.message,
+        message: progressEvent['message'] as string,
       };
 
       this.progressCallbacks.forEach(callback => {
@@ -300,118 +485,6 @@ export class MLEngineManager {
       }
     }
     this.isProgressListenerAdded = false;
-  }
-
-  /**
-   * Register a progress callback
-   */
-  onProgress(callback: ProgressCallback): void {
-    this.progressCallbacks.push(callback);
-    console.log('MLEngineManager: Progress callback registered');
-  }
-
-  /**
-   * Remove a progress callback
-   */
-  offProgress(callback: ProgressCallback): void {
-    this.progressCallbacks = this.progressCallbacks.filter(cb => cb !== callback);
-    console.log('MLEngineManager: Progress callback removed');
-  }
-
-  /**
-   * Run the engine with text input
-   */
-  async runEngine(text: string, timeoutMs = 30000): Promise<any> {
-    try {
-      const engine = await this.getEngine();
-      const trialML = (browser as any).trial.ml;
-
-      if (typeof trialML.runEngine !== 'function') {
-        throw new Error('browser.trial.ml.runEngine is not available');
-      }
-
-      // Add timeout handling
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error(`ML engine timeout after ${timeoutMs}ms: ${MLEngineError.TIMEOUT}`));
-        }, timeoutMs);
-      });
-
-      console.log('MLEngineManager: Running engine with text length:', text.length);
-      
-      const result = await Promise.race([
-        trialML.runEngine(engine.engine, text),
-        timeoutPromise,
-      ]);
-
-      console.log('MLEngineManager: Engine run completed');
-      return result;
-    } catch (error) {
-      console.error('MLEngineManager: Engine run failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Dispose of the current engine
-   */
-  async disposeEngine(): Promise<void> {
-    if (this.engine && this.engine.engine) {
-      try {
-        const trialML = (browser as any).trial.ml;
-        if (typeof trialML.deleteEngine === 'function') {
-          console.log('MLEngineManager: Disposing engine');
-          await trialML.deleteEngine(this.engine.engine);
-        }
-        this.engine = null;
-        this.cleanupProgressListener();
-        console.log('MLEngineManager: Engine disposed');
-      } catch (error) {
-        console.error('MLEngineManager: Error disposing engine:', error);
-        this.engine = null;
-        this.cleanupProgressListener();
-      }
-    }
-  }
-
-  /**
-   * Clear ML model cache
-   */
-  async clearModelCache(): Promise<void> {
-    try {
-      const trialML = (browser as any).trial.ml;
-      if (typeof trialML.deleteCachedModels === 'function') {
-        console.log('MLEngineManager: Clearing model cache');
-        await trialML.deleteCachedModels();
-        console.log('MLEngineManager: Model cache cleared');
-      } else {
-        console.log('MLEngineManager: deleteCachedModels not available');
-      }
-      
-      // Also dispose current engine
-      await this.disposeEngine();
-    } catch (error) {
-      console.error('MLEngineManager: Error clearing model cache:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate unique engine ID based on config
-   */
-  private generateEngineId(config: MLEngineConfig): string {
-    return `ml_engine_${config.modelHub || 'mozilla'}_${config.taskName}_${config.modelId}`;
-  }
-
-  /**
-   * Reset the manager (for testing or cleanup)
-   */
-  async reset(): Promise<void> {
-    await this.disposeEngine();
-    this.enginePromise = null;
-    this.progressCallbacks = [];
-    this.isProgressListenerAdded = false;
-    console.log('MLEngineManager: Reset complete');
   }
 }
 

@@ -3,7 +3,7 @@
  * Common utilities used across all AI provider implementations
  */
 
-import { SUMMARY_PROMPTS } from './summary-prompts';
+import {SUMMARY_PROMPTS, SummaryStyle} from './summary-prompts';
 
 /**
  * Estimate token count for a given text
@@ -30,7 +30,7 @@ export function addAuthHeader(
   headers: Record<string, string>,
   apiKey: string,
   authHeader: string,
-  useBearerToken: boolean
+  useBearerToken: boolean,
 ): void {
   if (apiKey && authHeader) {
     if (useBearerToken) {
@@ -54,14 +54,14 @@ export function buildUserMessage(articleText: string, title?: string): string {
 /**
  * Get the system prompt for summarization
  */
-export function getSystemPrompt(style?: string, customPrompt?: string): string {
+export function getSystemPrompt(style?: SummaryStyle, customPrompt?: string): string {
   // Use custom prompt if provided
   if (customPrompt && customPrompt.trim() !== '') {
     return customPrompt;
   }
 
   // Use style-specific prompt or default to concise
-  return SUMMARY_PROMPTS[style || 'concise'] || SUMMARY_PROMPTS.concise;
+  return SUMMARY_PROMPTS[style ?? 'concise'] || SUMMARY_PROMPTS.concise;
 }
 
 /**
@@ -70,7 +70,7 @@ export function getSystemPrompt(style?: string, customPrompt?: string): string {
 export function getTokenCount(
   articleText: string,
   systemPrompt: string,
-  estimateFn: (text: string) => number = estimateTokenCount
+  estimateFn: (text: string) => number = estimateTokenCount,
 ): number {
   // Estimate tokens for the article text plus prompt tokens
   const promptTokens = estimateFn(systemPrompt);
@@ -98,7 +98,7 @@ export function validateRequiredApiKey(apiKey: string): ValidationResult {
  */
 export function validateApiKeyFormat(
   apiKey: string,
-  expectedPrefixes: string[]
+  expectedPrefixes: string[],
 ): ValidationResult {
   for (const prefix of expectedPrefixes) {
     if (apiKey.startsWith(prefix)) {
@@ -124,7 +124,7 @@ export function validateApiKeyLength(apiKey: string, minLength: number = 30): Va
 export function validateModel(
   model: string | undefined,
   availableModels: string[] | undefined,
-  providerName: string
+  providerName: string,
 ): ValidationResult {
   if (model && availableModels && !availableModels.includes(model)) {
     return { valid: false, error: `Invalid model: ${model}. Available models: ${availableModels.join(', ')}` };
@@ -138,7 +138,7 @@ export function validateModel(
 export function validateTemperature(
   temperature: number | undefined,
   min: number = 0,
-  max: number = 1
+  max: number = 1,
 ): ValidationResult {
   if (temperature !== undefined) {
     if (typeof temperature !== 'number' || temperature < min || temperature > max) {
@@ -153,7 +153,7 @@ export function validateTemperature(
  */
 export function validateMaxTokens(
   maxTokens: number | undefined,
-  maxLimit?: number
+  maxLimit?: number,
 ): ValidationResult {
   if (maxTokens !== undefined) {
     if (typeof maxTokens !== 'number' || maxTokens <= 0) {

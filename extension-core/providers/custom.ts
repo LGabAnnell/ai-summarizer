@@ -7,17 +7,17 @@ import type { AIProvider, AIProviderConfig, AIProviderRequest, AIProviderRespons
 import type { SummaryStyle } from './summary-prompts';
 import { SUMMARY_PROMPTS } from './summary-prompts';
 import {
-  estimateTokenCount,
-  buildBaseHeaders,
+  type ValidationResult,
   addAuthHeader,
+  buildBaseHeaders,
   buildUserMessage,
+  estimateTokenCount,
   getSystemPrompt as getSystemPromptUtil,
   getTokenCount as getTokenCountUtil,
-  validateRequiredApiKey,
-  validateUrl,
-  validateTemperature,
   validateMaxTokens,
-  type ValidationResult,
+  validateRequiredApiKey,
+  validateTemperature,
+  validateUrl,
 } from './provider.utils';
 
 // Default configuration for custom provider
@@ -72,7 +72,7 @@ export class CustomProvider implements AIProvider {
   buildRequest(
     articleText: string,
     title?: string,
-    settings?: Record<string, any>
+    settings?: Record<string, any>,
   ): AIProviderRequest {
     const {
       model = '',
@@ -163,7 +163,7 @@ export class CustomProvider implements AIProvider {
       if (response.choices && response.choices.length > 0) {
         const firstChoice = response.choices[0];
         
-        if (firstChoice.message && firstChoice.message.content) {
+        if (firstChoice.message?.content) {
           return {
             summary: firstChoice.message.content,
             rawResponse: response,
@@ -201,7 +201,7 @@ export class CustomProvider implements AIProvider {
       }
 
       // Try message.content (some custom APIs)
-      if (response.message && response.message.content) {
+      if (response.message?.content) {
         return {
           summary: response.message.content,
           rawResponse: response,

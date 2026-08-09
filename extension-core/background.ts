@@ -6,13 +6,15 @@
 // Import provider factory
 import {createProvider} from './providers';
 import browser from 'webextension-polyfill';
-import {ArticleData} from "@shared/lib/models/article.model";
-import {CachedSummaryData, Message, SummarizeResponse} from "@shared/lib/models/summary.model";
+import {ArticleData} from '@shared/lib/models/article.model';
+import {CachedSummaryData, Message, SummarizeResponse} from '@shared/lib/models/summary.model';
 
 // Import ML services
-import {textClassifierService, ClassificationResult} from './ml/text-classifier.service';
+import {ClassificationResult, textClassifierService} from './ml/text-classifier.service';
 import {mlPermissionService} from './ml/ml-permission.service';
-import {ModelDownloadProgressEvent} from './ml/text-classifier.service';
+import {MLEngineConfig, mlEngineManager} from './ml/ml-engine-manager';
+import {ProviderType} from "@shared/lib/models/settings.model";
+import {Provider} from "@angular/core";
 
 // ML-related types for message handling
 export interface ClassifyTextRequest {
@@ -45,7 +47,7 @@ const CACHE_PREFIX = 'summary_cache_';
 // Settings type
 export interface ExtensionSettings {
   mlTimeout: number;
-  provider: string;
+  provider: ProviderType;
   apiKey: string;
   model: string;
   customEndpoint?: string;
@@ -85,10 +87,10 @@ const DEFAULT_SETTINGS: ExtensionSettings = {
 function generateCacheKey(article: ArticleData, settings: Partial<ExtensionSettings>): string {
   const keyParts = [
     article.url,
-    settings.provider || 'mistral',
-    settings.model || 'mistral-tiny',
-    settings.customPrompt || '',
-    settings.summaryStyle || 'concise',
+    settings.provider ?? 'mistral',
+    settings.model ?? 'mistral-tiny',
+    settings.customPrompt ?? '',
+    settings.summaryStyle ?? 'concise',
   ].join('|');
 
   return CACHE_PREFIX + btoa(encodeURIComponent(keyParts));
@@ -105,7 +107,7 @@ async function getCachedSummary(article: ArticleData, settings: Partial<Extensio
     const cached = result[cacheKey];
 
     // Check if cache has expired
-    if (cached.timestamp && Date.now() - cached.timestamp < (settings.cacheTTL || 7) * 24 * 60 * 60 * 1000) {
+    if (cached.timestamp && Date.now() - cached.timestamp < (settings.cacheTTL ?? 7) * 24 * 60 * 60 * 1000) {
       return cached.summary;
     } else {
       // Cache expired, remove it
@@ -119,15 +121,19 @@ async function getCachedSummary(article: ArticleData, settings: Partial<Extensio
 /**
  * Cache a summary
  */
-async function cacheSummary(article: ArticleData, settings: Partial<ExtensionSettings>, summary: string): Promise<void> {
+async function cacheSummary(
+  article: ArticleData,
+  settings: Partial<ExtensionSettings>,
+  summary: string,
+): Promise<void> {
   const cacheKey = generateCacheKey(article, settings);
   await browser.storage.local.set({
     [cacheKey]: {
       summary,
       timestamp: Date.now(),
       url: article.url,
-      provider: settings.provider || 'mistral',
-      model: settings.model || 'mistral-tiny',
+      provider: settings.provider ?? 'mistral',
+      model: settings.model ?? 'mistral-tiny',
     },
   });
 }
@@ -152,7 +158,7 @@ async function saveSettings(settings: Partial<ExtensionSettings>): Promise<void>
 /**
  * Send message to a specific tab's content script
  */
-async function sendMessageToTab(tabId: number, message: Message): Promise<any> {
+async function sendMessageToTab(tabId: number, message: Message): Promise<unknown> {
   try {
     return await browser.tabs.sendMessage(tabId, message);
   } catch (error) {
@@ -184,25 +190,29 @@ async function extractArticleFromActiveTab(): Promise<ArticleData | null> {
   }
 
   // Send extraction request
-  const response = await sendMessageToTab(tabId, {type: 'EXTRACT_ARTICLE'});
+  const response = await sendMessageToTab(tabId, {type: 'EXTRACT_ARTICLE'}) as {
+    success: boolean;
+    data?: ArticleData;
+    error?: string;
+  };
 
-  if (response && response.success && response.data) {
+  if (response?.success && response.data) {
     return response.data as ArticleData;
   }
 
-  throw new Error(response?.error || 'Failed to extract article');
+  throw new Error(response?.error ?? 'Failed to extract article');
 }
 
 /**
  * Handle summarization request
  */
-async function handleSummarize(article: ArticleData, providerOverride?: string): Promise<SummarizeResponse> {
+async function handleSummarize(article: ArticleData, providerOverride?: ProviderType): Promise<SummarizeResponse> {
   try {
     // Get settings
     const settings = await getSettings();
 
     // Use provider override if specified
-    const provider = providerOverride || settings.provider;
+    const provider: ProviderType = providerOverride ?? settings.provider;
 
     // Check cache first
     if (settings.cacheEnabled) {
@@ -210,7 +220,7 @@ async function handleSummarize(article: ArticleData, providerOverride?: string):
         provider,
         model: settings.model,
         customPrompt: settings.customPrompt,
-        summaryStyle: settings.summaryStyle
+        summaryStyle: settings.summaryStyle,
       });
 
       if (cachedSummary) {
@@ -226,7 +236,7 @@ async function handleSummarize(article: ArticleData, providerOverride?: string):
                 timeout: settings.mlTimeout,
                 modelHub: settings.mlModelHub,
                 // NOTE: NOT passing modelId - using task-based approach
-              }
+              },
             );
 
             if (classification.ok) {
@@ -245,7 +255,7 @@ async function handleSummarize(article: ArticleData, providerOverride?: string):
           summary: cachedSummary,
           success: true,
           cached: true,
-          classification: classificationResult && classificationResult.ok ? {
+          classification: classificationResult?.ok ? {
             label: classificationResult.label,
             score: classificationResult.score,
             modelId: classificationResult.modelId,
@@ -269,7 +279,7 @@ async function handleSummarize(article: ArticleData, providerOverride?: string):
 
     // Cache the result
     if (settings.cacheEnabled) {
-      await cacheSummary(article, settings, result.summary || '');
+      await cacheSummary(article, settings, result.summary ?? '');
     }
 
     // Run classification if ML is enabled
@@ -285,7 +295,7 @@ async function handleSummarize(article: ArticleData, providerOverride?: string):
             timeout: settings.mlTimeout,
             modelHub: settings.mlModelHub,
             // NOTE: NOT passing modelId - using task-based approach
-          }
+          },
         );
 
         if (classification.ok) {
@@ -311,7 +321,7 @@ async function handleSummarize(article: ArticleData, providerOverride?: string):
       success: true,
       cached: false,
       tokenCount: result.tokenCount,
-      classification: classificationResult && classificationResult.ok ? {
+      classification: classificationResult?.ok ? {
         label: classificationResult.label,
         score: classificationResult.score,
         modelId: classificationResult.modelId,
@@ -333,7 +343,7 @@ async function handleSummarize(article: ArticleData, providerOverride?: string):
  */
 async function callProviderAPI(
   article: ArticleData,
-  settings: ExtensionSettings
+  settings: ExtensionSettings,
 ): Promise<{ summary: string; tokenCount?: number; error?: string }> {
   try {
     // Special handling for Firefox ML provider
@@ -342,9 +352,9 @@ async function callProviderAPI(
     }
 
     const provider = createProvider(
-      settings.provider as any,
+      settings.provider,
       settings.apiKey,
-      {endpoint: settings.customEndpoint}
+      {endpoint: settings.customEndpoint},
     );
 
     // Build the request
@@ -357,7 +367,7 @@ async function callProviderAPI(
         maxTokens: settings.maxTokens,
         summaryStyle: settings.summaryStyle,
         customPrompt: settings.customPrompt,
-      }
+      },
     );
 
     // Make the API call
@@ -372,8 +382,8 @@ async function callProviderAPI(
       try {
         const errorJson = JSON.parse(errorText);
         throw new Error(errorJson.error?.message || errorJson.message || `HTTP ${response.status}`);
-      } catch {
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      } catch (parseError) {
+        throw new Error(`HTTP ${response.status}: ${errorText}`, {cause: parseError});
       }
     }
 
@@ -400,11 +410,11 @@ async function callProviderAPI(
 
 /**
  * Call Firefox ML API for local summarization
- * Uses browser.trial.ml API instead of HTTP requests
+ * Uses mlEngineManager abstraction instead of direct browser.trial.ml API calls
  */
 async function callFirefoxMLProvider(
   article: ArticleData,
-  settings: ExtensionSettings
+  settings: ExtensionSettings,
 ): Promise<{ summary: string; tokenCount?: number; error?: string }> {
   try {
     // Check if browser.trial.ml API is available
@@ -420,9 +430,9 @@ async function callFirefoxMLProvider(
     }
 
     // Get the model to use
-    const model = settings.model || 'Xenova/distilbart-cnn-6-6';
-    const temperature = settings.temperature || 0.7;
-    const maxTokens = settings.maxTokens || 500;
+    const model = settings.model ?? 'Xenova/distilbart-cnn-6-6';
+    const temperature = settings.temperature ?? 0.7;
+    const maxTokens = settings.maxTokens ?? 500;
 
     // Create summarization prompt with system prompt
     const systemPrompt = getSystemPrompt(settings.summaryStyle, settings.customPrompt);
@@ -434,33 +444,31 @@ async function callFirefoxMLProvider(
     console.log('Firefox ML: Creating summarization engine with model:', model);
 
     try {
-      // Create the engine for summarization task
-      // Firefox ML uses createEngine() with task type
-      const engine = await trialML.createEngine({
-        taskName: 'summarization', // or 'summarization' if available
-        model: model,
-        // Additional options for the summarization task
-        options: {
+      // Configure the summarization engine with task-specific options
+      const engineConfig: Partial<MLEngineConfig> = {
+        taskName: 'summarization',
+        modelHub: 'mozilla',
+        modelId: model,
+        taskOptions: {
           max_length: maxTokens,
           min_length: 30,
           do_sample: temperature > 0,
           temperature: temperature,
           num_return_sequences: 1,
-        }
-      });
+        },
+      };
 
-      console.log('Firefox ML: Engine created successfully');
-
-      // Run the engine on the article text
-      const result = await trialML.runEngine({
-        args: [prompt]
-      }) as unknown as any[];
+      // Get or create the engine using mlEngineManager
+      const timeout = settings.mlTimeout ?? 720000;
+      const result = await mlEngineManager.runEngine(prompt, timeout, engineConfig);
 
       console.log('Firefox ML: Engine execution completed, result:', result);
 
       // Handle the result
-      if (result && Array.isArray(result) && result.length > 0) {
-        let summary: string = result[0]['summary_text'];
+      // For summarization, the result is typically an array with summary_text in the first element
+      if (Array.isArray(result) && result.length > 0) {
+        const firstResult = result[0];
+        let summary: string = firstResult?.summary_text ?? '';
 
         if (summary && summary.trim()) {
           // Clean up the summary by removing any trailing special tokens
@@ -481,9 +489,7 @@ async function callFirefoxMLProvider(
 
           summary = summary.trim();
 
-          console.log('Firefox ML: Successfully generated summary:', summary.substring(0, 200) + '...');
-
-          await trialML.deleteCachedModels();
+          console.log('Firefox ML: Successfully generated summary:', `${summary.substring(0, 200)  }...`);
 
           return {
             summary: summary,
@@ -502,18 +508,27 @@ async function callFirefoxMLProvider(
       const errorMessage = mlError instanceof Error ? mlError.message : String(mlError);
 
       if (errorMessage.includes('permission') || errorMessage.includes('Permission')) {
-        throw new Error('ML permission denied. Please grant trialML permission in extension settings and ensure Firefox ML is enabled in about:config (browser.ml.enable and extensions.ml.enabled must be true).');
+        throw new Error(
+          'ML permission denied. Please grant trialML permission in extension settings and ensure Firefox ML is enabled in about:config (browser.ml.enable and extensions.ml.enabled must be true).',
+          {cause: mlError},
+        );
       }
 
       if (errorMessage.includes('model') || errorMessage.includes('Model')) {
-        throw new Error(`Model ${model} not available. Firefox ML models need to be downloaded on first use. Check that you have internet connectivity for the initial model download.`);
+        throw new Error(
+          `Model ${model} not available. Firefox ML models need to be downloaded on first use. Check that you have internet connectivity for the initial model download.`,
+          {cause: mlError},
+        );
       }
 
       if (errorMessage.includes('unavailable') || errorMessage.includes('not available')) {
-        throw new Error('Firefox ML API is not available in this Firefox version. Requires Firefox Nightly or Beta with ML enabled in about:config.');
+        throw new Error(
+          'Firefox ML API is not available in this Firefox version. Requires Firefox Nightly or Beta with ML enabled in about:config.',
+          {cause: mlError},
+        );
       }
 
-      throw new Error(`Firefox ML error: ${errorMessage}`);
+      throw new Error(`Firefox ML error: ${errorMessage}`, {cause: mlError});
     }
   } catch (error) {
     return {
@@ -554,19 +569,6 @@ function getSystemPrompt(style?: SummaryPrompt, customPrompt?: string): string {
   }
 
   return SUMMARY_PROMPTS[style ?? 'concise'];
-}
-
-/**
- * Generate a mock summary for testing purposes (fallback)
- */
-function generateMockSummary(article: ArticleData): string {
-  const lines = [
-    `This is a mock summary of "${article.title}".`,
-    `The article is ${article.length} characters long.`,
-    `In a real implementation, this would be replaced by actual AI-generated summary.`,
-  ];
-
-  return lines.join(' ');
 }
 
 /**
@@ -617,7 +619,7 @@ async function handleSaveSettings(settings: Partial<ExtensionSettings>): Promise
 /**
  * Handle REFRESH_MODELS request
  */
-async function handleRefreshModels(providerType: string, apiKey: string): Promise<{
+async function handleRefreshModels(providerType: ProviderType, apiKey: string): Promise<{
   success: boolean;
   data?: { models: string[] };
   error?: string
@@ -632,7 +634,7 @@ async function handleRefreshModels(providerType: string, apiKey: string): Promis
           models: [
             'Xenova/distilbart-cnn-6-6',
             'Xenova/distilbart-cnn-12-6',
-          ]
+          ],
         },
       };
     }
@@ -642,7 +644,7 @@ async function handleRefreshModels(providerType: string, apiKey: string): Promis
     }
 
     // Create provider instance
-    const provider = createProvider(providerType as any, apiKey);
+    const provider = createProvider(providerType, apiKey);
 
     // Call the provider's fetchModels method
     const models = await provider.fetchModels(apiKey);
@@ -669,21 +671,12 @@ async function testProviderConnection(providerType: string, apiKey: string): Pro
   try {
     // Firefox ML doesn't require an API key
     if (providerType === 'firefox-ml') {
-      // Check if browser.trial.ml API is available
-      const trialML = (browser as any).trial?.ml;
-      if (!trialML || typeof trialML.createEngine !== 'function') {
-        return {
-          valid: false,
-          error: 'Firefox ML API is not available. Requires Firefox Nightly or Beta with ML enabled.'
-        };
-      }
-
       // Check permission
       const hasPermission = await browser.permissions.contains({permissions: ['trialML']});
       if (!hasPermission) {
         return {
           valid: false,
-          error: 'trialML permission is required for Firefox ML. Please grant permission in extension settings.'
+          error: 'trialML permission is required for Firefox ML. Please grant permission in extension settings.',
         };
       }
 
@@ -733,7 +726,7 @@ async function testProviderConnection(providerType: string, apiKey: string): Pro
   } catch (error) {
     return {
       valid: false,
-      error: `Connection test failed: ${error instanceof Error ? error.message : String(error)}`
+      error: `Connection test failed: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }
@@ -767,7 +760,7 @@ async function handleClassifyText(request: ClassifyTextRequest): Promise<Classif
         modelId: request.modelId,
         timeout: request.timeout,
         modelHub: settings.mlModelHub,
-      }
+      },
     );
 
     console.log('Background: Classification result:', result);
@@ -904,95 +897,95 @@ async function handleCheckMLAvailability(): Promise<{
 /**
  * Main message handler
  */
-async function handleMessage(request: Message, sender: any): Promise<any> {
+async function handleMessage(request: Message): Promise<unknown> {
   switch (request.type) {
-    case 'EXTRACT_AND_SUMMARIZE':
-      try {
-        const article = await extractArticleFromActiveTab();
-        if (!article) {
-          return {
-            type: 'SUMMARIZE_RESPONSE',
-            error: 'Could not extract article content',
-            success: false,
-          };
-        }
-        const summaryResponse = await handleSummarize(article);
-        // Add article metadata to the response for the sidebar
-        return {
-          ...summaryResponse,
-          title: article.title,
-          articleUrl: article.url,
-        };
-      } catch (error) {
+  case 'EXTRACT_AND_SUMMARIZE':
+    try {
+      const article = await extractArticleFromActiveTab();
+      if (!article) {
         return {
           type: 'SUMMARIZE_RESPONSE',
-          error: `Extraction error: ${error instanceof Error ? error.message : String(error)}`,
+          error: 'Could not extract article content',
           success: false,
         };
       }
-
-    case 'SUMMARIZE':
-      return handleSummarize(request.article, request.provider);
-
-    case 'GET_SETTINGS':
-      return handleGetSettings();
-
-    case 'SAVE_SETTINGS':
-      return handleSaveSettings(request.settings);
-
-    case 'TEST_PROVIDER':
-      return testProviderConnection(request.provider, request.apiKey);
-
-    case 'REFRESH_MODELS':
-      return handleRefreshModels(request.provider, request.apiKey);
-
-    case 'CLEAR_CACHE':
-      try {
-        const keys = await browser.storage.local.getKeys();
-        const cacheKeys = keys.filter(key => key.startsWith(CACHE_PREFIX));
-        await browser.storage.local.remove(cacheKeys);
-        return {
-          type: 'CLEAR_CACHE_RESPONSE',
-          success: true,
-          cleared: cacheKeys.length,
-        };
-      } catch (error) {
-        return {
-          type: 'CLEAR_CACHE_RESPONSE',
-          success: false,
-          error: `Failed to clear cache: ${error}`,
-        };
-      }
-
-    // ML Classification cases
-    case 'CLASSIFY_TEXT':
-      return handleClassifyText(request);
-
-    case 'GET_ML_PERMISSION_STATUS':
-      return handleGetMLPermissionStatus();
-
-    case 'NOTIFY_ML_PERMISSION_GRANTED':
-      console.log('Background.handleMessage: Processing NOTIFY_ML_PERMISSION_GRANTED case');
-      return handleNotifyMLPermissionGranted();
-
-    case 'CLEAR_ML_CACHE':
-      return handleClearMLCache();
-
-    case 'CHECK_ML_AVAILABILITY':
-      return handleCheckMLAvailability();
-
-    default:
+      const summaryResponse = await handleSummarize(article);
+      // Add article metadata to the response for the sidebar
       return {
-        type: 'UNKNOWN_REQUEST',
-        error: `Unknown message type: ${request.type}`,
+        ...summaryResponse,
+        title: article.title,
+        articleUrl: article.url,
+      };
+    } catch (error) {
+      return {
+        type: 'SUMMARIZE_RESPONSE',
+        error: `Extraction error: ${error instanceof Error ? error.message : String(error)}`,
         success: false,
       };
+    }
+
+  case 'SUMMARIZE':
+    return handleSummarize(request.article, request.provider);
+
+  case 'GET_SETTINGS':
+    return handleGetSettings();
+
+  case 'SAVE_SETTINGS':
+    return handleSaveSettings(request.settings);
+
+  case 'TEST_PROVIDER':
+    return testProviderConnection(request.provider, request.apiKey);
+
+  case 'REFRESH_MODELS':
+    return handleRefreshModels(request.provider, request.apiKey);
+
+  case 'CLEAR_CACHE':
+    try {
+      const keys = await browser.storage.local.getKeys();
+      const cacheKeys = keys.filter(key => key.startsWith(CACHE_PREFIX));
+      await browser.storage.local.remove(cacheKeys);
+      return {
+        type: 'CLEAR_CACHE_RESPONSE',
+        success: true,
+        cleared: cacheKeys.length,
+      };
+    } catch (error) {
+      return {
+        type: 'CLEAR_CACHE_RESPONSE',
+        success: false,
+        error: `Failed to clear cache: ${error}`,
+      };
+    }
+
+    // ML Classification cases
+  case 'CLASSIFY_TEXT':
+    return handleClassifyText(request);
+
+  case 'GET_ML_PERMISSION_STATUS':
+    return handleGetMLPermissionStatus();
+
+  case 'NOTIFY_ML_PERMISSION_GRANTED':
+    console.log('Background.handleMessage: Processing NOTIFY_ML_PERMISSION_GRANTED case');
+    return handleNotifyMLPermissionGranted();
+
+  case 'CLEAR_ML_CACHE':
+    return handleClearMLCache();
+
+  case 'CHECK_ML_AVAILABILITY':
+    return handleCheckMLAvailability();
+
+  default:
+    return {
+      type: 'UNKNOWN_REQUEST',
+      error: `Unknown message type: ${request.type}`,
+      success: false,
+    };
   }
 }
 
 // Set up message listener
-browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  handleMessage(request as Message, sender)
+browser.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+  handleMessage(request as Message)
     .then(response => sendResponse(response))
     .catch(error => sendResponse({
       type: 'ERROR_RESPONSE',
@@ -1006,17 +999,12 @@ browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Set up ML progress event broadcasting
 // This sends progress events to all connected front-ends (popup, sidebar, options)
-function setupMLProgressBroadcasting() {
+function setupMLProgressBroadcasting(): void {
   try {
-    const trialML = (browser as any).trial?.ml;
-    if (!trialML || typeof trialML.onProgress !== 'function') {
-      console.log('Background: ML progress API not available, skipping progress broadcasting');
-      return;
-    }
 
     console.log('Background: Setting up ML progress event broadcasting');
 
-    trialML.onProgress.addListener((progressEvent: any) => {
+    browser.trial.ml.onProgress.addListener((progressEvent: any) => {
       console.log('Background: ML progress event received:', progressEvent);
 
       // Broadcast progress to all connected front-ends
@@ -1051,7 +1039,7 @@ setupMLProgressBroadcasting();
 
 // Set up keyboard shortcut command listener for sidebar toggle
 browser.commands.onCommand.addListener((command) => {
-  if (command === "toggle-sidebar") {
+  if (command === 'toggle-sidebar') {
     browser.sidebarAction.toggle();
   }
 });

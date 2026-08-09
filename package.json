@@ -21,10 +21,12 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
+    "lint:extension-core": "eslint extension-core",
     "lint:popup": "ng lint popup",
     "lint:options": "ng lint options",
     "lint:sidebar": "ng lint sidebar",
     "lint:shared": "ng lint shared",
+    "lint:all": "npm run lint:extension-core && npm run lint:shared && npm run lint:popup && npm run lint:options && npm run lint:sidebar",
     "package": "web-ext build",
     "run": "web-ext run"
   },

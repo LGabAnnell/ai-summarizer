@@ -6,12 +6,12 @@
 import type {AIProviderConfig, AIProviderSettings} from './provider.model';
 import { OpenAICompatibleProvider } from './openai-compatible-provider';
 import {
-  validateRequiredApiKey,
-  validateApiKeyFormat,
-  validateModel,
-  validateTemperature,
-  validateMaxTokens,
   type ValidationResult,
+  validateApiKeyFormat,
+  validateMaxTokens,
+  validateModel,
+  validateRequiredApiKey,
+  validateTemperature,
 } from './provider.utils';
 
 // OpenAI API configuration

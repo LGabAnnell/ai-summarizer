@@ -89,7 +89,7 @@ async function packageDist() {
       manifest.sidebar_action.default_panel = 'sidebar/index.html';
       
       // Firefox uses "scripts" instead of "service_worker" for background
-      if (manifest.background && manifest.background.service_worker) {
+      if (manifest.background?.service_worker) {
         manifest.background.scripts = [manifest.background.service_worker];
         delete manifest.background.service_worker;
       }

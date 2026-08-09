@@ -4,7 +4,7 @@
  */
 
 import { BaseProvider } from './base-provider';
-import type { AIProviderResponse, AIProviderConfig } from './provider.model';
+import type { AIProviderConfig, AIProviderResponse } from './provider.model';
 import type { ValidationResult } from './provider.utils';
 import { buildUserMessage } from './provider.utils';
 
@@ -15,7 +15,7 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
   buildRequestBody(
     articleText: string,
     title?: string,
-    settings?: Record<string, any>
+    settings?: Record<string, any>,
   ): Record<string, any> {
     const {
       model = this.config.defaultModel,
@@ -49,7 +49,7 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
       if (response.choices && response.choices.length > 0) {
         const firstChoice = response.choices[0];
 
-        if (firstChoice.message && firstChoice.message.content) {
+        if (firstChoice.message?.content) {
           return {
             summary: firstChoice.message.content,
             rawResponse: response,
@@ -71,7 +71,7 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
 
       if (response.error) {
         throw new Error(
-          response.error.message || `Unknown ${this.config.name} API error`
+          response.error.message || `Unknown ${this.config.name} API error`,
         );
       }
 

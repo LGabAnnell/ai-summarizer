@@ -140,25 +140,25 @@ export interface ProviderSettings {
 /**
  * Factory function to create the appropriate provider instance
  */
-export function createProvider(providerType: ProviderType, settings: ProviderSettings): AIProvider {
+export function createProvider(providerType: ProviderType): AIProvider {
   switch (providerType) {
-    case 'mistral':
-      // Import and return Mistral provider
-      // Note: Dynamic imports will be used in the actual implementation
-      return null as any; // Placeholder
-    case 'openai':
-      return null as any; // Placeholder
-    case 'anthropic':
-      return null as any; // Placeholder
-    case 'qwen':
-      return null as any; // Placeholder
-    case 'deepseek':
-      return null as any; // Placeholder
-    case 'custom':
-      return null as any; // Placeholder
-    case 'firefox-ml':
-      return null as any; // Placeholder
-    default:
-      throw new Error(`Unknown provider type: ${providerType}`);
+  case 'mistral':
+    // Import and return Mistral provider
+    // Note: Dynamic imports will be used in the actual implementation
+    return null as any; // Placeholder
+  case 'openai':
+    return null as any; // Placeholder
+  case 'anthropic':
+    return null as any; // Placeholder
+  case 'qwen':
+    return null as any; // Placeholder
+  case 'deepseek':
+    return null as any; // Placeholder
+  case 'custom':
+    return null as any; // Placeholder
+  case 'firefox-ml':
+    return null as any; // Placeholder
+  default:
+    throw new Error(`Unknown provider type: ${providerType}`);
   }
 }

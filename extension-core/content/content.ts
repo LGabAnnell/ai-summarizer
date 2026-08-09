@@ -51,11 +51,11 @@ function extractArticle(): ArticleData | null {
 
     const article = readability.parse();
 
-    if (article && article.textContent) {
+    if (article?.textContent) {
       // Truncate if necessary
       let textContent = article.textContent;
       if (textContent.length > MAX_TEXT_LENGTH) {
-        textContent = textContent.substring(0, MAX_TEXT_LENGTH) + '...';
+        textContent = `${textContent.substring(0, MAX_TEXT_LENGTH)  }...`;
       }
 
       return {
@@ -80,7 +80,7 @@ function extractArticle(): ArticleData | null {
 function extractArticleFallback(): ArticleData | null {
   try {
     // Try to find article element
-    let articleElement = document.querySelector('article') ||
+    const articleElement = document.querySelector('article') ||
                         document.querySelector('main') ||
                         document.querySelector('.article') ||
                         document.querySelector('.content') ||
@@ -111,7 +111,7 @@ function extractArticleFallback(): ArticleData | null {
 
     // Truncate if necessary
     if (textContent.length > MAX_TEXT_LENGTH) {
-      textContent = textContent.substring(0, MAX_TEXT_LENGTH) + '...';
+      textContent = `${textContent.substring(0, MAX_TEXT_LENGTH)  }...`;
     }
 
     // Try to find a title

@@ -14,12 +14,12 @@ import type {
   AIProviderResponse,
 } from './provider.model';
 import {
-  estimateTokenCount,
-  buildBaseHeaders,
+  type ValidationResult,
   addAuthHeader,
+  buildBaseHeaders,
+  estimateTokenCount,
   getSystemPrompt as getSystemPromptUtil,
   getTokenCount as getTokenCountUtil,
-  type ValidationResult,
 } from './provider.utils';
 
 export abstract class BaseProvider implements AIProvider {
@@ -71,7 +71,7 @@ export abstract class BaseProvider implements AIProvider {
   buildRequest(
     articleText: string,
     title?: string,
-    settings?: Record<string, any>
+    settings?: Record<string, any>,
   ): AIProviderRequest {
     const headers = {
       ...buildBaseHeaders(),
@@ -81,7 +81,7 @@ export abstract class BaseProvider implements AIProvider {
       headers,
       this.apiKey,
       this.config.authHeader!,
-      this.config.useBearerToken!
+      this.config.useBearerToken!,
     );
     return {
       url: this.config.endpoint,

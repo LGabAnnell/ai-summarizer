@@ -5,7 +5,7 @@
  */
 
 import browser from 'webextension-polyfill';
-import { mlEngineManager, MLEngineConfig } from './ml-engine-manager';
+import { MLEngineConfig, mlEngineManager } from './ml-engine-manager';
 import { mlPermissionService } from './ml-permission.service';
 
 /**
@@ -84,7 +84,7 @@ export class TextClassifierService {
    */
   async classifyText(
     text: string,
-    config?: Partial<MLEngineConfig & { timeout?: number }>
+    config?: Partial<MLEngineConfig & { timeout?: number }>,
   ): Promise<ClassificationResult> {
     const startTime = Date.now();
 
@@ -131,7 +131,7 @@ export class TextClassifierService {
 
       const result = await mlEngineManager.runEngine(
         truncatedText,
-        config?.timeout || 30000
+        config?.timeout || 30000,
       );
 
       // Parse and normalize the result
@@ -181,7 +181,7 @@ export class TextClassifierService {
    */
   private parseResult(
     result: any,
-    metadata: { modelId?: string; inferenceTime?: number }
+    metadata: { modelId?: string; inferenceTime?: number },
   ): ClassificationResult {
     try {
       console.log('TextClassifierService: Parsing result:', result);
@@ -245,7 +245,6 @@ export class TextClassifierService {
         error: 'Unable to parse classification result',
         ...metadata,
       };
-
     } catch (error) {
       console.error('TextClassifierService: Error parsing result:', error);
       return {
@@ -393,7 +392,7 @@ export class TextClassifierService {
    * Returns current progress and registers callback for future updates
    */
   onModelDownloadProgress(
-    callback: (event: ModelDownloadProgressEvent) => void
+    callback: (event: ModelDownloadProgressEvent) => void,
   ): void {
     mlEngineManager.onProgress((event) => {
       const progressEvent: ModelDownloadProgressEvent = {
@@ -410,7 +409,7 @@ export class TextClassifierService {
    * Remove progress callback
    */
   offModelDownloadProgress(
-    callback: (event: ModelDownloadProgressEvent) => void
+    callback: (event: ModelDownloadProgressEvent) => void,
   ): void {
     mlEngineManager.offProgress((event) => {
       const progressEvent: ModelDownloadProgressEvent = {
