@@ -417,12 +417,6 @@ async function callFirefoxMLProvider(
   settings: ExtensionSettings,
 ): Promise<{ summary: string; tokenCount?: number; error?: string }> {
   try {
-    // Check if browser.trial.ml API is available
-    const trialML = browser.trial.ml;
-    if (!trialML || typeof trialML.createEngine !== 'function' || typeof trialML.runEngine !== 'function') {
-      throw new Error('Firefox ML API (browser.trial.ml) is not available in this version of Firefox. Requires Firefox Nightly or Beta with extensions.ml.enabled=true in about:config.');
-    }
-
     // Check if we have the trialML permission
     const hasPermission = await browser.permissions.contains({permissions: ['trialML']});
     if (!hasPermission) {

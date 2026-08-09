@@ -334,44 +334,6 @@ export class TextClassifierService {
   }
 
   /**
-   * Check if ML classification is available
-   */
-  async isAvailable(): Promise<boolean> {
-    try {
-      // Check API availability
-      if (!mlPermissionService.isAPIAvailable()) {
-        return false;
-      }
-
-      // Check permission
-      const hasPermission = await mlPermissionService.checkPermission();
-      if (!hasPermission) {
-        return false;
-      }
-
-      // Check if engine can be created
-      return true;
-    } catch (error) {
-      console.error('TextClassifierService: Error checking availability:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Check permission status
-   */
-  async checkPermission(): Promise<boolean> {
-    return mlPermissionService.checkPermission();
-  }
-
-  /**
-   * Request ML permission
-   */
-  async requestPermission(): Promise<boolean> {
-    return mlPermissionService.requestPermission();
-  }
-
-  /**
    * Clear ML model cache
    */
   async clearCache(): Promise<{ success: boolean; error?: string }> {

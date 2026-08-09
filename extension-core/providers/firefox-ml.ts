@@ -20,6 +20,7 @@ import {
   getTokenCount as getTokenCountUtil,
 } from './provider.utils';
 import {AIRequestSettings} from '@shared/lib/models/settings.model';
+import {SummaryStyle} from "./summary-prompts";
 
 // Firefox ML API configuration
 const FIREFOX_ML_CONFIG: AIProviderConfig = {
@@ -176,7 +177,7 @@ export class FirefoxMLProvider implements AIProvider {
   /**
    * Get the system prompt for summarization
    */
-  getSystemPrompt(style?: string, customPrompt?: string): string {
+  getSystemPrompt(style?: SummaryStyle, customPrompt?: string): string {
     return getSystemPromptUtil(style, customPrompt);
   }
 

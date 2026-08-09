@@ -200,7 +200,7 @@ export class MLEngineManager {
   async runEngine(text: string, timeoutMs = 30000, config?: Partial<MLEngineConfig>): Promise<any> {
     try {
       const engine = await this.getEngine(config);
-      const trialML = (browser as any).trial.ml;
+      const trialML = browser.trial.ml;
 
       if (typeof trialML.runEngine !== 'function') {
         throw new Error('browser.trial.ml.runEngine is not available');
@@ -218,7 +218,9 @@ export class MLEngineManager {
       // For Firefox ML API, we need to call runEngine with the engine and text
       // The API signature is: runEngine(engine, inputText)
       const result = await Promise.race([
-        trialML.runEngine(engine.engine, text),
+        trialML.runEngine({
+          args: text
+        }),
         timeoutPromise,
       ]);
 
@@ -378,7 +380,7 @@ export class MLEngineManager {
   /**
    * Create the actual browser.trial.ml engine
    */
-  private async createBrowserEngine(config: MLEngineConfig): Promise<any> {
+  private async createBrowserEngine(config: MLEngineConfig): Promise<void> {
     try {
       const trialML = browser.trial.ml;
 
@@ -410,14 +412,7 @@ export class MLEngineManager {
         engineConfig.options = config.taskOptions;
       }
 
-      const engine = await trialML.createEngine(engineConfig as unknown as { [p: string]: string });
-
-      if (engine == null) {
-        throw new Error('Engine creation returned null');
-      }
-
-      console.log('MLEngineManager: Engine object created:', typeof engine);
-      return engine;
+      await trialML.createEngine(engineConfig as unknown as { [p: string]: string });
     } catch (error) {
       console.error('MLEngineManager: Browser engine creation failed:', error);
       throw error;
