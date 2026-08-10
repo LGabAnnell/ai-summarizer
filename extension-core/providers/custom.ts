@@ -3,7 +3,12 @@
  * Implements the AIProvider interface for user-defined custom endpoints
  */
 
-import type { AIProvider, AIProviderConfig, AIProviderRequest, AIProviderResponse } from './provider.model';
+import type {
+  AIProvider,
+  AIProviderConfig,
+  AIProviderRequest,
+  AIProviderResponse,
+} from './provider.model';
 import type { SummaryStyle } from './summary-prompts';
 import { SUMMARY_PROMPTS } from './summary-prompts';
 import {
@@ -51,17 +56,6 @@ export class CustomProvider implements AIProvider {
     this.config = {
       ...CUSTOM_CONFIG,
       endpoint: this.endpoint,
-    };
-  }
-
-  /**
-   * Update the endpoint
-   */
-  updateEndpoint(endpoint: string): void {
-    this.endpoint = endpoint;
-    this.config = {
-      ...this.config,
-      endpoint: endpoint,
     };
   }
 
@@ -222,32 +216,6 @@ export class CustomProvider implements AIProvider {
         truncated: false,
       };
     }
-  }
-
-  /**
-   * Validate the provider configuration
-   */
-  validateConfig(apiKey: string, settings?: Record<string, any>): ValidationResult {
-    // Validate API key is required
-    const apiKeyCheck = validateRequiredApiKey(apiKey);
-    if (!apiKeyCheck.valid) return apiKeyCheck;
-
-    // Check if endpoint is configured (if provided in settings)
-    const endpoint = settings?.endpoint || this.endpoint;
-    const endpointCheck = validateUrl(endpoint);
-    if (!endpointCheck.valid) {
-      return { valid: false, error: 'Custom endpoint URL is required' };
-    }
-
-    // Validate temperature if provided
-    const tempCheck = validateTemperature(settings?.temperature, 0, 1);
-    if (!tempCheck.valid) return tempCheck;
-
-    // Validate maxTokens if provided
-    const maxTokensCheck = validateMaxTokens(settings?.maxTokens);
-    if (!maxTokensCheck.valid) return maxTokensCheck;
-
-    return { valid: true };
   }
 
   /**

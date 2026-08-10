@@ -83,13 +83,6 @@ export interface AIProvider {
   parseResponse(response: any): AIProviderResponse;
 
   /**
-   * Validate the provider configuration
-   * @param apiKey - The API key to validate
-   * @param settings - Additional settings to validate
-   */
-  validateConfig(apiKey: string, settings?: Record<string, any>): { valid: boolean; error?: string };
-
-  /**
    * Get the estimated token count for the request
    * @param articleText - The article text
    */

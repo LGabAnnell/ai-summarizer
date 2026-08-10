@@ -14,7 +14,6 @@ import {ClassificationResult, textClassifierService} from './ml/text-classifier.
 import {mlPermissionService} from './ml/ml-permission.service';
 import {MLEngineConfig, mlEngineManager} from './ml/ml-engine-manager';
 import {ProviderType} from "@shared/lib/models/settings.model";
-import {Provider} from "@angular/core";
 
 // ML-related types for message handling
 export interface ClassifyTextRequest {
@@ -256,11 +255,11 @@ async function handleSummarize(article: ArticleData, providerOverride?: Provider
           success: true,
           cached: true,
           classification: classificationResult?.ok ? {
-            label: classificationResult.label,
-            score: classificationResult.score,
-            modelId: classificationResult.modelId,
-            inferenceTime: classificationResult.inferenceTime,
-            ok: classificationResult.ok,
+            label: classificationResult?.label,
+            score: classificationResult?.score,
+            modelId: classificationResult?.modelId,
+            inferenceTime: classificationResult?.inferenceTime,
+            ok: classificationResult?.ok,
           } : undefined,
         };
       }
@@ -322,11 +321,11 @@ async function handleSummarize(article: ArticleData, providerOverride?: Provider
       cached: false,
       tokenCount: result.tokenCount,
       classification: classificationResult?.ok ? {
-        label: classificationResult.label,
-        score: classificationResult.score,
-        modelId: classificationResult.modelId,
-        inferenceTime: classificationResult.inferenceTime,
-        ok: classificationResult.ok,
+        label: classificationResult?.label,
+        score: classificationResult?.score,
+        modelId: classificationResult?.modelId,
+        inferenceTime: classificationResult?.inferenceTime,
+        ok: classificationResult?.ok,
       } : undefined, // Only include if successful
     };
   } catch (error) {
@@ -467,20 +466,6 @@ async function callFirefoxMLProvider(
         if (summary && summary.trim()) {
           // Clean up the summary by removing any trailing special tokens
           // Firefox ML models may add their own stop tokens
-          summary = summary.trim();
-
-          // Remove common tokens that models might add
-          const cleanupPatterns = [
-            /\n+$/, // Remove trailing newlines
-            /<\/s>$/, // Remove end-of-sequence tokens
-            /<s>$/, // Remove start tokens if at end
-            /\[\/INST\]$/, // Remove instruction end tokens
-          ];
-
-          for (const pattern of cleanupPatterns) {
-            summary = summary.replace(pattern, '');
-          }
-
           summary = summary.trim();
 
           console.log('Firefox ML: Successfully generated summary:', `${summary.substring(0, 200)  }...`);
