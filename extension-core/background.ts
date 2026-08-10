@@ -677,45 +677,6 @@ async function testProviderConnection(providerType: string, apiKey: string): Pro
       return {valid: true};
     }
 
-    if (!apiKey || apiKey.trim() === '') {
-      return {valid: false, error: 'API key is required'};
-    }
-
-    // For now, just validate the API key format based on provider type
-    // In a full implementation, this would make a test API call
-    if (providerType === 'mistral') {
-      if (!apiKey.startsWith('sk-') && !apiKey.startsWith('mx-')) {
-        return {valid: false, error: 'Mistral API key should start with sk- or mx-'};
-      }
-      return {valid: true};
-    }
-
-    if (providerType === 'openai') {
-      if (!apiKey.startsWith('sk-')) {
-        return {valid: false, error: 'OpenAI API key should start with sk-'};
-      }
-      return {valid: true};
-    }
-
-    if (providerType === 'anthropic') {
-      if (!apiKey.startsWith('sk_')) {
-        return {valid: false, error: 'Anthropic API key should start with sk_'};
-      }
-      return {valid: true};
-    }
-
-    if (providerType === 'qwen' || providerType === 'deepseek') {
-      if (apiKey.length < 30) {
-        return {valid: false, error: 'API key seems too short'};
-      }
-      return {valid: true};
-    }
-
-    // For custom provider, just check that it's not empty
-    if (providerType === 'custom') {
-      return {valid: true};
-    }
-
     return {valid: true};
   } catch (error) {
     return {

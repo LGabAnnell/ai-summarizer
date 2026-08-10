@@ -26,8 +26,8 @@
   "commands": {
     "toggle-sidebar": {
       "suggested_key": {
-        "default": "Ctrl+Shift+Y",
-        "mac": "MacCtrl+Shift+Y"
+        "default": "Ctrl+Alt+R",
+        "mac": "MacCtrl+Shift+U"
       },
       "description": "Toggle the sidebar"
     }
