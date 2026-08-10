@@ -20,11 +20,6 @@
     h3 { font-size: 18px; }
   }
 
-  // Paragraphs
-  p {
-    margin: 8px 0;
-  }
-
   // Text formatting
   strong, b {
     font-weight: 600;
@@ -32,16 +27,6 @@
 
   em, i {
     font-style: italic;
-  }
-
-  // Lists
-  ul, ol {
-    margin: 8px 0;
-    padding-left: 24px;
-  }
-
-  li {
-    margin: 4px 0;
   }
 
   // Code blocks
@@ -65,7 +50,6 @@
     padding: 12px;
     border-radius: var(--border-radius);
     overflow-x: auto;
-    margin: 8px 0;
     font-family: monospace;
     font-size: 13px;
   }
@@ -74,7 +58,6 @@
   .sidebar & pre {
     padding: 12px;
     border-radius: var(--border-radius);
-    margin: 12px 0;
     font-size: 14px;
     border: 1px solid var(--border-color);
   }
@@ -82,8 +65,6 @@
   // Blockquotes
   blockquote {
     border-left: 3px solid var(--primary-light);
-    padding-left: 12px;
-    margin: 8px 0;
     color: var(--text-secondary);
   }
 
@@ -91,7 +72,6 @@
   .sidebar & blockquote {
     border-left: 4px solid var(--primary-light);
     padding-left: 16px;
-    margin: 12px 0;
   }
 
   // Links
@@ -103,17 +83,5 @@
     &:hover {
       opacity: 0.8;
     }
-  }
-
-  // Horizontal rules
-  hr {
-    border: 0;
-    border-top: 1px solid var(--border-color);
-    margin: 16px 0;
-  }
-
-  // Sidebar hr
-  .sidebar & hr {
-    margin: 20px 0;
   }
 }
