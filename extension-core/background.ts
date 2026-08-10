@@ -553,11 +553,12 @@ function getSystemPrompt(style?: SummaryPrompt, customPrompt?: string): string {
 /**
  * Handle GET_SETTINGS request
  */
-async function handleGetSettings(): Promise<{ type: string; settings: ExtensionSettings }> {
+async function handleGetSettings(): Promise<{ type: string; success: boolean; data: ExtensionSettings }> {
   const settings = await getSettings();
   return {
     type: 'GET_SETTINGS_RESPONSE',
-    settings,
+    success: true,
+    data: settings,
   };
 }
 
@@ -644,7 +645,9 @@ async function handleRefreshModels(providerType: ProviderType, apiKey: string): 
  * Test a provider connection
  */
 async function testProviderConnection(providerType: string, apiKey: string): Promise<{
-  valid: boolean;
+  type: string;
+  success: boolean;
+  data?: { valid: boolean };
   error?: string
 }> {
   try {
@@ -654,18 +657,20 @@ async function testProviderConnection(providerType: string, apiKey: string): Pro
       const hasPermission = await browser.permissions.contains({permissions: ['trialML']});
       if (!hasPermission) {
         return {
-          valid: false,
+          type: 'TEST_PROVIDER_RESPONSE',
+          success: false,
           error: 'trialML permission is required for Firefox ML. Please grant permission in extension settings.',
         };
       }
 
-      return {valid: true};
+      return { type: 'TEST_PROVIDER_RESPONSE', success: true, data: { valid: true } };
     }
 
-    return {valid: true};
+    return { type: 'TEST_PROVIDER_RESPONSE', success: true, data: { valid: true } };
   } catch (error) {
     return {
-      valid: false,
+      type: 'TEST_PROVIDER_RESPONSE',
+      success: false,
       error: `Connection test failed: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
@@ -678,7 +683,12 @@ async function testProviderConnection(providerType: string, apiKey: string): Pro
 /**
  * Handle CLASSIFY_TEXT request
  */
-async function handleClassifyText(request: ClassifyTextRequest): Promise<ClassificationResult & { type: string }> {
+async function handleClassifyText(request: ClassifyTextRequest): Promise<{
+  type: string;
+  success: boolean;
+  data?: ClassificationResult;
+  error?: string;
+}> {
   try {
     console.log('Background: Handling CLASSIFY_TEXT request');
 
@@ -688,8 +698,11 @@ async function handleClassifyText(request: ClassifyTextRequest): Promise<Classif
       console.log('Background: ML is disabled in settings');
       return {
         type: 'CLASSIFY_RESULT',
-        ok: false,
-        error: 'ML classification is disabled. Enable in Options page.',
+        success: false,
+        data: {
+          ok: false,
+          error: 'ML classification is disabled. Enable in Options page.',
+        },
       };
     }
 
@@ -706,14 +719,18 @@ async function handleClassifyText(request: ClassifyTextRequest): Promise<Classif
     console.log('Background: Classification result:', result);
     return {
       type: 'CLASSIFY_RESULT',
-      ...result,
+      success: true,
+      data: result,
     };
   } catch (error) {
     console.error('Background: Classification failed:', error);
     return {
       type: 'CLASSIFY_RESULT',
-      ok: false,
-      error: `Classification error: ${error instanceof Error ? error.message : String(error)}`,
+      success: false,
+      data: {
+        ok: false,
+        error: `Classification error: ${error instanceof Error ? error.message : String(error)}`,
+      },
     };
   }
 }
@@ -721,19 +738,22 @@ async function handleClassifyText(request: ClassifyTextRequest): Promise<Classif
 /**
  * Handle GET_ML_PERMISSION_STATUS request
  */
-async function handleGetMLPermissionStatus(): Promise<{ type: string; granted: boolean }> {
+async function handleGetMLPermissionStatus(): Promise<{ type: string; success: boolean; data?: { granted: boolean }; error?: string }> {
   try {
     const granted = await mlPermissionService.checkPermission();
     console.log('Background: ML permission status:', granted);
     return {
       type: 'ML_PERMISSION_STATUS',
-      granted,
+      success: true,
+      data: { granted },
     };
   } catch (error) {
     console.error('Background: Error checking ML permission:', error);
     return {
       type: 'ML_PERMISSION_STATUS',
-      granted: false,
+      success: false,
+      data: { granted: false },
+      error: error instanceof Error ? error.message : 'Error checking ML permission',
     };
   }
 }
@@ -768,7 +788,12 @@ async function handleNotifyMLPermissionGranted(): Promise<{ type: string; succes
 /**
  * Handle CLEAR_ML_CACHE request
  */
-async function handleClearMLCache(): Promise<{ type: string; success: boolean; error?: string }> {
+async function handleClearMLCache(): Promise<{
+  type: string;
+  success: boolean;
+  data?: { success: boolean; error?: string };
+  error?: string;
+}> {
   try {
     console.log('Background: Clearing ML model cache...');
     const result = await textClassifierService.clearCache();
@@ -778,13 +803,14 @@ async function handleClearMLCache(): Promise<{ type: string; success: boolean; e
       return {
         type: 'CLEAR_ML_CACHE_RESPONSE',
         success: true,
+        data: { success: true },
       };
     } else {
       console.log('Background: ML cache clear failed:', result.error);
       return {
         type: 'CLEAR_ML_CACHE_RESPONSE',
         success: false,
-        error: result.error,
+        data: { success: false, error: result.error },
       };
     }
   } catch (error) {
@@ -792,7 +818,10 @@ async function handleClearMLCache(): Promise<{ type: string; success: boolean; e
     return {
       type: 'CLEAR_ML_CACHE_RESPONSE',
       success: false,
-      error: `Cache clear failed: ${error instanceof Error ? error.message : String(error)}`,
+      data: { 
+        success: false,
+        error: `Cache clear failed: ${error instanceof Error ? error.message : String(error)}`
+      },
     };
   }
 }
@@ -802,9 +831,9 @@ async function handleClearMLCache(): Promise<{ type: string; success: boolean; e
  */
 async function handleCheckMLAvailability(): Promise<{
   type: string;
-  available: boolean;
-  apiAvailable: boolean;
-  permissionGranted: boolean;
+  success: boolean;
+  data?: { available: boolean; apiAvailable: boolean; permissionGranted: boolean };
+  error?: string;
 }> {
   try {
     const apiAvailable = mlPermissionService.isAPIAvailable();
@@ -819,17 +848,24 @@ async function handleCheckMLAvailability(): Promise<{
 
     return {
       type: 'ML_AVAILABILITY_RESPONSE',
-      available,
-      apiAvailable,
-      permissionGranted,
+      success: true,
+      data: {
+        available,
+        apiAvailable,
+        permissionGranted,
+      },
     };
   } catch (error) {
     console.error('Background: Error checking ML availability:', error);
     return {
       type: 'ML_AVAILABILITY_RESPONSE',
-      available: false,
-      apiAvailable: false,
-      permissionGranted: false,
+      success: false,
+      data: {
+        available: false,
+        apiAvailable: false,
+        permissionGranted: false,
+      },
+      error: error instanceof Error ? error.message : 'Error checking ML availability',
     };
   }
 }
@@ -887,7 +923,7 @@ async function handleMessage(request: Message): Promise<unknown> {
       return {
         type: 'CLEAR_CACHE_RESPONSE',
         success: true,
-        cleared: cacheKeys.length,
+        data: { cleared: cacheKeys.length },
       };
     } catch (error) {
       return {
