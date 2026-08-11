@@ -20,40 +20,21 @@ const THEME_STORAGE_KEY = 'ai-summarizer-theme';
   providedIn: 'root'
 })
 export class ThemeService {
-  // Current theme signal
-  private _theme = signal<Theme>('light');
-  readonly theme = this._theme.asReadonly();
-
   // System theme (detected)
-  private _systemTheme = signal<'light' | 'dark'>('light');
-  readonly systemTheme = this._systemTheme.asReadonly();
-
-  // Effective theme (respects system preference when theme is 'system')
-  readonly effectiveTheme = signal<'light' | 'dark'>('light');
+  private _theme = signal<Theme>('light');
 
   constructor() {
-    this.loadTheme();
+    this.initializeTheme();
+  }
+
+  /**
+   * Initialize theme: load saved preference from storage,
+   * resolve system theme if needed, then apply to the document.
+   */
+  private async initializeTheme(): Promise<void> {
+    await this.loadTheme();
     this.detectSystemTheme();
-
-    // Set up effect to update effective theme when inputs change
-    effect(() => {
-      const theme = this._theme();
-      const system = this._systemTheme();
-      
-      if (theme === 'system') {
-        this.effectiveTheme.set(system);
-      } else {
-        this.effectiveTheme.set(theme);
-      }
-    });
-
-    // Listen for system theme changes
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      mediaQuery.addEventListener('change', (e) => {
-        this._systemTheme.set(e.matches ? 'dark' : 'light');
-      });
-    }
+    this.applyThemeToDocument();
   }
 
   /**
@@ -63,8 +44,8 @@ export class ThemeService {
     try {
       // Check if we're in a browser extension context
       if (typeof browser !== 'undefined' && browser.storage) {
-        const result = await browser.storage.local.get([THEME_STORAGE_KEY]);
-        if (result[THEME_STORAGE_KEY]) {
+        const result = await browser.storage.local.get(THEME_STORAGE_KEY);
+        if (result[THEME_STORAGE_KEY] != null) {
           this._theme.set(result[THEME_STORAGE_KEY] as Theme);
         }
       }
@@ -90,10 +71,16 @@ export class ThemeService {
   /**
    * Detect system theme preference
    */
-  private detectSystemTheme(): void {
+  detectSystemTheme(): void {
     if (typeof window !== 'undefined' && window.matchMedia) {
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      this._systemTheme.set(isDark ? 'dark' : 'light');
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      if (this._theme() == 'system') {
+        this._theme.set(mediaQuery.matches ? 'dark' : 'light');
+        console.log("set media to " + this._theme());
+      }
+      mediaQuery.addEventListener('change', (e) => {
+        this._theme.set(e.matches ? 'dark' : 'light');
+      });
     }
   }
 
@@ -122,38 +109,14 @@ export class ThemeService {
   }
 
   /**
-   * Get effective theme (respects system preference)
-   */
-  getEffectiveTheme(): 'light' | 'dark' {
-    return this.effectiveTheme();
-  }
-
-  /**
-   * Check if current theme is dark
-   */
-  isDarkTheme(): boolean {
-    return this.effectiveTheme() === 'dark';
-  }
-
-  /**
-   * Check if current theme is light
-   */
-  isLightTheme(): boolean {
-    return this.effectiveTheme() === 'light';
-  }
-
-  /**
-   * Check if using system theme
-   */
-  isSystemTheme(): boolean {
-    return this._theme() === 'system';
-  }
-
-  /**
    * Get CSS class for current theme
    */
   getThemeClass(): string {
     return this.isDarkTheme() ? 'dark-theme' : 'light-theme';
+  }
+
+  isDarkTheme() {
+    return this._theme() === 'dark';
   }
 
   /**
@@ -169,7 +132,6 @@ export class ThemeService {
     // Add current theme class
     html.classList.add(themeClass);
     
-    // Also set data attribute for CSS variables
-    html.setAttribute('data-theme', this.effectiveTheme());
+    html.setAttribute('data-theme', this._theme());
   }
 }

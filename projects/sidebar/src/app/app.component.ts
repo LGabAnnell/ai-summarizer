@@ -1,4 +1,4 @@
-import {Component, inject, signal, OnInit, OnDestroy, effect, computed} from '@angular/core';
+import {Component, inject, signal, OnInit, OnDestroy, effect, computed, AfterViewInit} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {
   MarkdownPipe,
@@ -465,7 +465,7 @@ type ViewMode = 'current' | 'history' | 'history-detail';
     `
   ],
 })
-export class AppComponent implements OnInit, OnDestroy {
+export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   // Services
   private summaryService = inject(SummaryService);
   private messagingService = inject(MessagingService);
@@ -621,6 +621,9 @@ export class AppComponent implements OnInit, OnDestroy {
     } else {
       console.log('Not in browser extension context');
     }
+  }
+
+  ngAfterViewInit(): void {
   }
 
   ngOnDestroy(): void {
