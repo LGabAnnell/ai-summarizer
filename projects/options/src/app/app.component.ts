@@ -9,7 +9,9 @@ import {
   MessagingService,
   ModelDownloadProgress,
   ProviderType,
-  SettingsService
+  SettingsService,
+  ThemeService,
+  HeaderComponent
 } from '@shared/public-api';
 import {takeUntilDestroyed, toSignal} from "@angular/core/rxjs-interop";
 import {distinctUntilChanged} from "rxjs";
@@ -18,7 +20,7 @@ import {map} from "rxjs/operators";
 @Component({
   selector: 'options-root',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, HeaderComponent],
   templateUrl: 'app.component.html',
   styleUrl: 'app.component.scss',
 })
@@ -81,10 +83,14 @@ export class AppComponent implements OnInit {
   });
   private classificationService = inject(ClassificationService);
   private messagingService = inject(MessagingService);
+  public themeService = inject(ThemeService);
   private formValueSignal;
   private destroyRef = inject(DestroyRef);
 
   constructor() {
+    // Apply theme to document on initialization
+    this.themeService.applyThemeToDocument();
+    
     this.settingsForm = this.fb.group({
       provider: ['mistral', Validators.required],
       model: ['mistral-tiny', Validators.required],
@@ -137,7 +143,7 @@ export class AppComponent implements OnInit {
         this.isLoading.set(false);
       },
       error: (error) => {
-        this.error.set('Failed to load settings: ' + (error.message || 'Unknown error'));
+        this.error.set('Failed to load settings: ' + (error.message ?? 'Unknown error'));
         this.isLoading.set(false);
       }
     });
@@ -152,7 +158,7 @@ export class AppComponent implements OnInit {
    */
   getApiKeyValidators() {
     return (control: FormControl<string>) => {
-      const provider = this.settingsForm?.get('provider')?.value || 'mistral';
+      const provider = this.settingsForm?.get('provider')?.value ?? 'mistral';
 
       // Firefox ML doesn't require an API key
       if (provider === 'firefox-ml') {
@@ -398,6 +404,13 @@ export class AppComponent implements OnInit {
   openPrivacyPolicy(): void {
     // This will be implemented later
     alert('Privacy Policy will be shown here');
+  }
+
+  /**
+   * Toggle theme between light and dark
+   */
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
   }
 
   // ============================================================================

@@ -36,7 +36,11 @@ type ViewMode = 'current' | 'history' | 'history-detail';
   imports: [CommonModule, MarkdownPipe, HeaderComponent, EmptyStateComponent, LoadingStateComponent, ErrorStateComponent, SummaryHeaderComponent, SummaryMetaComponent, FooterComponent, SummarizeButtonComponent],
   template: `
     <div class="container" [class.dark-theme]="themeService.isDarkTheme()">
-      <shared-header></shared-header>
+      <shared-header
+        [showThemeToggle]="true"
+        [themeService]="themeService"
+        (themeToggle)="toggleTheme()">
+      </shared-header>
 
       <!-- Tabs -->
       <div class="tabs">

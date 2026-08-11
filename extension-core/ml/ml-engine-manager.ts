@@ -280,7 +280,6 @@ export class MLEngineManager {
       await Promise.all(disposalPromises);
       this.engines.clear();
       this.enginePromises.clear();
-      this.cleanupProgressListener();
       console.log('MLEngineManager: All engines disposed');
     }
   }
@@ -290,7 +289,7 @@ export class MLEngineManager {
    */
   async clearModelCache(): Promise<void> {
     try {
-      const trialML = (browser as any).trial.ml;
+      const trialML = browser.trial.ml;
       if (typeof trialML.deleteCachedModels === 'function') {
         console.log('MLEngineManager: Clearing model cache');
         await trialML.deleteCachedModels();
@@ -371,8 +370,6 @@ export class MLEngineManager {
       return engine;
     } catch (error) {
       console.error('MLEngineManager: Failed to create engine:', error);
-      // Clean up progress listener if setup failed
-      this.cleanupProgressListener();
       throw error;
     }
   }
@@ -393,7 +390,7 @@ export class MLEngineManager {
       // Create engine config - include model identifier if provided (task-based approach)
       // Firefox ML API uses 'model' for summarization and 'modelId' for classification
       const engineConfig: MLCreateEngineRequest = {
-        modelHub: config.modelHub || 'mozilla',
+        modelHub: config.modelHub ?? 'mozilla',
         taskName: config.taskName,
       };
 
@@ -462,24 +459,6 @@ export class MLEngineManager {
     if (status === 'error' || event.error) return 'error';
     if (status === 'extracting') return 'extracting';
     return 'downloading';
-  }
-
-  /**
-   * Clean up progress listener
-   */
-  private cleanupProgressListener(): void {
-    const trialML = (browser as any).trial?.ml;
-    if (this.isProgressListenerAdded && trialML && typeof trialML.onProgress !== 'function') {
-      try {
-        // Note: onProgress.addListener/removeListener pattern
-        // For now, we don't track the specific listener to remove
-        // as the API might not support removal
-        console.log('MLEngineManager: Progress listener cleanup not implemented');
-      } catch (error) {
-        console.error('MLEngineManager: Error cleaning up progress listener:', error);
-      }
-    }
-    this.isProgressListenerAdded = false;
   }
 }
 

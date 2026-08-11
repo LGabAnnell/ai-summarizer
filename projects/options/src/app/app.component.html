@@ -1,13 +1,10 @@
 <div class="page">
-  <div class="page-header">
-    <div class="header-content">
-      <div class="logo">
-        <div class="icon">AS</div>
-        <span>Article Summarizer</span>
-      </div>
-    </div>
-    <div class="header-title">Settings</div>
-  </div>
+  <shared-header
+    [showThemeToggle]="true"
+    [themeService]="themeService"
+    (themeToggle)="toggleTheme()">
+  </shared-header>
+  <div class="header-title">Settings</div>
 
   <!-- Toast Notifications Container -->
   <div class="toast-container">
