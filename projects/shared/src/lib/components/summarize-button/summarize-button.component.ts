@@ -1,5 +1,5 @@
-import { Component, input, output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {Component, input, output} from '@angular/core';
+import {CommonModule} from '@angular/common';
 
 /**
  * Reusable summarize button component
@@ -10,10 +10,10 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <button 
-      class="btn btn--primary btn--full-width"
-      (click)="buttonClick.emit()"
-      [disabled]="loading() || disabled()">
+    <button
+            class="btn btn--primary btn--full-width"
+            (click)="buttonClick.emit()"
+            [disabled]="loading() || disabled()">
       @if (loading()) {
         <span class="spinner"></span>
         {{ loadingText() }}
@@ -22,8 +22,10 @@ import { CommonModule } from '@angular/common';
       }
     </button>
   `,
-  styles: [
-    `
+  styles: [`
+    :host {
+      padding-bottom: 6px;
+    }
     .btn {
       display: inline-flex;
       align-items: center;
@@ -75,14 +77,13 @@ import { CommonModule } from '@angular/common';
         transform: rotate(360deg);
       }
     }
-    `
-  ]
+  `]
 })
 export class SummarizeButtonComponent {
   loading = input<boolean>(false);
   disabled = input<boolean>(false);
   text = input<string>('Summarize Article');
   loadingText = input<string>('Summarizing...');
-  
+
   buttonClick = output<void>();
 }

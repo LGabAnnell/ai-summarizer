@@ -1,5 +1,5 @@
-import { Component, input, output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {Component, input, output} from '@angular/core';
+import {CommonModule} from '@angular/common';
 
 /**
  * Reusable footer component
@@ -26,8 +26,7 @@ import { CommonModule } from '@angular/common';
       </div>
     </div>
   `,
-  styles: [
-    `
+  styles: [`
     .footer {
       display: flex;
       align-items: center;
@@ -67,15 +66,14 @@ import { CommonModule } from '@angular/common';
         }
       }
     }
-    `
-  ]
+  `]
 })
 export class FooterComponent {
   showViewArticle = input<boolean>(false);
   articleUrl = input<string>('');
   showClearHistory = input<boolean>(false);
   historyCount = input<number>(0);
-  
+
   viewArticle = output<void>();
   clearHistory = output<void>();
   openSettings = output<void>();

@@ -3,13 +3,13 @@
  * Provides theme management with persistent storage
  */
 
-import { Injectable, signal, effect } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import browser from "webextension-polyfill";
 
 /**
  * Theme types
  */
-export type Theme = 'light' | 'dark' | 'system';
+export type Theme = 'light' | 'dark';
 
 /**
  * Storage key for theme preference
@@ -20,21 +20,16 @@ const THEME_STORAGE_KEY = 'ai-summarizer-theme';
   providedIn: 'root'
 })
 export class ThemeService {
-  // System theme (detected)
   private _theme = signal<Theme>('light');
 
   constructor() {
-    this.initializeTheme();
-  }
+    // Read the theme already applied by the blocking script in index.html.
+    // This runs after first paint; the signal just syncs with the DOM.
+    const applied = document.documentElement.getAttribute('data-theme') as Theme | null;
+    this._theme.set(applied ?? 'light');
 
-  /**
-   * Initialize theme: load saved preference from storage,
-   * resolve system theme if needed, then apply to the document.
-   */
-  private async initializeTheme(): Promise<void> {
-    await this.loadTheme();
-    this.detectSystemTheme();
-    this.applyThemeToDocument();
+    // Sync from storage for cross-context persistence (popup/options lack the blocking script)
+    this.loadTheme();
   }
 
   /**
@@ -46,7 +41,13 @@ export class ThemeService {
       if (typeof browser !== 'undefined' && browser.storage) {
         const result = await browser.storage.local.get(THEME_STORAGE_KEY);
         if (result[THEME_STORAGE_KEY] != null) {
-          this._theme.set(result[THEME_STORAGE_KEY] as Theme);
+          const stored = result[THEME_STORAGE_KEY] as Theme;
+          // Sync localStorage so the blocking script in index.html can read it
+          localStorage.setItem(THEME_STORAGE_KEY, stored);
+          if (stored !== this._theme()) {
+            this._theme.set(stored);
+            this.applyThemeToDocument();
+          }
         }
       }
     } catch (error) {
@@ -62,25 +63,10 @@ export class ThemeService {
       // Check if we're in a browser extension context
       if (typeof browser !== 'undefined' && browser.storage) {
         await browser.storage.local.set({ [THEME_STORAGE_KEY]: this._theme() });
+        localStorage.setItem(THEME_STORAGE_KEY, this._theme());
       }
     } catch (error) {
       console.error('Failed to save theme:', error);
-    }
-  }
-
-  /**
-   * Detect system theme preference
-   */
-  detectSystemTheme(): void {
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      if (this._theme() == 'system') {
-        this._theme.set(mediaQuery.matches ? 'dark' : 'light');
-        console.log("set media to " + this._theme());
-      }
-      mediaQuery.addEventListener('change', (e) => {
-        this._theme.set(e.matches ? 'dark' : 'light');
-      });
     }
   }
 
