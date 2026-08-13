@@ -40,7 +40,6 @@ export class ClassificationService {
     modelId?: string,
     timeout?: number
   ): Observable<ClassificationResult> {
-    console.log('ClassificationService.classifyText: Called with text length:', text.length);
     
     if (typeof browser === 'undefined') {
       console.error('ClassificationService.classifyText: Not running in browser extension context');
@@ -54,7 +53,6 @@ export class ClassificationService {
       timeout
     }).pipe(
       map(response => {
-        console.log('ClassificationService.classifyText: Response received:', response);
         
         // Extract data from response
         let classificationData: ClassificationResult;
@@ -100,7 +98,6 @@ export class ClassificationService {
    * For the Options page, use the requestMLPermission() method which handles this properly.
    */
   requestMLPermissionFromUserGesture(): Observable<{ granted: boolean; error?: string }> {
-    console.log('ClassificationService.requestMLPermissionFromUserGesture: Called - This must be from a user gesture');
     
     if (typeof browser === 'undefined' || typeof browser.permissions === 'undefined') {
       console.error('ClassificationService.requestMLPermissionFromUserGesture: browser.permissions API not available');
@@ -116,7 +113,6 @@ export class ClassificationService {
       browser.permissions.request({ permissions: ['trialML'] })
     ).pipe(
       mergeMap((granted: boolean) => {
-        console.log('ClassificationService.requestMLPermissionFromUserGesture: Permission result:', granted);
         
         if (granted) {
           // Notify background script that permission was granted
@@ -156,7 +152,6 @@ export class ClassificationService {
    * Check current ML permission status
    */
   getMLPermissionStatus(): Observable<boolean> {
-    console.log('ClassificationService.getMLPermissionStatus: Called');
     
     if (typeof browser === 'undefined') {
       console.error('ClassificationService.getMLPermissionStatus: Not running in browser extension context');
@@ -167,7 +162,6 @@ export class ClassificationService {
       type: 'GET_ML_PERMISSION_STATUS'
     }).pipe(
       map(response => {
-        console.log('ClassificationService.getMLPermissionStatus: Response:', response);
         let result: { granted: boolean };
         if (response.data && typeof response.data === 'object') {
           result = response.data as { granted: boolean };
@@ -191,7 +185,6 @@ export class ClassificationService {
     apiAvailable: boolean; 
     permissionGranted: boolean; 
   }> {
-    console.log('ClassificationService.checkMLAvailability: Called');
     
     if (typeof browser === 'undefined') {
       console.error('ClassificationService.checkMLAvailability: Not running in browser extension context');
@@ -206,7 +199,6 @@ export class ClassificationService {
       type: 'CHECK_ML_AVAILABILITY'
     }).pipe(
       map(response => {
-        console.log('ClassificationService.checkMLAvailability: Response:', response);
         let result: { available: boolean; apiAvailable: boolean; permissionGranted: boolean };
         if (response.data && typeof response.data === 'object') {
           result = response.data as { available: boolean; apiAvailable: boolean; permissionGranted: boolean };
@@ -234,7 +226,6 @@ export class ClassificationService {
    * Clear ML model cache
    */
   clearMLCache(): Observable<{ success: boolean; error?: string }> {
-    console.log('ClassificationService.clearMLCache: Called');
     
     if (typeof browser === 'undefined') {
       console.error('ClassificationService.clearMLCache: Not running in browser extension context');
@@ -245,7 +236,6 @@ export class ClassificationService {
       type: 'CLEAR_ML_CACHE'
     }).pipe(
       map(response => {
-        console.log('ClassificationService.clearMLCache: Response:', response);
         let result: { success: boolean; error?: string };
         if (response.data && typeof response.data === 'object') {
           result = response.data as { success: boolean; error?: string };
@@ -271,11 +261,9 @@ export class ClassificationService {
    * Get ML settings from extension settings
    */
   getMLSettings(): Observable<MLSettings> {
-    console.log('ClassificationService.getMLSettings: Called');
     
     return this.messagingService.getSettings().pipe(
       map(response => {
-        console.log('ClassificationService.getMLSettings: Settings response:', response);
         const settingsData = response.data as ExtensionSettings || {} as ExtensionSettings;
         const mlSettings: MLSettings = {
           mlEnabled: settingsData.mlEnabled === true,
@@ -302,11 +290,9 @@ export class ClassificationService {
    * Save ML settings
    */
   saveMLSettings(settings: Partial<MLSettings>): Observable<void> {
-    console.log('ClassificationService.saveMLSettings: Called with settings:', settings);
     
     return this.messagingService.saveSettings(settings).pipe(
       mergeMap(response => {
-        console.log('ClassificationService.saveMLSettings: Response:', response);
         if (response.success === false) {
           console.error('ClassificationService.saveMLSettings: Save failed:', response.error);
           return throwError(() => new Error(response.error || 'Failed to save ML settings'));
@@ -344,7 +330,6 @@ export class ClassificationService {
    * This listens for broadcast messages from the background script
    */
   onModelDownloadProgress(): Observable<ModelDownloadProgress> {
-    console.log('ClassificationService.onModelDownloadProgress: Setting up listener');
     
     if (typeof browser === 'undefined') {
       console.error('ClassificationService.onModelDownloadProgress: Not running in browser extension context');
@@ -354,7 +339,6 @@ export class ClassificationService {
     // Return an observable that listens for progress messages
     return new Observable<ModelDownloadProgress>(subscriber => {
       const listener = (message: unknown) => {
-        console.log('ClassificationService.onModelDownloadProgress: Message received:', message);
         
         const progressMessage = message as ModelDownloadProgressMessage;
         if (progressMessage && progressMessage.type === 'MODEL_DOWNLOAD_PROGRESS') {
@@ -373,7 +357,6 @@ export class ClassificationService {
 
       // Cleanup on unsubscribe
       return () => {
-        console.log('ClassificationService.onModelDownloadProgress: Cleaning up listener');
         browser.runtime.onMessage.removeListener(listener);
       };
     });
@@ -384,7 +367,6 @@ export class ClassificationService {
    * @param articleText The article text to classify
    */
   classifyArticle(articleText: string): Observable<ClassificationResult> {
-    console.log('ClassificationService.classifyArticle: Called with text length:', articleText.length);
     
     // Truncate very long articles for classification
     const maxLength = 10000;

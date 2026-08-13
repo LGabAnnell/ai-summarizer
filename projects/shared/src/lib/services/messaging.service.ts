@@ -41,17 +41,13 @@ export class MessagingService {
       return throwError(() => new Error('Not running in a browser extension context'));
     }
 
-    console.log('MessagingService.sendMessage: Sending message:', message.type, message);
-    console.log('Message details:', JSON.stringify(message, null, 2));
 
     // Return an observable that wraps the message sending
     return from(browser.runtime.sendMessage(message)).pipe(
       map((response: unknown) => {
-        console.log('MessagingService.sendMessage: Raw response received:', response);
         
         // Handle both direct responses and wrapped responses
         if (response && typeof response === 'object' && !Array.isArray(response)) {
-          console.log('Response is object, processing...');
           // If response has a data property, use it. Otherwise, the response itself is the data
           // (excluding standard message fields)
           const responseObj = response as Record<string, unknown>;
@@ -75,7 +71,6 @@ export class MessagingService {
             error: responseObj['error'],
           } as MessageResponse<T>;
           
-          console.log('Processed response:', result);
           return result;
         }
         console.error('Invalid response format, raw response:', response);
@@ -110,7 +105,6 @@ export class MessagingService {
     articleUrl: string;
     cached: boolean;
   }>> {
-    console.log('MessagingService.extractAndSummarize: Called');
     return this.sendMessage<{
       summary: string;
       title: string;
@@ -123,7 +117,6 @@ export class MessagingService {
    * Get extension settings
    */
   getSettings(): Observable<MessageResponse<ExtensionSettings>> {
-    console.log('MessagingService.getSettings: Called');
     return this.sendMessage<ExtensionSettings>({ type: 'GET_SETTINGS' });
   }
 
@@ -131,7 +124,6 @@ export class MessagingService {
    * Save extension settings
    */
   saveSettings(settings: Partial<ExtensionSettings>): Observable<MessageResponse<void>> {
-    console.log('MessagingService.saveSettings: Called with settings:', JSON.stringify(settings, null, 2));
     return this.sendMessage({ type: 'SAVE_SETTINGS', settings });
   }
 
@@ -139,7 +131,6 @@ export class MessagingService {
    * Clear the summary cache
    */
   clearCache(): Observable<MessageResponse<{ cleared: number }>> {
-    console.log('MessagingService.clearCache: Called');
     return this.sendMessage<{ cleared: number }>({ type: 'CLEAR_CACHE' });
   }
 
@@ -151,9 +142,6 @@ export class MessagingService {
     cached: boolean;
     tokenCount?: number;
   }>> {
-    console.log('MessagingService.summarizeArticle: Called with article data');
-    console.log('Article data:', JSON.stringify(article, null, 2));
-    console.log('Provider:', provider);
     return this.sendMessage({ 
       type: 'SUMMARIZE', 
       article, 
@@ -165,7 +153,6 @@ export class MessagingService {
    * Test a provider connection
    */
   testProvider(provider: string, apiKey: string): Observable<MessageResponse<{ valid: boolean }>> {
-    console.log('MessagingService.testProvider: Called for provider:', provider);
     return this.sendMessage<{ valid: boolean }>({ 
       type: 'TEST_PROVIDER', 
       provider, 
@@ -177,7 +164,6 @@ export class MessagingService {
    * Refresh models for a specific provider
    */
   refreshModels(provider: ProviderType, apiKey: string): Observable<MessageResponse<{ models: string[] }>> {
-    console.log('MessagingService.refreshModels: Called for provider:', provider);
     return this.sendMessage<{ models: string[] }>({ 
       type: 'REFRESH_MODELS', 
       provider, 
@@ -189,16 +175,13 @@ export class MessagingService {
    * Open the options page
    */
   openOptionsPage(): void {
-    console.log('MessagingService.openOptionsPage: Called');
     if (typeof browser !== 'undefined') {
       try {
         browser.runtime.openOptionsPage();
-        console.log('Options page opened');
       } catch (error) {
         console.error('Failed to open options page:', error);
       }
     } else {
-      console.log('Cannot open options page: not in browser extension context');
     }
   }
 
@@ -206,7 +189,6 @@ export class MessagingService {
    * Get the current tab
    */
   getCurrentTab(): Observable<browser.Tabs.Tab> {
-    console.log('MessagingService.getCurrentTab: Called');
     if (typeof browser === 'undefined') {
       console.error('MessagingService.getCurrentTab: Not running in a browser extension context');
       return throwError(() => new Error('Not running in a browser extension context'));
@@ -214,12 +196,10 @@ export class MessagingService {
 
     return from(browser.tabs.query({ active: true, currentWindow: true })).pipe(
       map((tabs: browser.Tabs.Tab[]) => {
-        console.log('MessagingService.getCurrentTab: Received tabs:', tabs.length);
         if (tabs.length === 0) {
           console.error('MessagingService.getCurrentTab: No active tab found');
           throw new Error('No active tab found');
         }
-        console.log('MessagingService.getCurrentTab: Returning tab:', tabs[0].id, tabs[0].url);
         return tabs[0];
       }),
       catchError((error) => {
@@ -237,7 +217,6 @@ export class MessagingService {
    * Classify text using ML
    */
   classifyText(text: string, modelId?: string, timeout?: number): Observable<ClassificationResult> {
-    console.log('MessagingService.classifyText: Called with text length:', text.length);
     return this.sendMessage<ClassificationResult>({
       type: 'CLASSIFY_TEXT',
       text,
@@ -245,7 +224,6 @@ export class MessagingService {
       timeout
     }).pipe(
       map(response => {
-        console.log('MessagingService.classifyText: Response:', response);
         // Handle both direct response and wrapped response formats
         let classificationData: ClassificationResult;
         if (response.data && typeof response.data === 'object') {
@@ -277,12 +255,10 @@ export class MessagingService {
    * This is called from the UI after the user has granted permission via browser.permissions.request()
    */
   notifyMLPermissionGranted(): Observable<{ success: boolean; error?: string }> {
-    console.log('MessagingService.notifyMLPermissionGranted: Called - Sending NOTIFY_ML_PERMISSION_GRANTED message to background');
     return this.sendMessage<{ success: boolean; error?: string }>({
       type: 'NOTIFY_ML_PERMISSION_GRANTED'
     }).pipe(
       map(response => {
-        console.log('MessagingService.notifyMLPermissionGranted: Response received:', response);
         let result: { success: boolean; error?: string };
         if (response.data && typeof response.data === 'object') {
           result = response.data as { success: boolean; error?: string };
@@ -308,12 +284,10 @@ export class MessagingService {
    * Check ML permission status
    */
   getMLPermissionStatus(): Observable<boolean> {
-    console.log('MessagingService.getMLPermissionStatus: Called');
     return this.sendMessage<{ granted: boolean }>({
       type: 'GET_ML_PERMISSION_STATUS'
     }).pipe(
       map(response => {
-        console.log('MessagingService.getMLPermissionStatus: Response:', response);
         let result: { granted: boolean };
         if (response.data && typeof response.data === 'object') {
           result = response.data as { granted: boolean };
@@ -337,7 +311,6 @@ export class MessagingService {
     apiAvailable: boolean; 
     permissionGranted: boolean; 
   }> {
-    console.log('MessagingService.checkMLAvailability: Called');
     return this.sendMessage<{ 
       available: boolean; 
       apiAvailable: boolean; 
@@ -346,7 +319,6 @@ export class MessagingService {
       type: 'CHECK_ML_AVAILABILITY'
     }).pipe(
       map(response => {
-        console.log('MessagingService.checkMLAvailability: Response:', response);
         let result: { available: boolean; apiAvailable: boolean; permissionGranted: boolean };
         if (response.data && typeof response.data === 'object') {
           result = response.data as { available: boolean; apiAvailable: boolean; permissionGranted: boolean };
@@ -374,12 +346,10 @@ export class MessagingService {
    * Clear ML model cache
    */
   clearMLCache(): Observable<{ success: boolean; error?: string }> {
-    console.log('MessagingService.clearMLCache: Called');
     return this.sendMessage<{ success: boolean; error?: string }>({
       type: 'CLEAR_ML_CACHE'
     }).pipe(
       map(response => {
-        console.log('MessagingService.clearMLCache: Response:', response);
         let result: { success: boolean; error?: string };
         if (response.data && typeof response.data === 'object') {
           result = response.data as { success: boolean; error?: string };
@@ -405,7 +375,6 @@ export class MessagingService {
    * Get model download progress as observable
    */
   onModelDownloadProgress(): Observable<ModelDownloadProgress> {
-    console.log('MessagingService.onModelDownloadProgress: Setting up listener');
     
     if (typeof browser === 'undefined') {
       console.error('MessagingService.onModelDownloadProgress: Not running in browser extension context');
@@ -415,7 +384,6 @@ export class MessagingService {
     // Return an observable that listens for progress messages
     return new Observable<ModelDownloadProgress>(subscriber => {
       const listener = (message: unknown) => {
-        console.log('MessagingService.onModelDownloadProgress: Message received:', message);
         
         const progressMessage = message as ModelDownloadProgressMessage;
         if (progressMessage && progressMessage.type === 'MODEL_DOWNLOAD_PROGRESS') {
@@ -434,7 +402,6 @@ export class MessagingService {
 
       // Cleanup on unsubscribe
       return () => {
-        console.log('MessagingService.onModelDownloadProgress: Cleaning up listener');
         browser.runtime.onMessage.removeListener(listener);
       };
     });

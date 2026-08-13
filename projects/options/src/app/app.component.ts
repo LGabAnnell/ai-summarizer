@@ -451,7 +451,6 @@ export class AppComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (progress: ModelDownloadProgress) => {
-          console.log('Options: ML download progress:', progress);
           this.mlModelDownloadProgress.set(progress.progress);
           this.mlDownloadStatus.set(progress.status === 'downloading' ? 'Downloading...' :
             progress.status === 'extracting' ? 'Extracting...' :
@@ -502,11 +501,9 @@ export class AppComponent implements OnInit {
    * This calls browser.permissions.request() directly in the options page context
    */
   requestMLPermission(): void {
-    console.log('OptionsApp.requestMLPermission: User clicked "Grant ML Permission" button');
     this.isRequestingPermission.set(true);
     this.permissionRequestError.set(undefined);
 
-    console.log('OptionsApp.requestMLPermission: Checking if browser.permissions API is available');
 
     // Check if browser.permissions is available
     if (typeof browser === 'undefined' || typeof browser.permissions === 'undefined') {
@@ -517,24 +514,19 @@ export class AppComponent implements OnInit {
       return;
     }
 
-    console.log('OptionsApp.requestMLPermission: Calling browser.permissions.request() directly from user gesture');
 
     // Call browser.permissions.request() directly from the user gesture context
     browser.permissions.request({permissions: ['trialML']})
       .then((granted: boolean) => {
-        console.log('OptionsApp.requestMLPermission: Permission result:', granted);
         this.isRequestingPermission.set(false);
 
         if (granted) {
-          console.log('OptionsApp.requestMLPermission: Permission GRANTED');
           // this.mlPermissionStatus.set('granted');
           this.successMessage.set('ML permission granted! You can now use local classification.');
 
           // Notify background script that permission was granted
-          console.log('OptionsApp.requestMLPermission: Notifying background script');
           this.messagingService.notifyMLPermissionGranted().subscribe({
             next: () => {
-              console.log('OptionsApp.requestMLPermission: Background script notified successfully');
               setTimeout(() => this.clearSuccess(), 3000);
             },
             error: (error) => {
@@ -544,7 +536,6 @@ export class AppComponent implements OnInit {
             }
           });
         } else {
-          console.log('OptionsApp.requestMLPermission: Permission DENIED');
           // this.mlPermissionStatus.set('not_granted');
           this.permissionRequestError.set('Permission request was denied by user');
         }
@@ -565,7 +556,6 @@ export class AppComponent implements OnInit {
     // this.mlModelHub.set(hub);
     this.settingsService.setMLModelHub(hub).subscribe({
       next: () => {
-        console.log('ML model hub saved:', hub);
       },
       error: (error) => {
         console.error('Failed to save ML model hub:', error);
@@ -581,7 +571,6 @@ export class AppComponent implements OnInit {
     // this.mlModelId.set(modelId);
     this.settingsService.setMLModelId(modelId).subscribe({
       next: () => {
-        console.log('ML model ID saved:', modelId);
       },
       error: (error) => {
         console.error('Failed to save ML model ID:', error);

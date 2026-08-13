@@ -46,17 +46,13 @@ export class SummaryService {
    * Extract and summarize the current article
    */
   extractAndSummarize(): Observable<SummaryResult> {
-    console.log('SummaryService.extractAndSummarize: Called');
     this._state.set({ state: 'loading', loadingMessage: 'Extracting article...' });
-    console.log('State set to loading with message: Extracting article...');
     this._article.set(null);
     this.resetCopyState();
 
     return this.messaging.extractAndSummarize().pipe(
       switchMap((response) => {
-        console.log('SummaryService.extractAndSummarize: Response received:', response);
         if (response.success) {
-          console.log('Response successful, extracting data...');
           // Extract data, handling both wrapped and unwrapped response formats
           const data = this.extractResponseData<{
             summary: string;
@@ -89,15 +85,12 @@ export class SummaryService {
             } : undefined,
           };
           
-          console.log('Summary result created:', result.title, 'length:', result.summary.length);
           this._state.set({ state: 'success', summary: result });
-          console.log('State set to success');
           return of(result);
         } else {
           const error = response.error || 'Failed to summarize article';
           console.error('SummaryService.extractAndSummarize: Response error:', error);
           this._state.set({ state: 'error', error });
-          console.log('State set to error:', error);
           return throwError(() => new Error(error));
         }
       }),
@@ -106,7 +99,6 @@ export class SummaryService {
         console.error('SummaryService.extractAndSummarize: Caught error:', errorMessage);
         console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
         this._state.set({ state: 'error', error: errorMessage });
-        console.log('State set to error:', errorMessage);
         return throwError(() => error);
       })
     );
@@ -116,22 +108,16 @@ export class SummaryService {
    * Summarize with specific article data
    */
   summarize(article: ArticleData): Observable<SummaryResult> {
-    console.log('SummaryService.summarize: Called with article data');
-    console.log('Article data:', JSON.stringify(article, null, 2));
     
     this._state.set({ state: 'loading', loadingMessage: 'Summarizing...' });
-    console.log('State set to loading with message: Summarizing...');
     this._article.set(article);
     this.resetCopyState();
 
     const settings = this.settings.settings();
-    console.log('Using settings:', settings.provider, settings.model);
     
     return this.messaging.summarizeArticle(article, settings.provider).pipe(
       switchMap((response) => {
-        console.log('SummaryService.summarize: Response received:', response);
         if (response.success) {
-          console.log('Response successful, extracting data...');
           // Extract data, handling both wrapped and unwrapped response formats
           const data = this.extractResponseData<{
             summary: string;
@@ -164,15 +150,12 @@ export class SummaryService {
             } : undefined,
           };
           
-          console.log('Summary result created:', result.provider, result.model, 'length:', result.summary.length);
           this._state.set({ state: 'success', summary: result });
-          console.log('State set to success');
           return of(result);
         } else {
           const error = response.error || 'Failed to summarize article';
           console.error('SummaryService.summarize: Response error:', error);
           this._state.set({ state: 'error', error });
-          console.log('State set to error:', error);
           return throwError(() => new Error(error));
         }
       }),
@@ -181,7 +164,6 @@ export class SummaryService {
         console.error('SummaryService.summarize: Caught error:', errorMessage);
         console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
         this._state.set({ state: 'error', error: errorMessage });
-        console.log('State set to error:', errorMessage);
         return throwError(() => error);
       })
     );

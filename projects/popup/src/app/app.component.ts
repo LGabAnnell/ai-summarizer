@@ -114,7 +114,6 @@ export class AppComponent implements OnInit {
     if (typeof browser !== 'undefined') {
       // Listen for any messages that might be relevant
       browser.runtime.onMessage.addListener((message: unknown) => {
-        console.log('Popup received message:', message);
       });
     }
   }
@@ -207,7 +206,6 @@ export class AppComponent implements OnInit {
    */
   viewArticle(): void {
     // Implementation for viewing article
-    console.log('View article clicked');
   }
 
   /**
@@ -215,7 +213,6 @@ export class AppComponent implements OnInit {
    */
   clearHistory(): void {
     // Implementation for clearing history
-    console.log('Clear history clicked');
   }
 
   /**
