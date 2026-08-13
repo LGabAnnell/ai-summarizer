@@ -36,10 +36,10 @@ export class AppComponent implements OnInit {
   isScrolled = signal<boolean>(false);
   settingsForm!: FormGroup;
   // ML State
-  mlEnabled = signal<boolean>(false);
+  /*mlEnabled = signal<boolean>(false);
   mlModelHub = signal<'mozilla' | 'huggingface'>('mozilla');
   mlModelId = signal<string>('');
-  mlPermissionStatus = signal<'granted' | 'not_granted' | 'checking'>('checking');
+  mlPermissionStatus = signal<'granted' | 'not_granted' | 'checking'>('checking');*/
   isRequestingPermission = signal<boolean>(false);
   permissionRequestError = signal<string | undefined>(undefined);
   isTestingClassification = signal<boolean>(false);
@@ -103,6 +103,7 @@ export class AppComponent implements OnInit {
       cacheEnabled: [true],
       cacheTTL: [7, [Validators.required, Validators.min(1), Validators.max(30)]],
     });
+
     this.settingsForm.get('provider')?.valueChanges?.pipe(
       distinctUntilChanged(),
       map(provider => provider === 'firefox-ml'),
@@ -113,9 +114,9 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadSettings();
-    this.loadMLSettings();
-    this.checkMLPermissionStatus();
-    this.setupMLProgressListener();
+    // this.loadMLSettings();
+    // this.checkMLPermissionStatus();
+    // this.setupMLProgressListener();
   }
 
   @HostListener('window:scroll')
@@ -422,16 +423,16 @@ export class AppComponent implements OnInit {
    */
   loadMLSettings(): void {
     const mlSettings = this.settingsService.getMLSettings();
-    this.mlEnabled.set(mlSettings.mlEnabled === true);
+    /*this.mlEnabled.set(mlSettings.mlEnabled === true);
     this.mlModelHub.set(mlSettings.mlModelHub as 'mozilla' | 'huggingface' || 'mozilla');
-    this.mlModelId.set(mlSettings.mlModelId || 'distilbert-base-uncased-finetuned-sst-2-english');
+    this.mlModelId.set(mlSettings.mlModelId || 'distilbert-base-uncased-finetuned-sst-2-english');*/
   }
 
   /**
    * Check ML permission status on load
    */
   checkMLPermissionStatus(): void {
-    this.mlPermissionStatus.set('checking');
+    /*this.mlPermissionStatus.set('checking');
     this.classificationService.getMLPermissionStatus().subscribe({
       next: (granted) => {
         this.mlPermissionStatus.set(granted ? 'granted' : 'not_granted');
@@ -439,7 +440,7 @@ export class AppComponent implements OnInit {
       error: () => {
         this.mlPermissionStatus.set('not_granted');
       }
-    });
+    });*/
   }
 
   /**
@@ -468,7 +469,7 @@ export class AppComponent implements OnInit {
    * Toggle ML enabled/disabled
    */
   toggleMLEnabled(event: Event): void {
-    const enabled = (event.target as HTMLInputElement).checked;
+    /*const enabled = (event.target as HTMLInputElement).checked;
     this.mlEnabled.set(enabled);
 
     if (enabled) {
@@ -493,7 +494,7 @@ export class AppComponent implements OnInit {
           this.mlEnabled.set(true);
         }
       });
-    }
+    }*/
   }
 
   /**
@@ -511,7 +512,7 @@ export class AppComponent implements OnInit {
     if (typeof browser === 'undefined' || typeof browser.permissions === 'undefined') {
       console.error('OptionsApp.requestMLPermission: browser.permissions API not available');
       this.isRequestingPermission.set(false);
-      this.mlPermissionStatus.set('not_granted');
+      // this.mlPermissionStatus.set('not_granted');
       this.permissionRequestError.set('browser.permissions API not available');
       return;
     }
@@ -526,7 +527,7 @@ export class AppComponent implements OnInit {
 
         if (granted) {
           console.log('OptionsApp.requestMLPermission: Permission GRANTED');
-          this.mlPermissionStatus.set('granted');
+          // this.mlPermissionStatus.set('granted');
           this.successMessage.set('ML permission granted! You can now use local classification.');
 
           // Notify background script that permission was granted
@@ -544,14 +545,14 @@ export class AppComponent implements OnInit {
           });
         } else {
           console.log('OptionsApp.requestMLPermission: Permission DENIED');
-          this.mlPermissionStatus.set('not_granted');
+          // this.mlPermissionStatus.set('not_granted');
           this.permissionRequestError.set('Permission request was denied by user');
         }
       })
       .catch((error: unknown) => {
         console.error('OptionsApp.requestMLPermission: Error requesting permission:', error);
         this.isRequestingPermission.set(false);
-        this.mlPermissionStatus.set('not_granted');
+        // this.mlPermissionStatus.set('not_granted');
         const errorMessage = error instanceof Error ? error.message : 'Permission request failed';
         this.permissionRequestError.set(errorMessage);
       });
@@ -561,7 +562,7 @@ export class AppComponent implements OnInit {
    * Set ML model hub
    */
   setMLModelHub(hub: 'mozilla' | 'huggingface'): void {
-    this.mlModelHub.set(hub);
+    // this.mlModelHub.set(hub);
     this.settingsService.setMLModelHub(hub).subscribe({
       next: () => {
         console.log('ML model hub saved:', hub);
@@ -577,7 +578,7 @@ export class AppComponent implements OnInit {
    * Set ML model ID
    */
   setMLModelId(modelId: string): void {
-    this.mlModelId.set(modelId);
+    // this.mlModelId.set(modelId);
     this.settingsService.setMLModelId(modelId).subscribe({
       next: () => {
         console.log('ML model ID saved:', modelId);

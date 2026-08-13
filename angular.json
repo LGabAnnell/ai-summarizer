@@ -146,6 +146,11 @@
             "assets": [
               {
                 "glob": "**/*",
+                "input": "projects/shared/src/assets",
+                "output": "/assets"
+              },
+              {
+                "glob": "**/*",
                 "input": "projects/options/src/assets",
                 "output": "/assets"
               }
@@ -245,6 +250,11 @@
             "tsConfig": "projects/sidebar/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
+              {
+                "glob": "**/*",
+                "input": "projects/shared/src/assets",
+                "output": "/assets"
+              },
               {
                 "glob": "**/*",
                 "input": "projects/sidebar/src/assets",
