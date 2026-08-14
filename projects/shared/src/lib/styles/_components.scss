@@ -35,15 +35,6 @@ html, body {
 // LOGO & HEADER COMPONENTS
 // ============================================================================
 
-.logo {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--primary-color);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .icon {
   width: 24px;
   height: 24px;
@@ -63,12 +54,6 @@ html, body {
   justify-content: space-between;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
-}
-
-.header-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 // ============================================================================
@@ -163,16 +148,6 @@ html, body {
   animation: spin 1s ease-in-out infinite;
 }
 
-// Spinner for dark backgrounds (used in buttons)
-.spinner-dark {
-  width: 12px;
-  height: 12px;
-  border: 2px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top-color: #666;
-  animation: spin 1s ease-in-out infinite;
-}
-
 // Loading spinner
 .loading-spinner {
   width: 40px;
@@ -214,39 +189,12 @@ html, body {
   padding-top: 12px;
   border-top: 1px solid var(--border-color);
   font-size: 12px;
-
-  .footer-left,
-  .footer-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .settings-link {
-    color: var(--primary-color);
-    text-decoration: none;
-    cursor: pointer;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-
-  .cached-badge {
-    background-color: var(--primary-light);
-    color: var(--primary-color);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 500;
-  }
 }
 
 // ============================================================================
 // EMPTY, LOADING, ERROR STATES
 // ============================================================================
 
-.empty-state,
 .loading-state,
 .error-state {
   display: flex;
@@ -257,7 +205,6 @@ html, body {
   text-align: center;
 }
 
-.empty-state,
 .error-state {
   color: var(--text-secondary);
 }
@@ -267,7 +214,6 @@ html, body {
 }
 
 // State icons
-.empty-icon,
 .error-icon {
   width: 48px;
   height: 48px;
@@ -349,30 +295,8 @@ html, body {
   }
 }
 
-.copy-btn {
-  padding: 6px 12px;
-  font-size: 13px;
-  background: transparent;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  color: var(--text-secondary);
-
-  &:hover {
-    background-color: var(--primary-light);
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-  }
-
-  &--success {
-    background-color: var(--success-color) !important;
-    border-color: var(--success-color) !important;
-    color: white !important;
-  }
-}
-
 // Popup copy button (smaller)
-.popup .copy-btn {
+.popup {
   padding: 4px 8px;
   font-size: 12px;
 }
@@ -403,17 +327,6 @@ html, body {
       gap: 8px;
     }
 
-    .section-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-  }
-
-  .section-description {
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-bottom: 16px;
   }
 }
 
@@ -421,109 +334,7 @@ html, body {
 // FORM COMPONENTS
 // ============================================================================
 
-.form-group {
-  margin-bottom: 16px;
-
-  .form-label {
-    display: block;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-primary);
-    margin-bottom: 6px;
-  }
-
-  .form-description {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 4px;
-  }
-
-  .form-hint {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 4px;
-  }
-
-  .form-error {
-    font-size: 12px;
-    color: var(--error-color);
-    margin-top: 4px;
-  }
-}
-
-.form-input,
-.form-select,
-.form-textarea {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 14px;
-  font-family: inherit;
-  color: var(--text-primary);
-  background-color: var(--bg-primary);
-  transition: var(--transition);
-
-  &:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
-  }
-
-  &:disabled {
-    background-color: var(--bg-tertiary);
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-}
-
-.form-input {
-  height: 36px;
-}
-
-.form-select {
-  height: 36px;
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748B' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  padding-right: 32px;
-}
-
-.form-textarea {
-  min-height: 100px;
-  resize: vertical;
-  padding: 12px;
-}
-
 // Password input with show/hide toggle
-.password-container {
-  position: relative;
-  display: flex;
-  align-items: center;
-
-  .form-input {
-    padding-right: 40px;
-  }
-
-  .password-toggle {
-    position: absolute;
-    right: 10px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--text-muted);
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    &:hover {
-      color: var(--text-secondary);
-    }
-  }
-}
 
 // Model select with refresh button
 .model-select-wrapper {

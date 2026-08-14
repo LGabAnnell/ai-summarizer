@@ -1,5 +1,5 @@
-import { Component, input, output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {Component, input, output} from '@angular/core';
+import {CommonModule} from '@angular/common';
 
 /**
  * Reusable sticky save bar component
@@ -40,12 +40,14 @@ import { CommonModule } from '@angular/common';
       </div>
     </div>
   `,
-  styles: [
-    `
-    .save-bar {
+  styles: [`
+    :host {
       position: sticky;
       top: 0;
       z-index: 100;
+    }
+
+    .save-bar {
       background: var(--bg-primary, #f8f9fa);
       border-bottom: 1px solid var(--border-color, #e0e0e0);
       padding-top: 16px;
@@ -136,8 +138,7 @@ import { CommonModule } from '@angular/common';
         background: rgba(0, 123, 255, 0.1);
       }
     }
-    `
-  ]
+  `]
 })
 export class SaveBarComponent {
   isLoading = input<boolean>(false);
