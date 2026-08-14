@@ -181,7 +181,6 @@ export class MessagingService {
       } catch (error) {
         console.error('Failed to open options page:', error);
       }
-    } else {
     }
   }
 

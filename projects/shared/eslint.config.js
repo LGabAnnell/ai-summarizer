@@ -1,9 +1,10 @@
 #!/usr/bin/env node
+const { defineConfig } = require('eslint/config');
 const eslint = require('@eslint/js');
 const tseslint = require('typescript-eslint');
 const angular = require('angular-eslint');
 
-module.exports = tseslint.config(
+module.exports = defineConfig([
   { ignores: ['**/*spec.ts', '**/*.d.ts'] },
   {
     files: ['**/*.ts'],
@@ -26,4 +27,4 @@ module.exports = tseslint.config(
     ],
     rules: {}
   }
-);
+]);

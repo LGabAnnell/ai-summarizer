@@ -1,12 +1,11 @@
 #!/usr/bin/env node
+const { defineConfig } = require('eslint/config');
 const eslint = require('@eslint/js');
 const tseslint = require('typescript-eslint');
 const path = require('path');
 const globals = require('globals');
 
-module.exports = tseslint.config(
-  // Ignore patterns for extension-core
-  {},
+module.exports = defineConfig([
   // TypeScript files configuration
   {
     files: ['**/*.ts'],
@@ -79,5 +78,5 @@ module.exports = tseslint.config(
       // Import rules
       'no-duplicate-imports': 'error',
     },
-  }
-);
+  },
+]);

@@ -1,4 +1,4 @@
-import {Component, inject, signal, OnInit, OnDestroy, effect, computed, AfterViewInit} from '@angular/core';
+import {Component, inject, signal, OnInit, OnDestroy, effect, computed} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {
   MarkdownPipe,
@@ -465,7 +465,7 @@ type ViewMode = 'current' | 'history' | 'history-detail';
     `
   ],
 })
-export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
+export class AppComponent implements OnInit, OnDestroy {
   // Services
   private summaryService = inject(SummaryService);
   private messagingService = inject(MessagingService);
@@ -583,9 +583,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       if (state.state === 'error') {
         console.error('Summary service entered error state:', state.error);
       }
-
-      if (state.state === 'loading') {
-      }
     });
 
     // Load ML settings on startup
@@ -600,18 +597,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     // Get current state from summary service
     const currentState = this.summaryService.state();
     this.summaryState.set(currentState);
-
-    // Check if we're in a browser extension context
-    if (typeof browser !== 'undefined') {
-      this.messageListener = (message: unknown) => {
-        // Handle any relevant messages
-      };
-      browser.runtime.onMessage.addListener(this.messageListener);
-    } else {
-    }
-  }
-
-  ngAfterViewInit(): void {
   }
 
   ngOnDestroy(): void {
@@ -619,7 +604,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.messageListener && typeof browser !== 'undefined') {
       browser.runtime.onMessage.removeListener(this.messageListener);
       this.messageListener = null;
-    } else {
     }
     
     // Clean up classification progress listener
@@ -697,8 +681,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     this.summaryService.extractAndSummarize().subscribe({
-      next: (result) => {
-      },
       error: (error) => {
         console.error('Summarization error:', error);
         console.error('Error details:', error instanceof Error ? error.message : JSON.stringify(error));
@@ -758,7 +740,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       this.lastAddedSummaryId.set(summaryId);
       // Switch to history view
       this.setView('history');
-    } else {
     }
   }
 
@@ -786,7 +767,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     if (item) {
       await this.historyService.deleteItem(item.id);
       this.setView('history');
-    } else {
     }
   }
 
@@ -846,7 +826,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       } catch (error) {
         console.error('Failed to open options page:', error);
       }
-    } else {
     }
   }
 

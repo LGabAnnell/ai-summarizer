@@ -11,7 +11,6 @@ import {
   CheckMLAvailabilityRequest,
   ClassificationResult
 } from "./classification.model";
-import {Provider} from "@angular/core";
 
 export interface ExtractArticleRequest {
   type: 'EXTRACT_ARTICLE';

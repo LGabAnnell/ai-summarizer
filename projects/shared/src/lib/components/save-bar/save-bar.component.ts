@@ -50,6 +50,7 @@ import {CommonModule} from '@angular/common';
     .save-bar {
       background: var(--bg-primary, #f8f9fa);
       border-bottom: 1px solid var(--border-color, #e0e0e0);
+      border-radius: 12px;
       padding-top: 16px;
       padding-bottom: 16px;
       padding-left: 12px;
@@ -64,6 +65,8 @@ import {CommonModule} from '@angular/common';
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       background: var(--bg-primary, #f8f9fa);
       border-bottom: 1px solid var(--border-color, #e0e0e0);
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
     }
 
     .save-bar--compact .btn {
@@ -146,5 +149,6 @@ export class SaveBarComponent {
   formInvalid = input<boolean>(false);
 
   save = output<void>();
+  // eslint-disable-next-line @angular-eslint/no-output-native
   reset = output<void>();
 }

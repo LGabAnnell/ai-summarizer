@@ -1,4 +1,4 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MarkdownPipe } from '@shared/lib/pipes/markdown.pipe';
 import browser from 'webextension-polyfill';
@@ -93,7 +93,7 @@ import {
 
   `],
 })
-export class AppComponent implements OnInit {
+export class AppComponent {
   // State management
   state = signal<'idle' | 'loading' | 'success' | 'error'>('idle');
   summary = signal<string>('');
@@ -108,15 +108,6 @@ export class AppComponent implements OnInit {
   copied = signal<boolean>(false);
 
   constructor() {}
-
-  ngOnInit(): void {
-    // Check if we're in a browser extension context
-    if (typeof browser !== 'undefined') {
-      // Listen for any messages that might be relevant
-      browser.runtime.onMessage.addListener((message: unknown) => {
-      });
-    }
-  }
 
   characterCount() {
     return this.summary().length;

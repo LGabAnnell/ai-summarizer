@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ProviderType, SettingsService } from '@shared/public-api';
@@ -34,7 +34,6 @@ export class ProviderConfigComponent {
   // Local state
   showApiKey = signal<boolean>(false);
 
-  // Injected service
   private settingsService = inject(SettingsService);
 
   getProviderDisplayName(provider: string): string {

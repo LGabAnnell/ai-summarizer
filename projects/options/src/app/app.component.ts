@@ -1,13 +1,11 @@
 import {Component, computed, DestroyRef, HostListener, inject, OnInit, signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
-import * as browser from 'webextension-polyfill';
 import {
   ClassificationResult,
   ClassificationService,
   ExtensionSettings,
   MessagingService,
-  ModelDownloadProgress,
   ProviderType,
   SettingsService,
   ThemeService,
@@ -384,10 +382,18 @@ export class AppComponent implements OnInit {
   loadMLSettings(): void {}
   checkMLPermissionStatus(): void {}
   setupMLProgressListener(): void {}
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   toggleMLEnabled(event: Event): void {}
   requestMLPermission(): void {}
-  setMLModelHub(hub: 'mozilla' | 'huggingface'): void {}
-  setMLModelId(modelId: string): void {}
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  setMLModelHub(hub: 'mozilla' | 'huggingface'): void {
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  setMLModelId(modelId: string): void {
+  }
   testClassification(): void {}
   clearMLCache(): void {}
 }
