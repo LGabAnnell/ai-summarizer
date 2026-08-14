@@ -6,6 +6,8 @@
 // Import the vendored Readability.js
 // In the final build, this will be bundled with the content script
 import { Readability } from '@mozilla/readability';
+import browser, {Runtime} from 'webextension-polyfill';
+import OnMessageListener = Runtime.OnMessageListener;
 
 // Define message types for communication with background script
 export interface ArticleData {
@@ -43,11 +45,9 @@ function extractArticle(): ArticleData | null {
   try {
     // Use Mozilla's Readability library
     const doc = document.cloneNode(true) as Document;
-    const readability = new Readability(doc, {
-      maxCharCount: MAX_TEXT_LENGTH,
-      stripUnlikelyCandidates: true,
-      removeEmptyNodes: true,
-    });
+    const readability = new Readability(doc/*, {
+      charThreshold: MAX_TEXT_LENGTH,
+    }*/);
 
     const article = readability.parse();
 
@@ -137,8 +137,9 @@ function extractArticleFallback(): ArticleData | null {
 /**
  * Handle messages from the background script
  */
-function handleMessage(request: Message, sender: any, sendResponse: (response: Message) => void) {
-  if (request.type === 'EXTRACT_ARTICLE') {
+const handleMessage: OnMessageListener = (request: unknown, sender: any, sendResponse: (response: unknown) => void) => {
+  const castRequest = request as Message;
+  if (castRequest.type === 'EXTRACT_ARTICLE') {
     try {
       const article = extractArticle();
 
@@ -173,11 +174,7 @@ function handleMessage(request: Message, sender: any, sendResponse: (response: M
 }
 
 // Listen for messages from the background script
-if (typeof browser !== 'undefined') {
-  browser.runtime.onMessage.addListener(handleMessage);
-} else if (typeof chrome !== 'undefined') {
-  chrome.runtime.onMessage.addListener(handleMessage);
-}
+browser.runtime.onMessage.addListener(handleMessage);
 
 // Also listen for messages from the popup (via the background script)
 // The background script will forward messages to the content script

@@ -21,6 +21,7 @@ import {
   getSystemPrompt as getSystemPromptUtil,
   getTokenCount as getTokenCountUtil,
 } from './provider.utils';
+import {SummaryStyle} from "./summary-prompts";
 
 export abstract class BaseProvider implements AIProvider {
   abstract readonly config: AIProviderConfig;
@@ -103,7 +104,7 @@ export abstract class BaseProvider implements AIProvider {
   }
 
   /** Get the system prompt for summarization. */
-  getSystemPrompt(style?: string, customPrompt?: string): string {
+  getSystemPrompt(style?: SummaryStyle, customPrompt?: string): string {
     return getSystemPromptUtil(style, customPrompt);
   }
 

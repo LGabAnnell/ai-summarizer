@@ -102,7 +102,7 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
     }
 
     try {
-      const headers = {
+      const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
       
