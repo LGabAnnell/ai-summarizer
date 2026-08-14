@@ -153,7 +153,7 @@ export class SettingsService {
    * Get all provider types
    */
   getProviderTypes(): ProviderType[] {
-    return ['mistral', 'openai', 'anthropic', 'qwen', 'deepseek', 'custom', 'firefox-ml'];
+    return ['mistral', 'openai', 'anthropic', 'qwen', 'deepseek', 'custom'/*, 'firefox-ml'*/];
   }
 
   /**

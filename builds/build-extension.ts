@@ -63,6 +63,6 @@ async function buildExtension(debug: boolean = false) {
 
 // Check for debug mode via environment variable or CLI argument
 const args = process.argv.slice(2);
-const debugMode = args.includes('--debug') || process.env.DEBUG_BUILD === 'true';
+const debugMode = args.includes('--debug') || process.env['DEBUG_BUILD'] === 'true';
 
-buildExtension(debugMode);
+buildExtension(debugMode).then(() => console.log("done"));

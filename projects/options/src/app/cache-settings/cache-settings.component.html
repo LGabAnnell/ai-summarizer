@@ -1,0 +1,77 @@
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">
+      <span>💾</span>
+      Cache Settings
+    </div>
+  </div>
+  <div class="section-description">
+    Manage summary caching to avoid unnecessary API calls
+  </div>
+
+  <div class="form-group">
+    <div class="form-switch">
+      <label class="switch" for="cacheEnabled">
+        <input
+                type="checkbox"
+                id="cacheEnabled"
+                [formGroup]="parentForm()"
+                formControlName="cacheEnabled"
+                [checked]="parentForm().get('cacheEnabled')?.value"
+        >
+        <span class="slider"></span>
+        <span class="switch-label">Enable Summary Caching</span>
+      </label>
+    </div>
+    <div class="form-description">
+      Cache summaries to avoid re-processing the same articles
+    </div>
+  </div>
+
+  @if (parentForm().get('cacheEnabled')?.value) {
+    <div class="form-group">
+      <label class="form-label" for="cacheTTL">Cache Expiration (days)</label>
+      <div class="number-input-container">
+        <button
+                type="button"
+                class="number-decrement"
+                (click)="decrementCacheTTL()"
+                [disabled]="isLoading()">
+          −
+        </button>
+        <input
+                id="cacheTTL"
+                type="number"
+                [formGroup]="parentForm()"
+                formControlName="cacheTTL"
+                class="form-input"
+                min="1"
+                max="30"
+        >
+        <button
+                type="button"
+                class="number-increment"
+                (click)="incrementCacheTTL()"
+                [disabled]="isLoading()">
+          +
+        </button>
+      </div>
+      <div class="form-description">
+        Number of days to keep cached summaries
+      </div>
+    </div>
+  }
+
+  <div class="form-group">
+    <button
+            type="button"
+            class="btn btn--secondary"
+            (click)="onClearCache()"
+            [disabled]="isLoading()">
+      Clear Cache
+    </button>
+    <div class="form-description">
+      Remove all cached summaries
+    </div>
+  </div>
+</div>
