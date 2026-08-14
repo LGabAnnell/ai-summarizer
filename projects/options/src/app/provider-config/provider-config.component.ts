@@ -37,26 +37,6 @@ export class ProviderConfigComponent {
   // Injected service
   private settingsService = inject(SettingsService);
 
-  // Computed
-  apiKeyError = computed(() => {
-    const form = this.parentForm().value;
-    if (!form) return undefined;
-
-    const apiKey: string = form?.apiKey;
-    const currentProvider: string = form?.provider;
-
-    // Firefox ML doesn't require an API key
-    if (currentProvider === 'firefox-ml') {
-      return undefined;
-    }
-
-    if (!apiKey || apiKey.trim() === '') {
-      return 'API key is required';
-    }
-
-    return undefined;
-  });
-
   getProviderDisplayName(provider: string): string {
     return this.settingsService.getProviderDisplayName(provider as ProviderType);
   }

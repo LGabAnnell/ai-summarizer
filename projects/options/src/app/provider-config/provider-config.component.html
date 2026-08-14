@@ -119,8 +119,8 @@
         <div class="form-description">
           Your API key will be stored locally and never sent to third parties
         </div>
-        @if (apiKeyError()) {
-          <div class="form-error">{{ apiKeyError() }}</div>
+        @if (parentForm().get('apiKey')?.errors?.['required']) {
+          <div class="form-error">API key is required</div>
         }
       </div>
     }

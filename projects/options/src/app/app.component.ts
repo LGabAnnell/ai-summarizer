@@ -91,7 +91,7 @@ export class AppComponent implements OnInit {
     this.settingsForm = this.fb.group({
       provider: ['mistral', Validators.required],
       model: ['mistral-tiny', Validators.required],
-      apiKey: ['', this.getApiKeyValidators()],
+      apiKey: [''],
       customEndpoint: [''],
       summaryStyle: ['concise', Validators.required],
       customPrompt: [''],
@@ -105,7 +105,10 @@ export class AppComponent implements OnInit {
       distinctUntilChanged(),
       map(provider => provider === 'firefox-ml'),
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe(value => this.isFirefoxMLProvider.set(value));
+    ).subscribe(value => {
+      this.isFirefoxMLProvider.set(value);
+      this.updateApiKeyValidators();
+    });
     this.formValueSignal = toSignal(this.settingsForm.valueChanges, {initialValue: this.settingsForm.value});
   }
 
@@ -145,7 +148,31 @@ export class AppComponent implements OnInit {
   }
 
   /**
-   * Get validators for API key field based on current provider
+   * Update API key validators based on current provider
+   */
+  updateApiKeyValidators(): void {
+    const apiKeyControl = this.settingsForm.get('apiKey');
+    const providerValue = this.settingsForm.get('provider')?.value ?? 'mistral';
+    const isFirefoxML = providerValue === 'firefox-ml';
+    
+    if (!apiKeyControl) return;
+    
+    // Clear existing validators
+    apiKeyControl.clearValidators();
+    apiKeyControl.setValidators([]);
+    
+    if (isFirefoxML) {
+      // No validators for Firefox ML provider
+      return;
+    }
+    
+    // Add required validator for API key (non-Firefox ML providers)
+    apiKeyControl.addValidators(Validators.required);
+    apiKeyControl.updateValueAndValidity();
+  }
+
+  /**
+   * Get validators for API key field based on current provider (legacy method kept for compatibility)
    */
   getApiKeyValidators() {
     return (control: FormControl<string>) => {
@@ -168,16 +195,8 @@ export class AppComponent implements OnInit {
     if (provider !== 'custom') {
       this.settingsForm.patchValue({customEndpoint: ''});
     }
-    const apiKeyControl = this.settingsForm.get('apiKey');
-    if (apiKeyControl) {
-      if (provider === 'firefox-ml') {
-        apiKeyControl.clearValidators();
-        apiKeyControl.updateValueAndValidity();
-      } else {
-        apiKeyControl.setValidators(Validators.required);
-        apiKeyControl.updateValueAndValidity();
-      }
-    }
+    // Validators are now updated reactively via provider valueChanges
+    // No need to manually update validators here
   }
 
   // ============================================================================
