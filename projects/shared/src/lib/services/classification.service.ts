@@ -293,7 +293,7 @@ export class ClassificationService {
     
     return this.messagingService.saveSettings(settings).pipe(
       mergeMap(response => {
-        if (response.success === false) {
+        if (!response.success) {
           console.error('ClassificationService.saveMLSettings: Save failed:', response.error);
           return throwError(() => new Error(response.error || 'Failed to save ML settings'));
         }

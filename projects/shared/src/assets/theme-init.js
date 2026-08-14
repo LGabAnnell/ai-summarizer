@@ -1,7 +1,7 @@
 (function () {
   try {
-    var theme = localStorage.getItem('ai-summarizer-theme') || 'light';
-    var html = document.documentElement;
+    const theme = localStorage.getItem('ai-summarizer-theme') || 'light';
+    const html = document.documentElement;
     html.classList.remove('dark-theme', 'light-theme');
     html.classList.add(theme === 'dark' ? 'dark-theme' : 'light-theme');
     html.setAttribute('data-theme', theme);

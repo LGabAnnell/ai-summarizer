@@ -46,7 +46,7 @@ const DEFAULT_CUSTOM_PROMPT = 'You are a helpful assistant that summarizes artic
 export class CustomProvider implements AIProvider {
   readonly config: AIProviderConfig;
   private apiKey: string;
-  private endpoint: string;
+  private readonly endpoint: string;
 
   constructor(apiKey: string, endpoint?: string) {
     this.apiKey = apiKey;

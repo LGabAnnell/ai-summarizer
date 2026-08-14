@@ -1,6 +1,6 @@
 import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ThemeService } from '../../../lib/services/theme.service';
+import { ThemeService } from '../../services/theme.service';
 
 /**
  * Reusable header component with logo and optional theme toggle
