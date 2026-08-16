@@ -20,7 +20,6 @@
       [isLoading]="isLoading()"
       [isScrolled]="isScrolled()"
       [formInvalid]="settingsForm.invalid"
-      (save)="onSaveSettings()"
       (reset)="onResetToDefaults()">
     </shared-save-bar>
 
@@ -28,7 +27,6 @@
     <div class="form-content">
       <!-- Provider Configuration Section -->
       <options-provider-config
-        [parentForm]="settingsForm"
         [providerTypes]="providerTypes()"
         [availableModels]="availableModels()"
         [isTesting]="isTesting()"
@@ -42,13 +40,11 @@
       </options-provider-config>
 
       <!-- Summarization Settings Section -->
-      <options-summarization-settings
-        [parentForm]="settingsForm">
+      <options-summarization-settings>
       </options-summarization-settings>
 
       <!-- Cache Settings Section -->
       <options-cache-settings
-        [parentForm]="settingsForm"
         [isLoading]="isLoading()"
         (clearCache)="onClearCache()">
       </options-cache-settings>

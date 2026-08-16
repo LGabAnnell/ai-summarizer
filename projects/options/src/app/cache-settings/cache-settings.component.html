@@ -1,5 +1,4 @@
 <div class="section">
-  <div [formGroup]="parentForm()">
     <div class="section-header">
       <div class="section-title">
         <span>💾</span>
@@ -17,7 +16,7 @@
                   type="checkbox"
                   id="cacheEnabled"
                   formControlName="cacheEnabled"
-                  [checked]="parentForm().get('cacheEnabled')?.value"
+                  [checked]="cacheEnabledValue"
           >
           <span class="slider"></span>
           <span class="switch-label">Enable Summary Caching</span>
@@ -28,7 +27,7 @@
       </div>
     </div>
 
-    @if (parentForm().get('cacheEnabled')?.value) {
+    @if (cacheEnabledValue) {
       <div class="form-group">
         <label class="form-label" for="cacheTTL">Cache Expiration (days)</label>
         <div class="number-input-container">
@@ -73,5 +72,4 @@
         Remove all cached summaries
       </div>
     </div>
-  </div>
 </div>

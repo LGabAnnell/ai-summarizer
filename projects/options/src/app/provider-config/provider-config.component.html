@@ -23,8 +23,7 @@
     Configure your AI provider and API credentials
   </div>
 
-  <div [formGroup]="parentForm()">
-    <div class="grid-2">
+  <div class="grid-2">
       <div class="form-group">
         <label class="form-label" for="provider">AI Provider</label>
         <select
@@ -119,13 +118,13 @@
         <div class="form-description">
           Your API key will be stored locally and never sent to third parties
         </div>
-        @if (parentForm().get('apiKey')?.errors?.['required']) {
+        @if (apiKeyErrors?.['required']) {
           <div class="form-error">API key is required</div>
         }
       </div>
     }
     
-    @if (parentForm().get('provider')?.value === 'custom') {
+    @if (isCustomProvider) {
       <div class="form-group">
         <label class="form-label" for="customEndpoint">Custom Endpoint URL</label>
         <input
@@ -157,5 +156,4 @@
         }
       </div>
     }
-  </div>
 </div>

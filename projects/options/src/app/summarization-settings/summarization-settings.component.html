@@ -1,5 +1,4 @@
 <div class="section">
-  <div [formGroup]="parentForm()">
     <div class="section-header">
       <div class="section-title">
         <span>⚙️</span>
@@ -62,7 +61,7 @@
               formControlName="customPrompt"
               class="form-textarea"
               placeholder="You are a helpful assistant that summarizes articles..."
-              [disabled]="parentForm().get('summaryStyle')?.value !== 'custom'"></textarea>
+              [disabled]="!isCustomStyle"></textarea>
       <div class="form-description">
         Customize the system prompt when using "Custom Prompt" style
       </div>
@@ -84,5 +83,4 @@
         Maximum number of tokens to generate in the summary
       </div>
     </div>
-  </div>
 </div>

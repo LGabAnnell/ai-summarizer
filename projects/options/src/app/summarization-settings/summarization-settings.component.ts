@@ -1,6 +1,6 @@
-import { Component, input } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { ControlContainer, FormGroupDirective, ReactiveFormsModule } from '@angular/forms';
 
 /**
  * Summarization settings section component
@@ -11,8 +11,13 @@ import { FormGroup, ReactiveFormsModule } from '@angular/forms';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: 'summarization-settings.component.html',
-  styleUrl: 'summarization-settings.component.scss'
+  styleUrl: 'summarization-settings.component.scss',
+  viewProviders: [{ provide: ControlContainer, useExisting: FormGroupDirective }],
 })
 export class SummarizationSettingsComponent {
-  parentForm = input.required<FormGroup>();
+  private formDirective = inject(FormGroupDirective);
+
+  get isCustomStyle() {
+    return this.formDirective.control.get('summaryStyle')?.value === 'custom';
+  }
 }

@@ -1,6 +1,6 @@
 import { Component, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { ControlContainer, FormGroupDirective, ReactiveFormsModule } from '@angular/forms';
 import { ProviderType, SettingsService } from '@shared/public-api';
 
 /**
@@ -12,11 +12,11 @@ import { ProviderType, SettingsService } from '@shared/public-api';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: 'provider-config.component.html',
-  styleUrl: 'provider-config.component.scss'
+  styleUrl: 'provider-config.component.scss',
+  viewProviders: [{ provide: ControlContainer, useExisting: FormGroupDirective }],
 })
 export class ProviderConfigComponent {
   // Inputs
-  parentForm = input.required<FormGroup>();
   providerTypes = input.required<ProviderType[]>();
   availableModels = input.required<string[]>();
   isTesting = input<boolean>(false);
@@ -35,6 +35,15 @@ export class ProviderConfigComponent {
   showApiKey = signal<boolean>(false);
 
   private settingsService = inject(SettingsService);
+  private formDirective = inject(FormGroupDirective);
+
+  get apiKeyErrors() {
+    return this.formDirective.control.get('apiKey')?.errors;
+  }
+
+  get isCustomProvider() {
+    return this.formDirective.control.get('provider')?.value === 'custom';
+  }
 
   getProviderDisplayName(provider: string): string {
     return this.settingsService.getProviderDisplayName(provider as ProviderType);
