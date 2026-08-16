@@ -7,7 +7,7 @@
 import {createProvider} from './providers';
 import browser from 'webextension-polyfill';
 import {ArticleData} from '@shared/lib/models/article.model';
-import {CachedSummaryData, Message, SummarizeResponse} from '@shared/lib/models/summary.model';
+import {CachedSummaryData, Message, SummarizeResponse, SetThemeRequest} from '@shared/lib/models/summary.model';
 
 // Import ML services
 import {ClassificationResult, textClassifierService} from './ml/text-classifier.service';
@@ -949,6 +949,17 @@ async function handleMessage(request: Message): Promise<unknown> {
 
   case 'CHECK_ML_AVAILABILITY':
     return handleCheckMLAvailability();
+
+  case 'SET_THEME': {
+    const themeRequest = request as SetThemeRequest;
+    // Broadcast the theme change to all extension pages (popup, options, sidebar).
+    // runtime.sendMessage does not reach the background itself, so no loop here.
+    browser.runtime.sendMessage({ type: 'THEME_CHANGED', theme: themeRequest.theme })
+      .catch(() => {
+        // Some contexts may not be open or may not handle the message; ignore.
+      });
+    return { type: 'SET_THEME_RESPONSE', success: true };
+  }
 
   default:
     return {

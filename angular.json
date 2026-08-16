@@ -39,7 +39,6 @@
             "outputPath": "dist/popup",
             "index": "projects/popup/src/index.html",
             "browser": "projects/popup/src/main.ts",
-            "polyfills": ["zone.js"],
             "tsConfig": "projects/popup/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
@@ -140,7 +139,6 @@
             "outputPath": "dist/options",
             "index": "projects/options/src/index.html",
             "browser": "projects/options/src/main.ts",
-            "polyfills": ["zone.js"],
             "tsConfig": "projects/options/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
@@ -246,7 +244,6 @@
             "outputPath": "dist/sidebar",
             "index": "projects/sidebar/src/index.html",
             "browser": "projects/sidebar/src/main.ts",
-            "polyfills": ["zone.js"],
             "tsConfig": "projects/sidebar/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [

@@ -93,7 +93,7 @@ export class AppComponent implements OnInit {
       customEndpoint: [''],
       summaryStyle: ['concise', Validators.required],
       customPrompt: [''],
-      maxTokens: [500, [Validators.required, Validators.min(50), Validators.max(4000)]],
+      maxTokens: [500, [Validators.required, Validators.min(50)]],
       temperature: [0.7, [Validators.required, Validators.min(0), Validators.max(1)]],
       cacheEnabled: [true],
       cacheTTL: [7, [Validators.required, Validators.min(1), Validators.max(30)]],

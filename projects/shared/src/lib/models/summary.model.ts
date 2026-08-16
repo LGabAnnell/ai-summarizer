@@ -11,6 +11,7 @@ import {
   CheckMLAvailabilityRequest,
   ClassificationResult
 } from "./classification.model";
+import {Theme} from "./theme.model";
 
 export interface ExtractArticleRequest {
   type: 'EXTRACT_ARTICLE';
@@ -83,6 +84,16 @@ export interface ClearCacheRequest {
   type: 'CLEAR_CACHE';
 }
 
+export interface SetThemeRequest {
+  type: 'SET_THEME';
+  theme: Theme;
+}
+
+export interface ThemeChangedMessage {
+  type: 'THEME_CHANGED';
+  theme: Theme;
+}
+
 // Discriminated union type for all possible incoming message types
 export type Message =
   | ExtractAndSummarizeRequest
@@ -92,6 +103,7 @@ export type Message =
   | TestProviderRequest
   | RefreshModelsRequest
   | ClearCacheRequest
+  | SetThemeRequest
   | ExtractArticleRequest
   | ClassifyTextRequest
   | GetMLPermissionStatusRequest

@@ -10,8 +10,9 @@ import { catchError, map } from 'rxjs/operators';
 import * as browser from 'webextension-polyfill';
 import {ExtensionSettings, ProviderType} from '../models/settings.model';
 import { ArticleData } from '../models/article.model';
-import {Message} from "../models/summary.model";
+import {Message, ThemeChangedMessage} from "../models/summary.model";
 import {ClassificationResult, ModelDownloadProgress, ModelDownloadProgressMessage} from "../models/classification.model";
+import {Theme} from "../models/theme.model";
 
 export interface MessageResponse<T = unknown> {
   type: string;
@@ -132,6 +133,14 @@ export class MessagingService {
    */
   clearCache(): Observable<MessageResponse<{ cleared: number }>> {
     return this.sendMessage<{ cleared: number }>({ type: 'CLEAR_CACHE' });
+  }
+
+  /**
+   * Notify the background script of a theme change so it can broadcast it
+   * to all extension contexts (popup, options, sidebar).
+   */
+  setTheme(theme: Theme): Observable<MessageResponse<void>> {
+    return this.sendMessage({ type: 'SET_THEME', theme });
   }
 
   /**
@@ -400,6 +409,32 @@ export class MessagingService {
       browser.runtime.onMessage.addListener(listener);
 
       // Cleanup on unsubscribe
+      return () => {
+        browser.runtime.onMessage.removeListener(listener);
+      };
+    });
+  }
+
+  /**
+   * Listen for theme-change broadcasts originated by the background script
+   * in response to a SET_THEME message from any extension context.
+   */
+  onThemeChanged(): Observable<Theme> {
+    if (typeof browser === 'undefined') {
+      console.error('MessagingService.onThemeChanged: Not running in browser extension context');
+      return throwError(() => new Error('Not running in browser extension context'));
+    }
+
+    return new Observable<Theme>(subscriber => {
+      const listener = (message: unknown) => {
+        const themeMessage = message as ThemeChangedMessage;
+        if (themeMessage && themeMessage.type === 'THEME_CHANGED') {
+          subscriber.next(themeMessage.theme);
+        }
+      };
+
+      browser.runtime.onMessage.addListener(listener);
+
       return () => {
         browser.runtime.onMessage.removeListener(listener);
       };

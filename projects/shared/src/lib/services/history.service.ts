@@ -3,8 +3,9 @@
  * Stores and retrieves recent summaries for the sidebar
  */
 
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { SummaryResult } from '../models/summary.model';
+import { MessagingService } from './messaging.service';
 import browser from 'webextension-polyfill';
 
 /**
@@ -45,6 +46,8 @@ export class HistoryService {
   // Selected history item for viewing
   private _selectedItem = signal<HistoryItem | null>(null);
   readonly selectedItem = this._selectedItem.asReadonly();
+
+  private readonly messaging = inject(MessagingService);
 
   constructor() {
     this.loadHistory();
@@ -183,6 +186,14 @@ export class HistoryService {
     this._history.set([]);
     this._selectedItem.set(null);
     await this.saveHistory();
+
+    // Also clear the summary cache so cached summaries are not retained
+    // after the user clears their history.
+    try {
+      await this.messaging.clearCache().toPromise();
+    } catch (error) {
+      console.error('Failed to clear summary cache while clearing history:', error);
+    }
   }
 
   /**

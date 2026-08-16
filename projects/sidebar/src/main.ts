@@ -4,9 +4,11 @@ import { provideRouter } from '@angular/router';
 
 // Set up webextension polyfill as global for sidebar context
 import 'webextension-polyfill';
+import {provideZonelessChangeDetection} from "@angular/core";
 
 bootstrapApplication(AppComponent, {
   providers: [
-    provideRouter([])
+    provideRouter([]),
+    provideZonelessChangeDetection()
   ]
 }).catch(err => console.error(err));

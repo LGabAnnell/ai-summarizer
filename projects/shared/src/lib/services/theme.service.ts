@@ -3,13 +3,10 @@
  * Provides theme management with persistent storage
  */
 
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import browser from "webextension-polyfill";
-
-/**
- * Theme types
- */
-export type Theme = 'light' | 'dark';
+import { MessagingService } from "./messaging.service";
+import { Theme } from "../models/theme.model";
 
 /**
  * Storage key for theme preference
@@ -21,6 +18,7 @@ const THEME_STORAGE_KEY = 'ai-summarizer-theme';
 })
 export class ThemeService {
   private _theme = signal<Theme>('light');
+  private messagingService = inject(MessagingService);
 
   constructor() {
     // Read the theme already applied by the blocking script in index.html.
@@ -30,6 +28,17 @@ export class ThemeService {
 
     // Sync from storage for cross-context persistence (popup/options lack the blocking script)
     this.loadTheme();
+
+    // Subscribe to theme-change broadcasts from other extension contexts.
+    // The broadcast is fire-and-forget from the sender's perspective; we only
+    // apply the incoming theme here without re-broadcasting (no loop).
+    this.messagingService.onThemeChanged().subscribe((theme) => {
+      if (theme !== this._theme()) {
+        this._theme.set(theme);
+        localStorage.setItem(THEME_STORAGE_KEY, theme);
+        this.applyThemeToDocument();
+      }
+    });
   }
 
   /**
@@ -76,6 +85,9 @@ export class ThemeService {
   async setTheme(theme: Theme): Promise<void> {
     this._theme.set(theme);
     await this.saveTheme();
+    // Notify the background script so it can broadcast the change to all contexts.
+    // Fire-and-forget: errors are already caught inside sendMessage.
+    this.messagingService.setTheme(theme).subscribe();
   }
 
   /**

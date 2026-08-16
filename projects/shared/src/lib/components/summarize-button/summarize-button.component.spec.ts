@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SummarizeButtonComponent } from './summarize-button.component';
 import { By } from '@angular/platform-browser';
 import { describe, it, beforeEach, expect, vi } from "vitest";
+import {provideZonelessChangeDetection} from "@angular/core";
 
 describe('SummarizeButtonComponent', () => {
   let component: SummarizeButtonComponent;
@@ -9,7 +10,8 @@ describe('SummarizeButtonComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [SummarizeButtonComponent]
+      imports: [SummarizeButtonComponent],
+      providers: [provideZonelessChangeDetection()]
     }).compileComponents();
 
     fixture = TestBed.createComponent(SummarizeButtonComponent);
