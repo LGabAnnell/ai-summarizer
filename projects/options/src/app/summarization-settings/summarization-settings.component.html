@@ -56,12 +56,19 @@
 
     <div class="form-group">
       <label class="form-label" for="customPrompt">Custom System Prompt</label>
-      <textarea
-              id="customPrompt"
-              formControlName="customPrompt"
-              class="form-textarea"
-              placeholder="You are a helpful assistant that summarizes articles..."
-              [disabled]="!isCustomStyle"></textarea>
+      @if (isCustomStyle) {
+        <textarea
+                id="customPrompt"
+                formControlName="customPrompt"
+                class="form-textarea"
+                placeholder="You are a helpful assistant that summarizes articles..."></textarea>
+      } @else {
+        <textarea
+                id="customPrompt"
+                class="form-textarea"
+                readonly
+                [value]="predefinedPrompt"></textarea>
+      }
       <div class="form-description">
         Customize the system prompt when using "Custom Prompt" style
       </div>

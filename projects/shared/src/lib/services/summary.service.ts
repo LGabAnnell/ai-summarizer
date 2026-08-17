@@ -28,7 +28,6 @@ export class SummaryService {
   // Public readonly signals
   readonly state = this._state.asReadonly();
   readonly article = this._article.asReadonly();
-  readonly copyState = this._copyState.asReadonly();
 
   private messaging = inject(MessagingService);
   private settings = inject(SettingsService);
@@ -170,113 +169,9 @@ export class SummaryService {
   }
 
   /**
-   * Copy summary to clipboard
-   */
-  async copyToClipboard(): Promise<boolean> {
-    const currentState = this._state();
-    
-    if (currentState.state !== 'success' || !currentState.summary) {
-      return false;
-    }
-
-    this._copyState.set({ copying: true, copied: false });
-
-    try {
-      await navigator.clipboard.writeText(currentState.summary.summary);
-      this._copyState.set({ copying: false, copied: true });
-      
-      // Reset copied state after 2 seconds
-      setTimeout(() => {
-        this.resetCopyState();
-      }, 2000);
-      
-      return true;
-    } catch /* (error) */ {
-      this._copyState.set({ copying: false, copied: false });
-      return false;
-    }
-  }
-
-  /**
    * Reset the copy state
    */
   resetCopyState(): void {
     this._copyState.set({ copying: false, copied: false });
-  }
-
-  /**
-   * Get the current summary
-   */
-  getCurrentSummary(): string | undefined {
-    const currentState = this._state();
-    return currentState.state === 'success' ? currentState.summary?.summary : undefined;
-  }
-
-  /**
-   * Get the current title
-   */
-  getCurrentTitle(): string | undefined {
-    const currentState = this._state();
-    return currentState.state === 'success' ? currentState.summary?.title : undefined;
-  }
-
-  /**
-   * Get the current article URL
-   */
-  getCurrentArticleUrl(): string | undefined {
-    const currentState = this._state();
-    return currentState.state === 'success' ? currentState.summary?.articleUrl : undefined;
-  }
-
-  /**
-   * Check if current summary is cached
-   */
-  isCached(): boolean {
-    const currentState = this._state();
-    return currentState.state === 'success' ? currentState.summary?.cached || false : false;
-  }
-
-  /**
-   * Clear the current state
-   */
-  clear(): void {
-    this._state.set({ state: 'idle' });
-    this._article.set(null);
-    this.resetCopyState();
-  }
-
-  /**
-   * Check if currently loading
-   */
-  isLoading(): boolean {
-    return this._state().state === 'loading';
-  }
-
-  /**
-   * Check if in error state
-   */
-  isError(): boolean {
-    return this._state().state === 'error';
-  }
-
-  /**
-   * Check if in success state
-   */
-  isSuccess(): boolean {
-    return this._state().state === 'success';
-  }
-
-  /**
-   * Get the current error message
-   */
-  getErrorMessage(): string | undefined {
-    return this._state().error;
-  }
-
-  /**
-   * Get the current loading message
-   */
-  getLoadingMessage(): string | undefined {
-    return this._state().loadingMessage;
   }
 }

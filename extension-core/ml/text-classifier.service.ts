@@ -4,7 +4,6 @@
  * All ML code isolated to background script context
  */
 
-import browser from 'webextension-polyfill';
 import { MLEngineConfig, mlEngineManager } from './ml-engine-manager';
 import { mlPermissionService } from './ml-permission.service';
 

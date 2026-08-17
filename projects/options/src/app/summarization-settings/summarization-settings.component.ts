@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ControlContainer, FormGroupDirective, ReactiveFormsModule } from '@angular/forms';
+import { SummaryStyle, SUMMARY_PROMPTS } from '@shared/public-api';
 
 /**
  * Summarization settings section component
@@ -18,6 +19,14 @@ export class SummarizationSettingsComponent {
   private formDirective = inject(FormGroupDirective);
 
   get isCustomStyle() {
-    return this.formDirective.control.get('summaryStyle')?.value === 'custom';
+    return this.currentStyle === 'custom';
+  }
+
+  get currentStyle(): SummaryStyle {
+    return (this.formDirective.control.get('summaryStyle')?.value ?? 'concise') as SummaryStyle;
+  }
+
+  get predefinedPrompt(): string {
+    return SUMMARY_PROMPTS[this.currentStyle] ?? '';
   }
 }

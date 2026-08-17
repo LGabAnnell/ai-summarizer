@@ -75,10 +75,3 @@ export class MistralProvider extends OpenAICompatibleProvider {
 export function createMistralProvider(apiKey: string): MistralProvider {
   return new MistralProvider(apiKey);
 }
-
-/**
- * Create a Mistral provider from settings
- */
-export function createMistralProviderFromSettings(settings: ProviderSettings): MistralProvider {
-  return new MistralProvider(settings.apiKey);
-}

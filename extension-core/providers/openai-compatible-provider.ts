@@ -5,7 +5,6 @@
 
 import { BaseProvider } from './base-provider';
 import type { AIProviderConfig, AIProviderResponse } from './provider.model';
-import type { ValidationResult } from './provider.utils';
 import { buildUserMessage } from './provider.utils';
 
 export abstract class OpenAICompatibleProvider extends BaseProvider {

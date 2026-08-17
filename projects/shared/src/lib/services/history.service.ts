@@ -7,6 +7,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { SummaryResult } from '../models/summary.model';
 import { MessagingService } from './messaging.service';
 import browser from 'webextension-polyfill';
+import {firstValueFrom} from "rxjs";
 
 /**
  * Summary history item with additional metadata
@@ -45,7 +46,6 @@ export class HistoryService {
 
   // Selected history item for viewing
   private _selectedItem = signal<HistoryItem | null>(null);
-  readonly selectedItem = this._selectedItem.asReadonly();
 
   private readonly messaging = inject(MessagingService);
 
@@ -157,13 +157,6 @@ export class HistoryService {
   }
 
   /**
-   * Clear selection
-   */
-  clearSelection(): void {
-    this._selectedItem.set(null);
-  }
-
-  /**
    * Delete a history item
    */
   async deleteItem(id: string): Promise<void> {
@@ -190,7 +183,7 @@ export class HistoryService {
     // Also clear the summary cache so cached summaries are not retained
     // after the user clears their history.
     try {
-      await this.messaging.clearCache().toPromise();
+      await firstValueFrom(this.messaging.clearCache());
     } catch (error) {
       console.error('Failed to clear summary cache while clearing history:', error);
     }
@@ -208,13 +201,6 @@ export class HistoryService {
    */
   getSelectedItem(): HistoryItem | null {
     return this._selectedItem();
-  }
-
-  /**
-   * Check if there are any history items
-   */
-  hasItems(): boolean {
-    return this._history().length > 0;
   }
 
   /**

@@ -35,16 +35,6 @@ export interface ExtensionSettings {
   mlModelId?: string;
 }
 
-export interface SettingsState {
-  settings: ExtensionSettings;
-  isLoading: boolean;
-  error?: string;
-}
-
-export interface SettingsValidation {
-  valid: boolean;
-  errors: Record<string, string>;
-}
 export interface AIRequestSettings {
   /** Model to use for completion */
   model?: string;

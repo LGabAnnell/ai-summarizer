@@ -91,13 +91,6 @@ export class MessagingService {
   }
 
   /**
-   * Send message and get a typed response
-   */
-  sendMessageTyped<T, R>(message: Message & { type: T }): Observable<MessageResponse<R>> {
-    return this.sendMessage<R>(message);
-  }
-
-  /**
    * Request article extraction and summarization
    */
   extractAndSummarize(): Observable<MessageResponse<{
@@ -178,43 +171,6 @@ export class MessagingService {
       provider, 
       apiKey 
     });
-  }
-
-  /**
-   * Open the options page
-   */
-  openOptionsPage(): void {
-    if (typeof browser !== 'undefined') {
-      try {
-        browser.runtime.openOptionsPage();
-      } catch (error) {
-        console.error('Failed to open options page:', error);
-      }
-    }
-  }
-
-  /**
-   * Get the current tab
-   */
-  getCurrentTab(): Observable<browser.Tabs.Tab> {
-    if (typeof browser === 'undefined') {
-      console.error('MessagingService.getCurrentTab: Not running in a browser extension context');
-      return throwError(() => new Error('Not running in a browser extension context'));
-    }
-
-    return from(browser.tabs.query({ active: true, currentWindow: true })).pipe(
-      map((tabs: browser.Tabs.Tab[]) => {
-        if (tabs.length === 0) {
-          console.error('MessagingService.getCurrentTab: No active tab found');
-          throw new Error('No active tab found');
-        }
-        return tabs[0];
-      }),
-      catchError((error) => {
-        console.error('MessagingService.getCurrentTab: Error getting current tab:', error);
-        return throwError(() => error);
-      })
-    );
   }
 
   // ============================================================================

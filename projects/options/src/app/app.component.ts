@@ -62,8 +62,6 @@ export class AppComponent implements OnInit {
   private settingsService = inject(SettingsService);
   public themeService = inject(ThemeService);
   private classificationService = inject(ClassificationService);
-  private messagingService = inject(MessagingService);
-  
   private formValueSignal;
   private destroyRef = inject(DestroyRef);
 

@@ -11,14 +11,3 @@ export interface ArticleData {
   publicationDate?: string;
   siteName?: string;
 }
-
-export interface ArticleExtractRequest {
-  url?: string;
-  tabId?: number;
-}
-
-export interface ArticleExtractResponse {
-  data?: ArticleData;
-  error?: string;
-  success: boolean;
-}

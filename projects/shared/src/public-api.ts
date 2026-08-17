@@ -5,6 +5,7 @@
 // Models
 export * from './lib/models/summary.model';
 export * from './lib/models/settings.model';
+export * from './lib/models/summary-prompts.model';
 export * from './lib/models/article.model';
 export * from './lib/models/classification.model';
 export * from './lib/models/theme.model';

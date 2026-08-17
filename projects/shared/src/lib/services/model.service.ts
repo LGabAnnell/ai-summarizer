@@ -38,11 +38,6 @@ export class ModelService {
     'firefox-ml': { models: [], timestamp: 0, loading: false },
   });
 
-  // Public readonly signals
-  readonly modelsCache = this._modelsCache.asReadonly();
-
-  constructor() {}
-
   /**
    * Get the loading state for a specific provider
    */
@@ -80,8 +75,8 @@ export class ModelService {
   hasValidCache(provider: ProviderType): boolean {
     const entry = this._modelsCache()[provider];
     if (!entry || entry.error) return false;
-    
-    return entry.models.length > 0 && 
+
+    return entry.models.length > 0 &&
            (Date.now() - entry.timestamp) < this.CACHE_TTL;
   }
 

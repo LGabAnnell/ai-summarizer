@@ -24,9 +24,7 @@ export class SettingsService {
   private _isLoading = signal<boolean>(false);
   private _error = signal<string | undefined>(undefined);
 
-  // Public readonly signals
   readonly settings = this._settings.asReadonly();
-  readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
 
   private messaging = inject(MessagingService);
@@ -99,25 +97,10 @@ export class SettingsService {
   }
 
   /**
-   * Update a specific setting
-   */
-  updateSetting<K extends keyof ExtensionSettings>(key: K, value: ExtensionSettings[K]): Observable<ExtensionSettings> {
-    return this.saveSettings({ [key]: value } as Partial<ExtensionSettings>);
-  }
-
-  /**
    * Get a specific setting
    */
   getSetting<K extends keyof ExtensionSettings>(key: K): ExtensionSettings[K] {
     return this._settings()[key];
-  }
-
-  /**
-   * Get available models for the current provider
-   */
-  getAvailableModels(): string[] {
-    const provider = this._settings().provider;
-    return PROVIDER_MODELS[provider] || [];
   }
 
   /**
@@ -136,13 +119,6 @@ export class SettingsService {
   }
 
   /**
-   * Get all provider configurations
-   */
-  getProviderConfigs(): Record<ProviderType, ProviderConfig> {
-    return PROVIDER_CONFIGS;
-  }
-
-  /**
    * Get the display name for a provider
    */
   getProviderDisplayName(provider: ProviderType): string {
@@ -154,66 +130,6 @@ export class SettingsService {
    */
   getProviderTypes(): ProviderType[] {
     return ['mistral', 'openai', 'anthropic', 'qwen', 'deepseek', 'custom'/*, 'firefox-ml'*/];
-  }
-
-  /**
-   * Validate settings
-   */
-  validateSettings(settings: Partial<ExtensionSettings>): { valid: boolean; errors: Record<string, string> } {
-    const errors: Record<string, string> = {};
-    const currentSettings = this._settings();
-    const mergedSettings = { ...currentSettings, ...settings };
-
-    // Validate API key if provider requires it
-    const providerConfig = PROVIDER_CONFIGS[mergedSettings.provider];
-    const providerRequiresApiKey = providerConfig && providerConfig.apiKeyPrefix !== null;
-    
-    if (providerRequiresApiKey) {
-      if (mergedSettings.apiKey && mergedSettings.apiKey.trim() === '') {
-        errors['apiKey'] = 'API key is required';
-      }
-      
-      // Validate API key format if provided
-      if (mergedSettings.apiKey && providerConfig?.apiKeyPrefix) {
-        if (!mergedSettings.apiKey.startsWith(providerConfig.apiKeyPrefix)) {
-          errors['apiKey'] = `API key should start with ${providerConfig.apiKeyPrefix}`;
-        }
-      }
-    }
-
-    // Validate model
-    const availableModels = this.getAvailableModelsForProvider(mergedSettings.provider);
-    if (mergedSettings.model && availableModels.length > 0) {
-      if (!availableModels.includes(mergedSettings.model)) {
-        errors['model'] = `Invalid model. Available models: ${availableModels.join(', ')}`;
-      }
-    }
-
-    // Validate temperature
-    if (mergedSettings.temperature !== undefined) {
-      if (mergedSettings.temperature < 0 || mergedSettings.temperature > 1) {
-        errors['temperature'] = 'Temperature must be between 0 and 1';
-      }
-    }
-
-    // Validate maxTokens
-    if (mergedSettings.maxTokens !== undefined) {
-      if (mergedSettings.maxTokens <= 0) {
-        errors['maxTokens'] = 'Max tokens must be positive';
-      }
-    }
-
-    // Validate cache TTL
-    if (mergedSettings.cacheTTL !== undefined) {
-      if (mergedSettings.cacheTTL <= 0) {
-        errors['cacheTTL'] = 'Cache TTL must be positive';
-      }
-    }
-
-    return {
-      valid: Object.keys(errors).length === 0,
-      errors,
-    };
   }
 
   /**
@@ -257,14 +173,6 @@ export class SettingsService {
         return of(PROVIDER_MODELS[provider] || []);
       })
     );
-  }
-
-  /**
-   * Refresh models for the current provider
-   */
-  refreshCurrentProviderModels(): Observable<string[]> {
-    const settings = this._settings();
-    return this.refreshModels(settings.provider as ProviderType, settings.apiKey);
   }
 
   /**

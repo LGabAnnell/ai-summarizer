@@ -468,7 +468,6 @@ type ViewMode = 'current' | 'history' | 'history-detail';
 export class AppComponent implements OnInit, OnDestroy {
   // Services
   private summaryService = inject(SummaryService);
-  private messagingService = inject(MessagingService);
   private settingsService = inject(SettingsService);
   private classificationService = inject(ClassificationService);
   public historyService = inject(HistoryService);

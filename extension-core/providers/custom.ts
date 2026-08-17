@@ -12,17 +12,12 @@ import type {
 import type { SummaryStyle } from './summary-prompts';
 import { SUMMARY_PROMPTS } from './summary-prompts';
 import {
-  type ValidationResult,
   addAuthHeader,
   buildBaseHeaders,
   buildUserMessage,
   estimateTokenCount,
   getSystemPrompt as getSystemPromptUtil,
   getTokenCount as getTokenCountUtil,
-  validateMaxTokens,
-  validateRequiredApiKey,
-  validateTemperature,
-  validateUrl,
 } from './provider.utils';
 
 // Default configuration for custom provider

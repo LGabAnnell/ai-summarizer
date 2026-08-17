@@ -18,13 +18,6 @@ export interface ExtractArticleRequest {
   tabId?: number;
 }
 
-export interface ExtractArticleResponse {
-  type: 'EXTRACT_ARTICLE_RESPONSE';
-  data?: ArticleData;
-  error?: string;
-  success: boolean;
-}
-
 export interface SummarizeRequest {
   type: 'SUMMARIZE';
   article: ArticleData;
@@ -124,20 +117,6 @@ export interface SummaryResult {
   timestamp: Date;
   // NEW: Classification result (optional)
   classification?: ClassificationResult;
-}
-
-export interface SummaryRequest {
-  article: ArticleData;
-  provider?: string;
-  settings?: SummarySettings;
-}
-
-export interface SummarySettings {
-  model?: string;
-  maxTokens?: number;
-  temperature?: number;
-  summaryStyle?: 'concise' | 'detailed' | 'bullet_points' | 'custom';
-  customPrompt?: string;
 }
 
 export interface SummaryState {
