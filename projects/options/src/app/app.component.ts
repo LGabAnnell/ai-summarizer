@@ -81,9 +81,6 @@ export class AppComponent implements OnInit {
   mlAvailabilityChecked = signal<boolean>(false);
 
   constructor() {
-    // Apply theme to document on initialization
-    this.themeService.applyThemeToDocument();
-    
     this.settingsForm = this.fb.group({
       provider: ['mistral', Validators.required],
       model: ['mistral-tiny', Validators.required],

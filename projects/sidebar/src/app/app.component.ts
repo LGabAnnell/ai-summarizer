@@ -549,14 +549,6 @@ export class AppComponent implements OnInit, OnDestroy {
   });
 
   constructor() {
-    // Apply theme to document on initialization
-    this.themeService.applyThemeToDocument();
-
-    // Set up effect to apply theme changes
-    effect(() => {
-      this.themeService.applyThemeToDocument();
-    });
-
     // Set up effect to watch summary state changes
     effect(() => {
       const state = this.summaryService.state();

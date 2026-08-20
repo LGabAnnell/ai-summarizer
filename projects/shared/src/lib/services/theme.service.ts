@@ -3,7 +3,7 @@
  * Provides theme management with persistent storage
  */
 
-import { Injectable, inject, signal } from '@angular/core';
+import {Injectable, inject, signal, effect} from '@angular/core';
 import browser from "webextension-polyfill";
 import { MessagingService } from "./messaging.service";
 import { Theme } from "../models/theme.model";
@@ -39,6 +39,8 @@ export class ThemeService {
         this.applyThemeToDocument();
       }
     });
+
+    effect(() => this.applyThemeToDocument());
   }
 
   /**
@@ -55,7 +57,6 @@ export class ThemeService {
           localStorage.setItem(THEME_STORAGE_KEY, stored);
           if (stored !== this._theme()) {
             this._theme.set(stored);
-            this.applyThemeToDocument();
           }
         }
       }
