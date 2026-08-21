@@ -40,13 +40,12 @@
 
       <div class="form-group">
         <label class="form-label" for="model">Model</label>
-        @if (isFirefoxMLProvider()) {
+        @if (isFirefoxMLProvider() || isCustomProvider) {
           <input
                   id="model"
                   type="text"
                   formControlName="model"
                   class="form-input"
-                  placeholder="Enter model name (e.g., Xenova/distilbart-cnn-6-6)"
           />
         } @else {
           <div class="model-select-wrapper">

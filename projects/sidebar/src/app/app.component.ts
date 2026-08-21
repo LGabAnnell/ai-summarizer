@@ -3,7 +3,6 @@ import {CommonModule} from '@angular/common';
 import {
   MarkdownPipe,
   SummaryService,
-  MessagingService,
   SettingsService,
   HistoryService,
   ThemeService,

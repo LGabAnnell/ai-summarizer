@@ -12,7 +12,7 @@ import {
   DEFAULT_SETTINGS,
   PROVIDER_MODELS,
   PROVIDER_CONFIGS,
-  ProviderType, ProviderConfig
+  ProviderType
 } from '../models/settings.model';
 
 @Injectable({

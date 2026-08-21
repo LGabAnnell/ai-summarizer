@@ -46,12 +46,6 @@ export interface AIRequestSettings {
   summaryStyle?: string;
   /** Custom system prompt */
   customPrompt?: string;
-  /** Request format (for custom providers) */
-  requestFormat?: 'openai' | 'custom';
-  /** Custom request body (for custom providers) */
-  customBody?: Record<string, string>;
-  /** Custom endpoint URL (for custom providers) */
-  customEndpoint?: string;
 }
 
 /**

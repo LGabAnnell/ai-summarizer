@@ -5,7 +5,6 @@ import {
   ClassificationResult,
   ClassificationService,
   ExtensionSettings,
-  MessagingService,
   ProviderType,
   SettingsService,
   ThemeService,
