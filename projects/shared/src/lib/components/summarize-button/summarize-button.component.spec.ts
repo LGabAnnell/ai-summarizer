@@ -1,7 +1,7 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { SummarizeButtonComponent } from './summarize-button.component';
-import { By } from '@angular/platform-browser';
-import { describe, it, beforeEach, expect, vi } from "vitest";
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {SummarizeButtonComponent} from './summarize-button.component';
+import {By} from '@angular/platform-browser';
+import {beforeEach, describe, expect, it, vi} from "vitest";
 import {provideZonelessChangeDetection} from "@angular/core";
 
 describe('SummarizeButtonComponent', () => {

@@ -1,5 +1,5 @@
-import { Component, input, output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {Component, input, output} from '@angular/core';
+import {CommonModule} from '@angular/common';
 
 /**
  * Reusable copy button component with loading and success states
@@ -10,11 +10,11 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <button 
-      class="copy-btn"
-      [class.copy-btn--success]="copied()"
-      [disabled]="disabled()"
-      (click)="copyClick.emit()">
+    <button
+            class="copy-btn"
+            [class.copy-btn--success]="copied()"
+            [disabled]="disabled()"
+            (click)="copyClick.emit()">
       @if (copying()) {
         <span class="spinner">{{ darkSpinner() ? 'spinner-dark' : 'spinner' }}</span>
         {{ loadingText() }}
@@ -27,51 +27,51 @@ import { CommonModule } from '@angular/common';
   `,
   styles: [
     `
-    .copy-btn {
-      padding: 6px 12px;
-      font-size: 13px;
-      background: transparent;
-      border: 1px solid var(--border-color);
-      border-radius: var(--border-radius);
-      cursor: pointer;
-      color: var(--text-secondary);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      .copy-btn {
+        padding: 6px 12px;
+        font-size: 13px;
+        background: transparent;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        color: var(--text-secondary);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
 
-      &:hover:not(:disabled) {
-        background-color: var(--primary-light);
-        border-color: var(--primary-color);
-        color: var(--primary-color);
+        &:hover:not(:disabled) {
+          background-color: var(--primary-light);
+          border-color: var(--primary-color);
+          color: var(--primary-color);
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        &.copy-btn--success {
+          background-color: var(--success-color) !important;
+          border-color: var(--success-color) !important;
+          color: white !important;
+        }
       }
 
-      &:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
+      .spinner {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+        border-top-color: #666;
+        animation: spin 1s ease-in-out infinite;
       }
 
-      &.copy-btn--success {
-        background-color: var(--success-color) !important;
-        border-color: var(--success-color) !important;
-        color: white !important;
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
       }
-    }
-
-    .spinner {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      border: 2px solid rgba(0, 0, 0, 0.1);
-      border-radius: 50%;
-      border-top-color: #666;
-      animation: spin 1s ease-in-out infinite;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
     `
   ]
 })
@@ -84,7 +84,7 @@ export class CopyButtonComponent {
   successText = input<string>('✓ Copied!');
   loadingText = input<string>('Copying...');
   darkSpinner = input<boolean>(false);
-  
+
   // Output
   copyClick = output<void>();
 }

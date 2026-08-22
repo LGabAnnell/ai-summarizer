@@ -3,15 +3,19 @@
  * Provides a consistent interface for sending messages between extension components
  */
 
-import { Injectable } from '@angular/core';
-import { Observable, from, of, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import {Injectable} from '@angular/core';
+import {from, Observable, of, throwError} from 'rxjs';
+import {catchError, map} from 'rxjs/operators';
 
 import * as browser from 'webextension-polyfill';
 import {ExtensionSettings, ProviderType} from '../models/settings.model';
-import { ArticleData } from '../models/article.model';
+import {ArticleData} from '../models/article.model';
 import {Message, ThemeChangedMessage} from "../models/summary.model";
-import {ClassificationResult, ModelDownloadProgress, ModelDownloadProgressMessage} from "../models/classification.model";
+import {
+  ClassificationResult,
+  ModelDownloadProgress,
+  ModelDownloadProgressMessage
+} from "../models/classification.model";
 import {Theme} from "../models/theme.model";
 
 export interface MessageResponse<T = unknown> {
@@ -29,8 +33,9 @@ export interface MessageResponse<T = unknown> {
   providedIn: 'root'
 })
 export class MessagingService {
-  
-  constructor() {}
+
+  constructor() {
+  }
 
   /**
    * Send a message to the background script
@@ -46,7 +51,7 @@ export class MessagingService {
     // Return an observable that wraps the message sending
     return from(browser.runtime.sendMessage(message)).pipe(
       map((response: unknown) => {
-        
+
         // Handle both direct responses and wrapped responses
         if (response && typeof response === 'object' && !Array.isArray(response)) {
           // If response has a data property, use it. Otherwise, the response itself is the data
@@ -54,7 +59,7 @@ export class MessagingService {
           const responseObj = response as Record<string, unknown>;
           const standardFields = ['type', 'success', 'error', 'data'];
           const hasExplicitData = responseObj['data'] !== undefined;
-          
+
           // Collect all non-standard fields as the actual data
           const responseData: Record<string, unknown> = {};
           for (const key in responseObj) {
@@ -62,29 +67,29 @@ export class MessagingService {
               responseData[key] = responseObj[key];
             }
           }
-          
+
           const data = hasExplicitData ? responseObj['data'] : (Object.keys(responseData).length > 0 ? responseData : undefined);
-          
+
           const result = {
             type: responseObj['type'] || message.type + '_RESPONSE',
             success: responseObj['success'] !== false, // Default to true if not specified
             data: data as T,
             error: responseObj['error'],
           } as MessageResponse<T>;
-          
+
           return result;
         }
         console.error('Invalid response format, raw response:', response);
-        return { type: 'UNKNOWN', success: false, error: 'Invalid response format' };
+        return {type: 'UNKNOWN', success: false, error: 'Invalid response format'};
       }),
       catchError((error) => {
         console.error('Message sending failed:', error);
         console.error('Error details:', error instanceof Error ? error.message : JSON.stringify(error));
         console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace available');
-        return of({ 
-          type: message.type + '_RESPONSE', 
-          success: false, 
-          error: error instanceof Error ? error.message : 'Failed to send message' 
+        return of({
+          type: message.type + '_RESPONSE',
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to send message'
         });
       })
     );
@@ -104,28 +109,28 @@ export class MessagingService {
       title: string;
       articleUrl: string;
       cached: boolean;
-    }>({ type: 'EXTRACT_AND_SUMMARIZE' });
+    }>({type: 'EXTRACT_AND_SUMMARIZE'});
   }
 
   /**
    * Get extension settings
    */
   getSettings(): Observable<MessageResponse<ExtensionSettings>> {
-    return this.sendMessage<ExtensionSettings>({ type: 'GET_SETTINGS' });
+    return this.sendMessage<ExtensionSettings>({type: 'GET_SETTINGS'});
   }
 
   /**
    * Save extension settings
    */
   saveSettings(settings: Partial<ExtensionSettings>): Observable<MessageResponse<void>> {
-    return this.sendMessage({ type: 'SAVE_SETTINGS', settings });
+    return this.sendMessage({type: 'SAVE_SETTINGS', settings});
   }
 
   /**
    * Clear the summary cache
    */
   clearCache(): Observable<MessageResponse<{ cleared: number }>> {
-    return this.sendMessage<{ cleared: number }>({ type: 'CLEAR_CACHE' });
+    return this.sendMessage<{ cleared: number }>({type: 'CLEAR_CACHE'});
   }
 
   /**
@@ -133,7 +138,7 @@ export class MessagingService {
    * to all extension contexts (popup, options, sidebar).
    */
   setTheme(theme: Theme): Observable<MessageResponse<void>> {
-    return this.sendMessage({ type: 'SET_THEME', theme });
+    return this.sendMessage({type: 'SET_THEME', theme});
   }
 
   /**
@@ -144,10 +149,10 @@ export class MessagingService {
     cached: boolean;
     tokenCount?: number;
   }>> {
-    return this.sendMessage({ 
-      type: 'SUMMARIZE', 
-      article, 
-      provider 
+    return this.sendMessage({
+      type: 'SUMMARIZE',
+      article,
+      provider
     });
   }
 
@@ -155,10 +160,10 @@ export class MessagingService {
    * Test a provider connection
    */
   testProvider(provider: string, apiKey: string): Observable<MessageResponse<{ valid: boolean }>> {
-    return this.sendMessage<{ valid: boolean }>({ 
-      type: 'TEST_PROVIDER', 
-      provider, 
-      apiKey 
+    return this.sendMessage<{ valid: boolean }>({
+      type: 'TEST_PROVIDER',
+      provider,
+      apiKey
     });
   }
 
@@ -166,10 +171,10 @@ export class MessagingService {
    * Refresh models for a specific provider
    */
   refreshModels(provider: ProviderType, apiKey: string): Observable<MessageResponse<{ models: string[] }>> {
-    return this.sendMessage<{ models: string[] }>({ 
-      type: 'REFRESH_MODELS', 
-      provider, 
-      apiKey 
+    return this.sendMessage<{ models: string[] }>({
+      type: 'REFRESH_MODELS',
+      provider,
+      apiKey
     });
   }
 
@@ -270,15 +275,15 @@ export class MessagingService {
   /**
    * Check if ML is available
    */
-  checkMLAvailability(): Observable<{ 
-    available: boolean; 
-    apiAvailable: boolean; 
-    permissionGranted: boolean; 
+  checkMLAvailability(): Observable<{
+    available: boolean;
+    apiAvailable: boolean;
+    permissionGranted: boolean;
   }> {
-    return this.sendMessage<{ 
-      available: boolean; 
-      apiAvailable: boolean; 
-      permissionGranted: boolean; 
+    return this.sendMessage<{
+      available: boolean;
+      apiAvailable: boolean;
+      permissionGranted: boolean;
     }>({
       type: 'CHECK_ML_AVAILABILITY'
     }).pipe(
@@ -339,7 +344,7 @@ export class MessagingService {
    * Get model download progress as observable
    */
   onModelDownloadProgress(): Observable<ModelDownloadProgress> {
-    
+
     if (typeof browser === 'undefined') {
       console.error('MessagingService.onModelDownloadProgress: Not running in browser extension context');
       return throwError(() => new Error('Not running in browser extension context'));
@@ -348,7 +353,7 @@ export class MessagingService {
     // Return an observable that listens for progress messages
     return new Observable<ModelDownloadProgress>(subscriber => {
       const listener = (message: unknown) => {
-        
+
         const progressMessage = message as ModelDownloadProgressMessage;
         if (progressMessage && progressMessage.type === 'MODEL_DOWNLOAD_PROGRESS') {
           const progress: ModelDownloadProgress = {

@@ -26,6 +26,7 @@ import {CommonModule} from '@angular/common';
     :host {
       padding-bottom: 6px;
     }
+
     .btn {
       display: inline-flex;
       align-items: center;

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // @ts-check
-const { defineConfig } = require('eslint/config');
+const {defineConfig} = require('eslint/config');
 const eslint = require('@eslint/js');
 const tseslint = require('typescript-eslint');
 const angular = require('angular-eslint');
 
 module.exports = defineConfig([
-  { ignores: ['projects/options/src/**/*spec.ts', 'projects/options/src/**/*.d.ts'] },
+  {ignores: ['projects/options/src/**/*spec.ts', 'projects/options/src/**/*.d.ts']},
   {
     files: ['**/*.ts'],
     extends: [
@@ -16,8 +16,8 @@ module.exports = defineConfig([
     ],
     processor: angular.processInlineTemplates,
     rules: {
-      '@angular-eslint/component-selector': ['error', { type: 'element', prefix: 'options', style: 'kebab-case' }],
-      '@angular-eslint/directive-selector': ['error', { type: 'attribute', prefix: 'options', style: 'camelCase' }]
+      '@angular-eslint/component-selector': ['error', {type: 'element', prefix: 'options', style: 'kebab-case'}],
+      '@angular-eslint/directive-selector': ['error', {type: 'attribute', prefix: 'options', style: 'camelCase'}]
     }
   },
   {

@@ -3,17 +3,9 @@
  * Extends BaseProvider — implements DashScope body shape and response parsing.
  */
 
-import type {AIProviderConfig, AIProviderResponse, ProviderSettings} from './provider.model';
-import { BaseProvider } from './base-provider';
-import {
-  type ValidationResult,
-  buildUserMessage,
-  validateApiKeyLength,
-  validateMaxTokens,
-  validateModel,
-  validateRequiredApiKey,
-  validateTemperature,
-} from './provider.utils';
+import type {AIProviderConfig, AIProviderResponse} from './provider.model';
+import {BaseProvider} from './base-provider';
+import {buildUserMessage,} from './provider.utils';
 
 // Qwen API configuration
 const QWEN_CONFIG: AIProviderConfig = {
@@ -65,8 +57,8 @@ export class QwenProvider extends BaseProvider {
     const userMessage = buildUserMessage(articleText, title);
 
     const messages = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userMessage },
+      {role: 'system', content: systemPrompt},
+      {role: 'user', content: userMessage},
     ];
 
     return {
@@ -125,27 +117,6 @@ export class QwenProvider extends BaseProvider {
     }
   }
 
-  validateConfig(apiKey: string, settings?: ProviderSettings): ValidationResult {
-    const apiKeyCheck = validateRequiredApiKey(apiKey);
-    if (!apiKeyCheck.valid) return apiKeyCheck;
-
-    const apiKeyLength = validateApiKeyLength(apiKey, 30);
-    if (!apiKeyLength.valid) {
-      return { valid: false, error: 'Invalid DashScope API key format. Key seems too short.' };
-    }
-
-    const modelCheck = validateModel(settings?.model, this.config.availableModels, 'Qwen');
-    if (!modelCheck.valid) return modelCheck;
-
-    const tempCheck = validateTemperature(settings?.temperature, 0, 1);
-    if (!tempCheck.valid) return tempCheck;
-
-    const maxTokensCheck = validateMaxTokens(settings?.maxTokens);
-    if (!maxTokensCheck.valid) return maxTokensCheck;
-
-    return { valid: true };
-  }
-
   /**
    * Fetch available models from DashScope API.
    * @param apiKey - The API key for authentication
@@ -153,7 +124,7 @@ export class QwenProvider extends BaseProvider {
    */
   async fetchModels(apiKey: string): Promise<string[]> {
     const modelsEndpoint = this.config.modelsEndpoint;
-    
+
     if (!modelsEndpoint) {
       // Fallback to hardcoded models if no models endpoint is configured
       return this.config.availableModels || [];
@@ -163,7 +134,7 @@ export class QwenProvider extends BaseProvider {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      
+
       // Add authentication header for DashScope
       if (this.config.authHeader && this.config.useBearerToken) {
         headers[this.config.authHeader] = `Bearer ${apiKey}`;
@@ -183,12 +154,12 @@ export class QwenProvider extends BaseProvider {
       }
 
       const data = await response.json();
-      
+
       // Handle DashScope response format
       if (data.data && Array.isArray(data.data)) {
         return data.data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');
       }
-      
+
       // Handle alternative format where models are directly in the response
       if (Array.isArray(data)) {
         return data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');

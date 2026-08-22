@@ -5,12 +5,12 @@ import {
   ClassificationResult,
   ClassificationService,
   ExtensionSettings,
+  HeaderComponent,
   ProviderType,
+  SaveBarComponent,
   SettingsService,
   ThemeService,
-  HeaderComponent,
-  ToastContainerComponent,
-  SaveBarComponent
+  ToastContainerComponent
 } from '@shared/public-api';
 import {ProviderConfigComponent} from './provider-config/provider-config.component';
 import {SummarizationSettingsComponent} from './summarization-settings/summarization-settings.component';
@@ -47,29 +47,10 @@ export class AppComponent implements OnInit {
   modelsError = signal<string | undefined>(undefined);
   isScrolled = signal<boolean>(false);
   settingsForm!: FormGroup;
-  
+
   // Computed
   isFirefoxMLProvider = signal(false);
-  providerTypes = computed(() => this.settingsService.getProviderTypes());
-  availableModels = computed(() => {
-    const provider = this.settingsForm?.get('provider')?.value || 'mistral';
-    return this.settingsService.getAvailableModelsForProvider(provider);
-  });
-
-  // Injected services
-  private fb = inject(FormBuilder);
-  private settingsService = inject(SettingsService);
   public themeService = inject(ThemeService);
-  private classificationService = inject(ClassificationService);
-  private formValueSignal;
-  private destroyRef = inject(DestroyRef);
-
-  settings = signal<Partial<ExtensionSettings>>(
-    this.settingsService.getSetting('provider') != null ? {
-      provider: this.settingsService.getSetting('provider')
-    } : {}
-  );
-
   // ML State (commented out as per user decision)
   isRequestingPermission = signal<boolean>(false);
   permissionRequestError = signal<string | undefined>(undefined);
@@ -78,6 +59,22 @@ export class AppComponent implements OnInit {
   mlModelDownloadProgress = signal<number>(0);
   mlDownloadStatus = signal<string | undefined>(undefined);
   mlAvailabilityChecked = signal<boolean>(false);
+  // Injected services
+  private fb = inject(FormBuilder);
+  private settingsService = inject(SettingsService);
+  providerTypes = computed(() => this.settingsService.getProviderTypes());
+  availableModels = computed(() => {
+    const provider = this.settingsForm?.get('provider')?.value || 'mistral';
+    return this.settingsService.getAvailableModelsForProvider(provider);
+  });
+  settings = signal<Partial<ExtensionSettings>>(
+    this.settingsService.getSetting('provider') != null ? {
+      provider: this.settingsService.getSetting('provider')
+    } : {}
+  );
+  private classificationService = inject(ClassificationService);
+  private formValueSignal;
+  private destroyRef = inject(DestroyRef);
 
   constructor() {
     this.settingsForm = this.fb.group({
@@ -146,18 +143,18 @@ export class AppComponent implements OnInit {
     const apiKeyControl = this.settingsForm.get('apiKey');
     const providerValue = this.settingsForm.get('provider')?.value ?? 'mistral';
     const isFirefoxML = providerValue === 'firefox-ml';
-    
+
     if (!apiKeyControl) return;
-    
+
     // Clear existing validators
     apiKeyControl.clearValidators();
     apiKeyControl.setValidators([]);
-    
+
     if (isFirefoxML) {
       // No validators for Firefox ML provider
       return;
     }
-    
+
     // Add required validator for API key (non-Firefox ML providers)
     apiKeyControl.addValidators(Validators.required);
     apiKeyControl.updateValueAndValidity();
@@ -373,13 +370,21 @@ export class AppComponent implements OnInit {
   // ML Classification Methods (Commented Out as per user decisions)
   // ============================================================================
 
-  loadMLSettings(): void {}
-  checkMLPermissionStatus(): void {}
-  setupMLProgressListener(): void {}
+  loadMLSettings(): void {
+  }
+
+  checkMLPermissionStatus(): void {
+  }
+
+  setupMLProgressListener(): void {
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  toggleMLEnabled(event: Event): void {}
-  requestMLPermission(): void {}
+  toggleMLEnabled(event: Event): void {
+  }
+
+  requestMLPermission(): void {
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setMLModelHub(hub: 'mozilla' | 'huggingface'): void {
@@ -388,6 +393,10 @@ export class AppComponent implements OnInit {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setMLModelId(modelId: string): void {
   }
-  testClassification(): void {}
-  clearMLCache(): void {}
+
+  testClassification(): void {
+  }
+
+  clearMLCache(): void {
+  }
 }

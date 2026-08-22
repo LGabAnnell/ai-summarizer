@@ -2,16 +2,16 @@
  * Settings Service for managing extension settings
  */
 
-import { Injectable, inject, signal } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
-import { MessagingService } from './messaging.service';
-import { ModelService } from './model.service';
+import {inject, Injectable, signal} from '@angular/core';
+import {Observable, of, throwError} from 'rxjs';
+import {catchError, map, switchMap} from 'rxjs/operators';
+import {MessagingService} from './messaging.service';
+import {ModelService} from './model.service';
 import {
-  ExtensionSettings,
   DEFAULT_SETTINGS,
-  PROVIDER_MODELS,
+  ExtensionSettings,
   PROVIDER_CONFIGS,
+  PROVIDER_MODELS,
   ProviderType
 } from '../models/settings.model';
 
@@ -21,16 +21,16 @@ import {
 export class SettingsService {
   // State
   private _settings = signal<ExtensionSettings>(DEFAULT_SETTINGS);
+  readonly settings = this._settings.asReadonly();
   private _isLoading = signal<boolean>(false);
   private _error = signal<string | undefined>(undefined);
-
-  readonly settings = this._settings.asReadonly();
   readonly error = this._error.asReadonly();
 
   private messaging = inject(MessagingService);
   private modelService = inject(ModelService);
 
-  constructor() {}
+  constructor() {
+  }
 
   /**
    * Load settings from storage
@@ -113,7 +113,7 @@ export class SettingsService {
     if (cachedModels.length > 0) {
       return cachedModels;
     }
-    
+
     // Fall back to hardcoded models
     return PROVIDER_MODELS[provider] || [];
   }
@@ -140,13 +140,13 @@ export class SettingsService {
     return this.messaging.testProvider(settings.provider, settings.apiKey).pipe(
       map((response) => {
         if (response.success && response.data) {
-          return { valid: response.data.valid };
+          return {valid: response.data.valid};
         } else {
-          return { valid: false, error: response.error || 'Connection test failed' };
+          return {valid: false, error: response.error || 'Connection test failed'};
         }
       }),
       catchError((error) => {
-        return of({ valid: false, error: error.message || 'Connection test failed' });
+        return of({valid: false, error: error.message || 'Connection test failed'});
       })
     );
   }
@@ -230,28 +230,28 @@ export class SettingsService {
    * Enable ML classification
    */
   enableML(): Observable<ExtensionSettings> {
-    return this.saveSettings({ mlEnabled: true });
+    return this.saveSettings({mlEnabled: true});
   }
 
   /**
    * Disable ML classification
    */
   disableML(): Observable<ExtensionSettings> {
-    return this.saveSettings({ mlEnabled: false });
+    return this.saveSettings({mlEnabled: false});
   }
 
   /**
    * Set ML model hub
    */
   setMLModelHub(hub: 'mozilla' | 'huggingface'): Observable<ExtensionSettings> {
-    return this.saveSettings({ mlModelHub: hub });
+    return this.saveSettings({mlModelHub: hub});
   }
 
   /**
    * Set ML model ID
    */
   setMLModelId(modelId: string): Observable<ExtensionSettings> {
-    return this.saveSettings({ mlModelId: modelId });
+    return this.saveSettings({mlModelId: modelId});
   }
 
   /**
@@ -277,7 +277,7 @@ export class SettingsService {
    */
   validateMLSettings(settings: Partial<ExtensionSettings>): { valid: boolean; errors: Record<string, string> } {
     const errors: Record<string, string> = {};
-    
+
     if (settings.mlModelHub && !['mozilla', 'huggingface'].includes(settings.mlModelHub)) {
       errors['mlModelHub'] = 'Invalid model hub. Must be "mozilla" or "huggingface"';
     }

@@ -1,42 +1,42 @@
 <div class="page">
   <shared-header
-    [showThemeToggle]="true"
-    [themeService]="themeService"
-    (themeToggle)="toggleTheme()">
+          (themeToggle)="toggleTheme()"
+          [showThemeToggle]="true"
+          [themeService]="themeService">
   </shared-header>
   <div class="header-title">Settings</div>
 
   <!-- Toast Notifications Container -->
   <shared-toast-container
-    [error]="error()"
-    [successMessage]="successMessage()"
-    (clearError)="onClearError()"
-    (clearSuccess)="onClearSuccess()">
+          (clearError)="onClearError()"
+          (clearSuccess)="onClearSuccess()"
+          [error]="error()"
+          [successMessage]="successMessage()">
   </shared-toast-container>
 
-  <form [formGroup]="settingsForm" (ngSubmit)="onSaveSettings()" class="settings-form">
+  <form (ngSubmit)="onSaveSettings()" [formGroup]="settingsForm" class="settings-form">
     <!-- Sticky Save Bar -->
     <shared-save-bar
-      [isLoading]="isLoading()"
-      [isScrolled]="isScrolled()"
-      [formInvalid]="settingsForm.invalid"
-      (reset)="onResetToDefaults()">
+            (reset)="onResetToDefaults()"
+            [formInvalid]="settingsForm.invalid"
+            [isLoading]="isLoading()"
+            [isScrolled]="isScrolled()">
     </shared-save-bar>
 
     <!-- Form Content -->
     <div class="form-content">
       <!-- Provider Configuration Section -->
       <options-provider-config
-        [providerTypes]="providerTypes()"
-        [availableModels]="availableModels()"
-        [isTesting]="isTesting()"
-        [connectionStatus]="connectionStatus()"
-        [modelsLoading]="modelsLoading()"
-        [modelsError]="modelsError()"
-        [isFirefoxMLProvider]="isFirefoxMLProvider()"
-        (providerChange)="onProviderChange($event)"
-        (testConnection)="onTestConnection()"
-        (refreshModels)="onRefreshModels()">
+              (providerChange)="onProviderChange($event)"
+              (refreshModels)="onRefreshModels()"
+              (testConnection)="onTestConnection()"
+              [availableModels]="availableModels()"
+              [connectionStatus]="connectionStatus()"
+              [isFirefoxMLProvider]="isFirefoxMLProvider()"
+              [isTesting]="isTesting()"
+              [modelsError]="modelsError()"
+              [modelsLoading]="modelsLoading()"
+              [providerTypes]="providerTypes()">
       </options-provider-config>
 
       <!-- Summarization Settings Section -->
@@ -45,8 +45,8 @@
 
       <!-- Cache Settings Section -->
       <options-cache-settings
-        [isLoading]="isLoading()"
-        (clearCache)="onClearCache()">
+              (clearCache)="onClearCache()"
+              [isLoading]="isLoading()">
       </options-cache-settings>
 
     </div>

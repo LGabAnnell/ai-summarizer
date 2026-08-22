@@ -2,16 +2,12 @@
  * Summary Service for managing article summarization
  */
 
-import { Injectable, inject, signal } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
-import { catchError, switchMap } from 'rxjs/operators';
-import { MessagingService, MessageResponse } from './messaging.service';
-import { SettingsService } from './settings.service';
-import {
-  ArticleData,
-  SummaryResult,
-  SummaryState
-} from '../../public-api';
+import {inject, Injectable, signal} from '@angular/core';
+import {Observable, of, throwError} from 'rxjs';
+import {catchError, switchMap} from 'rxjs/operators';
+import {MessageResponse, MessagingService} from './messaging.service';
+import {SettingsService} from './settings.service';
+import {ArticleData, SummaryResult, SummaryState} from '../../public-api';
 
 @Injectable({
   providedIn: 'root'
@@ -21,31 +17,22 @@ export class SummaryService {
   private _state = signal<SummaryState>({
     state: 'idle',
   });
-
-  private _article = signal<ArticleData | null>(null);
-  private _copyState = signal<{ copying: boolean; copied: boolean }>({ copying: false, copied: false });
-
   // Public readonly signals
   readonly state = this._state.asReadonly();
+  private _article = signal<ArticleData | null>(null);
   readonly article = this._article.asReadonly();
-
+  private _copyState = signal<{ copying: boolean; copied: boolean }>({copying: false, copied: false});
   private messaging = inject(MessagingService);
   private settings = inject(SettingsService);
 
-  constructor() {}
-
-  /**
-   * Extract data from response, handling both wrapped (data property) and unwrapped formats
-   */
-  private extractResponseData<T>(response: MessageResponse<T>): T {
-    return response.data !== undefined ? response.data : (response as unknown as T);
+  constructor() {
   }
 
   /**
    * Extract and summarize the current article
    */
   extractAndSummarize(): Observable<SummaryResult> {
-    this._state.set({ state: 'loading', loadingMessage: 'Extracting article...' });
+    this._state.set({state: 'loading', loadingMessage: 'Extracting article...'});
     this._article.set(null);
     this.resetCopyState();
 
@@ -66,7 +53,7 @@ export class SummaryService {
               error?: string;
             };
           }>(response);
-          
+
           const result: SummaryResult = {
             summary: data.summary,
             cached: data.cached || false,
@@ -83,13 +70,13 @@ export class SummaryService {
               error: data.classification.error,
             } : undefined,
           };
-          
-          this._state.set({ state: 'success', summary: result });
+
+          this._state.set({state: 'success', summary: result});
           return of(result);
         } else {
           const error = response.error || 'Failed to summarize article';
           console.error('SummaryService.extractAndSummarize: Response error:', error);
-          this._state.set({ state: 'error', error });
+          this._state.set({state: 'error', error});
           return throwError(() => new Error(error));
         }
       }),
@@ -97,7 +84,7 @@ export class SummaryService {
         const errorMessage = error instanceof Error ? error.message : 'Failed to summarize article';
         console.error('SummaryService.extractAndSummarize: Caught error:', errorMessage);
         console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-        this._state.set({ state: 'error', error: errorMessage });
+        this._state.set({state: 'error', error: errorMessage});
         return throwError(() => error);
       })
     );
@@ -107,13 +94,13 @@ export class SummaryService {
    * Summarize with specific article data
    */
   summarize(article: ArticleData): Observable<SummaryResult> {
-    
-    this._state.set({ state: 'loading', loadingMessage: 'Summarizing...' });
+
+    this._state.set({state: 'loading', loadingMessage: 'Summarizing...'});
     this._article.set(article);
     this.resetCopyState();
 
     const settings = this.settings.settings();
-    
+
     return this.messaging.summarizeArticle(article, settings.provider).pipe(
       switchMap((response) => {
         if (response.success) {
@@ -130,7 +117,7 @@ export class SummaryService {
               error?: string;
             };
           }>(response);
-          
+
           const result: SummaryResult = {
             summary: data.summary,
             cached: data.cached || false,
@@ -148,13 +135,13 @@ export class SummaryService {
               error: data.classification.error,
             } : undefined,
           };
-          
-          this._state.set({ state: 'success', summary: result });
+
+          this._state.set({state: 'success', summary: result});
           return of(result);
         } else {
           const error = response.error || 'Failed to summarize article';
           console.error('SummaryService.summarize: Response error:', error);
-          this._state.set({ state: 'error', error });
+          this._state.set({state: 'error', error});
           return throwError(() => new Error(error));
         }
       }),
@@ -162,7 +149,7 @@ export class SummaryService {
         const errorMessage = error instanceof Error ? error.message : 'Failed to summarize article';
         console.error('SummaryService.summarize: Caught error:', errorMessage);
         console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-        this._state.set({ state: 'error', error: errorMessage });
+        this._state.set({state: 'error', error: errorMessage});
         return throwError(() => error);
       })
     );
@@ -172,6 +159,13 @@ export class SummaryService {
    * Reset the copy state
    */
   resetCopyState(): void {
-    this._copyState.set({ copying: false, copied: false });
+    this._copyState.set({copying: false, copied: false});
+  }
+
+  /**
+   * Extract data from response, handling both wrapped (data property) and unwrapped formats
+   */
+  private extractResponseData<T>(response: MessageResponse<T>): T {
+    return response.data !== undefined ? response.data : (response as unknown as T);
   }
 }

@@ -1,8 +1,8 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { SummaryHeaderComponent } from './summary-header.component';
-import { CopyButtonComponent } from '../copy-button/copy-button.component';
-import { By } from '@angular/platform-browser';
-import { describe, it, beforeEach, expect, vi } from "vitest";
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {SummaryHeaderComponent} from './summary-header.component';
+import {CopyButtonComponent} from '../copy-button/copy-button.component';
+import {By} from '@angular/platform-browser';
+import {beforeEach, describe, expect, it, vi} from "vitest";
 
 describe('SummaryHeaderComponent', () => {
   let component: SummaryHeaderComponent;
@@ -148,7 +148,7 @@ describe('SummaryHeaderComponent', () => {
 
       const copyButton = fixture.debugElement.query(By.directive(CopyButtonComponent));
       // Try to trigger click on the button - disabled buttons should not emit events
-      copyButton.triggerEventHandler('click', { preventDefault: vi.fn(), stopPropagation: vi.fn() });
+      copyButton.triggerEventHandler('click', {preventDefault: vi.fn(), stopPropagation: vi.fn()});
 
       // Note: In Angular, disabled buttons still receive events in tests,
       // but the actual browser prevents the click. This test verifies the disabled state is passed.

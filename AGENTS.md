@@ -112,7 +112,6 @@ interface AIProvider {
   config: AIProviderConfig
   buildRequest(articleText: string, title?: string, settings?: any): AIProviderRequest
   parseResponse(response: any): AIProviderResponse
-  validateConfig(apiKey: string, settings?: any): { valid: boolean; error?: string }
   getTokenCount(articleText: string): number
   getSystemPrompt(style?: string, customPrompt?: string): string
   fetchModels(apiKey: string): Promise<string[]>
@@ -226,7 +225,7 @@ npm run build
 
 1. Create new file: `extension-core/providers/[provider-name].ts`
 2. Extend `OpenAICompatibleProvider` (or `BaseProvider` for non-OAI APIs)
-3. Implement required methods: `buildRequest`, `parseResponse`, `validateConfig`
+3. Implement required methods: `buildRequest`, `parseResponse`
 4. Export provider class and factory function
 5. Update `extension-core/providers/index.ts`:
    - Import new provider

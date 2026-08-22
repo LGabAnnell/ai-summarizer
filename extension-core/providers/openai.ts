@@ -3,16 +3,8 @@
  * Extends OpenAI-compatible provider — only overrides body params and validation.
  */
 
-import type {AIProviderConfig, AIProviderSettings} from './provider.model';
-import { OpenAICompatibleProvider } from './openai-compatible-provider';
-import {
-  type ValidationResult,
-  validateApiKeyFormat,
-  validateMaxTokens,
-  validateModel,
-  validateRequiredApiKey,
-  validateTemperature,
-} from './provider.utils';
+import type {AIProviderConfig} from './provider.model';
+import {OpenAICompatibleProvider} from './openai-compatible-provider';
 
 // OpenAI API configuration
 const OPENAI_CONFIG: AIProviderConfig = {
@@ -45,29 +37,7 @@ export class OpenAIProvider extends OpenAICompatibleProvider {
   }
 
   protected getExtraBodyParams(): Record<string, any> {
-    return { frequency_penalty: 0.0, presence_penalty: 0.0 };
-  }
-
-  validateConfig(apiKey: string, settings?: AIProviderSettings): ValidationResult {
-    const apiKeyCheck = validateRequiredApiKey(apiKey);
-    if (!apiKeyCheck.valid) return apiKeyCheck;
-
-    const apiKeyFormat = validateApiKeyFormat(apiKey, ['sk-']);
-    if (!apiKeyFormat.valid) {
-      return { valid: false, error: 'Invalid OpenAI API key format. Expected to start with sk-' };
-    }
-
-    const modelCheck = validateModel(settings?.model, this.config.availableModels, 'OpenAI');
-    if (!modelCheck.valid) return modelCheck;
-
-    // OpenAI supports 0-2 range
-    const tempCheck = validateTemperature(settings?.temperature, 0, 2);
-    if (!tempCheck.valid) return tempCheck;
-
-    const maxTokensCheck = validateMaxTokens(settings?.maxTokens);
-    if (!maxTokensCheck.valid) return maxTokensCheck;
-
-    return { valid: true };
+    return {frequency_penalty: 0.0, presence_penalty: 0.0};
   }
 }
 

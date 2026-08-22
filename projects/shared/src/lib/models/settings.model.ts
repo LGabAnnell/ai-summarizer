@@ -25,7 +25,7 @@ export interface ExtensionSettings {
   cacheEnabled: boolean;
   /** Cache TTL in days */
   cacheTTL: number;
-  
+
   // ML Classification Settings
   /** Enable/disable ML classification (default: false) */
   mlEnabled?: boolean;

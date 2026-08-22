@@ -1,5 +1,5 @@
-import { bootstrapApplication } from '@angular/platform-browser';
-import { AppComponent } from './app/app.component';
+import {bootstrapApplication} from '@angular/platform-browser';
+import {AppComponent} from './app/app.component';
 
 // Set up webextension polyfill as global
 import 'webextension-polyfill';

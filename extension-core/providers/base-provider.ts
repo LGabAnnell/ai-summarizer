@@ -4,17 +4,10 @@
  * Concrete providers only need to implement:
  *  - buildRequestBody()  (body shape is provider-specific)
  *  - parseResponseBody() (response format is provider-specific)
- *  - validateConfig()    (key format rules differ per provider)
  */
 
-import type {
-  AIProvider,
-  AIProviderConfig,
-  AIProviderRequest,
-  AIProviderResponse,
-} from './provider.model';
+import type {AIProvider, AIProviderConfig, AIProviderRequest, AIProviderResponse,} from './provider.model';
 import {
-  type ValidationResult,
   addAuthHeader,
   buildBaseHeaders,
   estimateTokenCount,
@@ -43,28 +36,12 @@ export abstract class BaseProvider implements AIProvider {
   /** Parse the response body — format varies by provider API. */
   abstract parseResponseBody(response: any): AIProviderResponse;
 
-  /** Validate provider configuration (key format, model, etc.). */
-  abstract validateConfig(
-    apiKey: string,
-    settings?: Record<string, any>
-  ): ValidationResult;
-
   /**
    * Fetch available models from the provider's API
    * @param apiKey - The API key for authentication
    * @returns Promise with array of model IDs
    */
   abstract fetchModels(apiKey: string): Promise<string[]>;
-
-  /**
-   * Override to add provider-specific headers (e.g., anthropic-version).
-   * Returns an empty object by default.
-   */
-  protected getExtraHeaders(): Record<string, string> {
-    return {};
-  }
-
-  // ── Concrete methods (shared across all providers) ──────────────────
 
   /**
    * Build the full API request (headers + auth + body).
@@ -92,6 +69,8 @@ export abstract class BaseProvider implements AIProvider {
     };
   }
 
+  // ── Concrete methods (shared across all providers) ──────────────────
+
   /** Parse the API response to extract the summary. */
   parseResponse(response: any): AIProviderResponse {
     return this.parseResponseBody(response);
@@ -111,5 +90,13 @@ export abstract class BaseProvider implements AIProvider {
   /** Update the API key. */
   updateApiKey(apiKey: string): void {
     this.apiKey = apiKey;
+  }
+
+  /**
+   * Override to add provider-specific headers (e.g., anthropic-version).
+   * Returns an empty object by default.
+   */
+  protected getExtraHeaders(): Record<string, string> {
+    return {};
   }
 }

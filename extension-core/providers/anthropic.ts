@@ -3,17 +3,9 @@
  * Extends BaseProvider — implements Messages API body shape and response parsing.
  */
 
-import type {AIProviderConfig, AIProviderResponse, AIProviderSettings} from './provider.model';
-import { BaseProvider } from './base-provider';
-import {
-  type ValidationResult,
-  buildUserMessage,
-  validateApiKeyFormat,
-  validateMaxTokens,
-  validateModel,
-  validateRequiredApiKey,
-  validateTemperature,
-} from './provider.utils';
+import type {AIProviderConfig, AIProviderResponse} from './provider.model';
+import {BaseProvider} from './base-provider';
+import {buildUserMessage,} from './provider.utils';
 
 // Anthropic API configuration
 const ANTHROPIC_CONFIG: AIProviderConfig = {
@@ -54,10 +46,6 @@ export class AnthropicProvider extends BaseProvider {
     super(apiKey);
   }
 
-  protected override getExtraHeaders(): Record<string, string> {
-    return { 'anthropic-version': '2023-06-01' };
-  }
-
   /** Build the request body — Anthropic Messages API format. */
   buildRequestBody(
     articleText: string,
@@ -78,8 +66,8 @@ export class AnthropicProvider extends BaseProvider {
     return {
       model,
       messages: [
-        { role: ANTHROPIC_ROLES.system, content: systemPrompt },
-        { role: ANTHROPIC_ROLES.user, content: userMessage },
+        {role: ANTHROPIC_ROLES.system, content: systemPrompt},
+        {role: ANTHROPIC_ROLES.user, content: userMessage},
       ],
       max_tokens: maxTokens,
       temperature,
@@ -132,27 +120,6 @@ export class AnthropicProvider extends BaseProvider {
     }
   }
 
-  validateConfig(apiKey: string, settings?: AIProviderSettings): ValidationResult {
-    const apiKeyCheck = validateRequiredApiKey(apiKey);
-    if (!apiKeyCheck.valid) return apiKeyCheck;
-
-    const apiKeyFormat = validateApiKeyFormat(apiKey, ['sk_']);
-    if (!apiKeyFormat.valid) {
-      return { valid: false, error: 'Invalid Anthropic API key format. Expected to start with sk_' };
-    }
-
-    const modelCheck = validateModel(settings?.model, this.config.availableModels, 'Anthropic');
-    if (!modelCheck.valid) return modelCheck;
-
-    const tempCheck = validateTemperature(settings?.temperature, 0, 1);
-    if (!tempCheck.valid) return tempCheck;
-
-    const maxTokensCheck = validateMaxTokens(settings?.maxTokens, 4096);
-    if (!maxTokensCheck.valid) return maxTokensCheck;
-
-    return { valid: true };
-  }
-
   /**
    * Fetch available models from Anthropic API.
    * @param apiKey - The API key for authentication
@@ -160,7 +127,7 @@ export class AnthropicProvider extends BaseProvider {
    */
   async fetchModels(apiKey: string): Promise<string[]> {
     const modelsEndpoint = this.config.modelsEndpoint;
-    
+
     if (!modelsEndpoint) {
       // Fallback to hardcoded models if no models endpoint is configured
       return this.config.availableModels || [];
@@ -170,7 +137,7 @@ export class AnthropicProvider extends BaseProvider {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      
+
       // Add authentication header for Anthropic (x-api-key without Bearer)
       if (this.config.authHeader) {
         headers[this.config.authHeader] = apiKey;
@@ -188,12 +155,12 @@ export class AnthropicProvider extends BaseProvider {
       }
 
       const data = await response.json();
-      
+
       // Handle Anthropic response format: { data: [{ id: string, ... }] }
       if (data.data && Array.isArray(data.data)) {
         return data.data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');
       }
-      
+
       // Handle alternative format
       if (Array.isArray(data)) {
         return data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');
@@ -206,6 +173,10 @@ export class AnthropicProvider extends BaseProvider {
       // Fall back to hardcoded models on any error
       return this.config.availableModels || [];
     }
+  }
+
+  protected override getExtraHeaders(): Record<string, string> {
+    return {'anthropic-version': '2023-06-01'};
   }
 }
 

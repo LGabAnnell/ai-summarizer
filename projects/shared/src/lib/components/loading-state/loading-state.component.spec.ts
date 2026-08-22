@@ -1,7 +1,7 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { LoadingStateComponent } from './loading-state.component';
-import { By } from '@angular/platform-browser';
-import { describe, it, beforeEach, expect } from "vitest";
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {LoadingStateComponent} from './loading-state.component';
+import {By} from '@angular/platform-browser';
+import {beforeEach, describe, expect, it} from "vitest";
 
 describe('LoadingStateComponent', () => {
   let component: LoadingStateComponent;

@@ -7,7 +7,7 @@
 import {createProvider} from './providers';
 import browser from 'webextension-polyfill';
 import {ArticleData} from '@shared/lib/models/article.model';
-import {CachedSummaryData, Message, SummarizeResponse, SetThemeRequest} from '@shared/lib/models/summary.model';
+import {CachedSummaryData, Message, SetThemeRequest, SummarizeResponse} from '@shared/lib/models/summary.model';
 
 // Import ML services
 import {ClassificationResult, textClassifierService} from './ml/text-classifier.service';
@@ -468,7 +468,7 @@ async function callFirefoxMLProvider(
           // Firefox ML models may add their own stop tokens
           summary = summary.trim();
 
-          console.log('Firefox ML: Successfully generated summary:', `${summary.substring(0, 200)  }...`);
+          console.log('Firefox ML: Successfully generated summary:', `${summary.substring(0, 200)}...`);
 
           return {
             summary: summary,
@@ -663,10 +663,10 @@ async function testProviderConnection(providerType: string, apiKey: string): Pro
         };
       }
 
-      return { type: 'TEST_PROVIDER_RESPONSE', success: true, data: { valid: true } };
+      return {type: 'TEST_PROVIDER_RESPONSE', success: true, data: {valid: true}};
     }
 
-    return { type: 'TEST_PROVIDER_RESPONSE', success: true, data: { valid: true } };
+    return {type: 'TEST_PROVIDER_RESPONSE', success: true, data: {valid: true}};
   } catch (error) {
     return {
       type: 'TEST_PROVIDER_RESPONSE',
@@ -738,21 +738,26 @@ async function handleClassifyText(request: ClassifyTextRequest): Promise<{
 /**
  * Handle GET_ML_PERMISSION_STATUS request
  */
-async function handleGetMLPermissionStatus(): Promise<{ type: string; success: boolean; data?: { granted: boolean }; error?: string }> {
+async function handleGetMLPermissionStatus(): Promise<{
+  type: string;
+  success: boolean;
+  data?: { granted: boolean };
+  error?: string
+}> {
   try {
     const granted = await mlPermissionService.checkPermission();
     console.log('Background: ML permission status:', granted);
     return {
       type: 'ML_PERMISSION_STATUS',
       success: true,
-      data: { granted },
+      data: {granted},
     };
   } catch (error) {
     console.error('Background: Error checking ML permission:', error);
     return {
       type: 'ML_PERMISSION_STATUS',
       success: false,
-      data: { granted: false },
+      data: {granted: false},
       error: error instanceof Error ? error.message : 'Error checking ML permission',
     };
   }
@@ -803,14 +808,14 @@ async function handleClearMLCache(): Promise<{
       return {
         type: 'CLEAR_ML_CACHE_RESPONSE',
         success: true,
-        data: { success: true },
+        data: {success: true},
       };
     } else {
       console.log('Background: ML cache clear failed:', result.error);
       return {
         type: 'CLEAR_ML_CACHE_RESPONSE',
         success: false,
-        data: { success: false, error: result.error },
+        data: {success: false, error: result.error},
       };
     }
   } catch (error) {
@@ -818,7 +823,7 @@ async function handleClearMLCache(): Promise<{
     return {
       type: 'CLEAR_ML_CACHE_RESPONSE',
       success: false,
-      data: { 
+      data: {
         success: false,
         error: `Cache clear failed: ${error instanceof Error ? error.message : String(error)}`
       },
@@ -875,98 +880,98 @@ async function handleCheckMLAvailability(): Promise<{
  */
 async function handleMessage(request: Message): Promise<unknown> {
   switch (request.type) {
-  case 'EXTRACT_AND_SUMMARIZE':
-    try {
-      const article = await extractArticleFromActiveTab();
-      if (!article) {
+    case 'EXTRACT_AND_SUMMARIZE':
+      try {
+        const article = await extractArticleFromActiveTab();
+        if (!article) {
+          return {
+            type: 'SUMMARIZE_RESPONSE',
+            error: 'Could not extract article content',
+            success: false,
+          };
+        }
+        const summaryResponse = await handleSummarize(article);
+        // Add article metadata to the response for the sidebar
+        return {
+          ...summaryResponse,
+          title: article.title,
+          articleUrl: article.url,
+        };
+      } catch (error) {
         return {
           type: 'SUMMARIZE_RESPONSE',
-          error: 'Could not extract article content',
+          error: `Extraction error: ${error instanceof Error ? error.message : String(error)}`,
           success: false,
         };
       }
-      const summaryResponse = await handleSummarize(article);
-      // Add article metadata to the response for the sidebar
-      return {
-        ...summaryResponse,
-        title: article.title,
-        articleUrl: article.url,
-      };
-    } catch (error) {
-      return {
-        type: 'SUMMARIZE_RESPONSE',
-        error: `Extraction error: ${error instanceof Error ? error.message : String(error)}`,
-        success: false,
-      };
-    }
 
-  case 'SUMMARIZE':
-    return handleSummarize(request.article, request.provider);
+    case 'SUMMARIZE':
+      return handleSummarize(request.article, request.provider);
 
-  case 'GET_SETTINGS':
-    return handleGetSettings();
+    case 'GET_SETTINGS':
+      return handleGetSettings();
 
-  case 'SAVE_SETTINGS':
-    return handleSaveSettings(request.settings);
+    case 'SAVE_SETTINGS':
+      return handleSaveSettings(request.settings);
 
-  case 'TEST_PROVIDER':
-    return testProviderConnection(request.provider, request.apiKey);
+    case 'TEST_PROVIDER':
+      return testProviderConnection(request.provider, request.apiKey);
 
-  case 'REFRESH_MODELS':
-    return handleRefreshModels(request.provider, request.apiKey);
+    case 'REFRESH_MODELS':
+      return handleRefreshModels(request.provider, request.apiKey);
 
-  case 'CLEAR_CACHE':
-    try {
-      const keys = await browser.storage.local.getKeys();
-      const cacheKeys = keys.filter(key => key.startsWith(CACHE_PREFIX));
-      await browser.storage.local.remove(cacheKeys);
-      return {
-        type: 'CLEAR_CACHE_RESPONSE',
-        success: true,
-        data: { cleared: cacheKeys.length },
-      };
-    } catch (error) {
-      return {
-        type: 'CLEAR_CACHE_RESPONSE',
-        success: false,
-        error: `Failed to clear cache: ${error}`,
-      };
-    }
+    case 'CLEAR_CACHE':
+      try {
+        const keys = await browser.storage.local.getKeys();
+        const cacheKeys = keys.filter(key => key.startsWith(CACHE_PREFIX));
+        await browser.storage.local.remove(cacheKeys);
+        return {
+          type: 'CLEAR_CACHE_RESPONSE',
+          success: true,
+          data: {cleared: cacheKeys.length},
+        };
+      } catch (error) {
+        return {
+          type: 'CLEAR_CACHE_RESPONSE',
+          success: false,
+          error: `Failed to clear cache: ${error}`,
+        };
+      }
 
     // ML Classification cases
-  case 'CLASSIFY_TEXT':
-    return handleClassifyText(request);
+    case 'CLASSIFY_TEXT':
+      return handleClassifyText(request);
 
-  case 'GET_ML_PERMISSION_STATUS':
-    return handleGetMLPermissionStatus();
+    case 'GET_ML_PERMISSION_STATUS':
+      return handleGetMLPermissionStatus();
 
-  case 'NOTIFY_ML_PERMISSION_GRANTED':
-    console.log('Background.handleMessage: Processing NOTIFY_ML_PERMISSION_GRANTED case');
-    return handleNotifyMLPermissionGranted();
+    case 'NOTIFY_ML_PERMISSION_GRANTED':
+      console.log('Background.handleMessage: Processing NOTIFY_ML_PERMISSION_GRANTED case');
+      return handleNotifyMLPermissionGranted();
 
-  case 'CLEAR_ML_CACHE':
-    return handleClearMLCache();
+    case 'CLEAR_ML_CACHE':
+      return handleClearMLCache();
 
-  case 'CHECK_ML_AVAILABILITY':
-    return handleCheckMLAvailability();
+    case 'CHECK_ML_AVAILABILITY':
+      return handleCheckMLAvailability();
 
-  case 'SET_THEME': {
-    const themeRequest = request as SetThemeRequest;
-    // Broadcast the theme change to all extension pages (popup, options, sidebar).
-    // runtime.sendMessage does not reach the background itself, so no loop here.
-    browser.runtime.sendMessage({ type: 'THEME_CHANGED', theme: themeRequest.theme })
-      .catch(() => {
-        // Some contexts may not be open or may not handle the message; ignore.
-      });
-    return { type: 'SET_THEME_RESPONSE', success: true };
-  }
+    case 'SET_THEME': {
+      const themeRequest = request as SetThemeRequest;
+      // Broadcast the theme change to all extension pages (popup, options, sidebar).
+      // runtime.sendMessage does not reach the background itself, so no loop here.
+      browser.runtime.sendMessage({type: 'THEME_CHANGED', theme: themeRequest.theme})
+        .catch(() => {
+          // Some contexts may not be open or may not handle the message; ignore.
+        });
+      return {type: 'SET_THEME_RESPONSE', success: true};
+    }
 
-  default:
-    return {
-      type: 'UNKNOWN_REQUEST',
-      error: `Unknown message type: ${request.type}`,
-      success: false,
-    };
+    default:
+      return {
+        type: 'UNKNOWN_REQUEST',
+        error: `Unknown message type: ${request.type}`,
+        success: false,
+      };
   }
 }
 

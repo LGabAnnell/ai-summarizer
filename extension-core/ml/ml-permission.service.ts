@@ -20,13 +20,12 @@ export interface MLPermissionState {
  * Uses browser.permissions API to check and request trialML permission
  */
 export class MLPermissionService {
+  private static instance: MLPermissionService | null = null;
   private state: MLPermissionState = {
     granted: false,
     checked: false,
     lastCheckedAt: undefined,
   };
-
-  private static instance: MLPermissionService | null = null;
 
   /**
    * Singleton instance
@@ -46,8 +45,8 @@ export class MLPermissionService {
     console.log('MLPermissionService.checkPermission: Checking ML permission status');
     // Return cached result if we've checked recently (within 1 minute)
     const now = Date.now();
-    if (this.state.checked && this.state.lastCheckedAt && 
-        (now - this.state.lastCheckedAt) < 60000) {
+    if (this.state.checked && this.state.lastCheckedAt &&
+      (now - this.state.lastCheckedAt) < 60000) {
       console.log('MLPermissionService.checkPermission: Returning cached permission state:', this.state.granted);
       return this.state.granted;
     }
@@ -56,7 +55,7 @@ export class MLPermissionService {
       // Check if browser.permissions is available (should be in background script)
       if (typeof browser.permissions === 'undefined') {
         console.log('MLPermissionService.checkPermission: browser.permissions API not available');
-        this.state = { granted: false, checked: true, lastCheckedAt: now };
+        this.state = {granted: false, checked: true, lastCheckedAt: now};
         return false;
       }
 
@@ -77,7 +76,7 @@ export class MLPermissionService {
     } catch (error) {
       console.error('MLPermissionService: Error checking permission:', error);
       // If there's an error (e.g., API not available), assume not granted
-      this.state = { granted: false, checked: true, lastCheckedAt: now };
+      this.state = {granted: false, checked: true, lastCheckedAt: now};
       return false;
     }
   }
@@ -99,7 +98,7 @@ export class MLPermissionService {
    * Get current permission state
    */
   getState(): MLPermissionState {
-    return { ...this.state };
+    return {...this.state};
   }
 
   /**
@@ -109,7 +108,7 @@ export class MLPermissionService {
     // Check if browser.trial and browser.trial.ml exist
     const hasTrialAPI = typeof (browser as any).trial !== 'undefined';
     const hasMLAPI = hasTrialAPI && typeof (browser as any).trial.ml !== 'undefined';
-    
+
     console.log('MLPermissionService.isAPIAvailable: trial API available:', hasTrialAPI, '| trial.ml available:', hasMLAPI);
     return hasMLAPI;
   }

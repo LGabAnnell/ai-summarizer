@@ -88,9 +88,9 @@ export type ValidationResult = { valid: boolean; error?: string };
  */
 export function validateRequiredApiKey(apiKey: string): ValidationResult {
   if (!apiKey || apiKey.trim() === '') {
-    return { valid: false, error: 'API key is required' };
+    return {valid: false, error: 'API key is required'};
   }
-  return { valid: true };
+  return {valid: true};
 }
 
 /**
@@ -102,10 +102,10 @@ export function validateApiKeyFormat(
 ): ValidationResult {
   for (const prefix of expectedPrefixes) {
     if (apiKey.startsWith(prefix)) {
-      return { valid: true };
+      return {valid: true};
     }
   }
-  return { valid: false, error: `Invalid API key format. Expected to start with one of: ${expectedPrefixes.join(', ')}` };
+  return {valid: false, error: `Invalid API key format. Expected to start with one of: ${expectedPrefixes.join(', ')}`};
 }
 
 /**
@@ -113,9 +113,9 @@ export function validateApiKeyFormat(
  */
 export function validateApiKeyLength(apiKey: string, minLength: number = 30): ValidationResult {
   if (apiKey.length < minLength) {
-    return { valid: false, error: `Invalid API key format. Key seems too short (minimum ${minLength} characters).` };
+    return {valid: false, error: `Invalid API key format. Key seems too short (minimum ${minLength} characters).`};
   }
-  return { valid: true };
+  return {valid: true};
 }
 
 /**
@@ -127,9 +127,9 @@ export function validateModel(
   providerName: string,
 ): ValidationResult {
   if (model && availableModels && !availableModels.includes(model)) {
-    return { valid: false, error: `Invalid model: ${model}. Available models: ${availableModels.join(', ')}` };
+    return {valid: false, error: `Invalid model: ${model}. Available models: ${availableModels.join(', ')}`};
   }
-  return { valid: true };
+  return {valid: true};
 }
 
 /**
@@ -142,10 +142,10 @@ export function validateTemperature(
 ): ValidationResult {
   if (temperature !== undefined) {
     if (typeof temperature !== 'number' || temperature < min || temperature > max) {
-      return { valid: false, error: `Temperature must be a number between ${min} and ${max}` };
+      return {valid: false, error: `Temperature must be a number between ${min} and ${max}`};
     }
   }
-  return { valid: true };
+  return {valid: true};
 }
 
 /**
@@ -157,13 +157,13 @@ export function validateMaxTokens(
 ): ValidationResult {
   if (maxTokens !== undefined) {
     if (typeof maxTokens !== 'number' || maxTokens <= 0) {
-      return { valid: false, error: 'maxTokens must be a positive number' };
+      return {valid: false, error: 'maxTokens must be a positive number'};
     }
     if (maxLimit && maxTokens > maxLimit) {
-      return { valid: false, error: `maxTokens must be a positive number (max ${maxLimit})` };
+      return {valid: false, error: `maxTokens must be a positive number (max ${maxLimit})`};
     }
   }
-  return { valid: true };
+  return {valid: true};
 }
 
 /**
@@ -171,12 +171,12 @@ export function validateMaxTokens(
  */
 export function validateUrl(url: string | undefined): ValidationResult {
   if (!url || url.trim() === '') {
-    return { valid: false, error: 'URL is required' };
+    return {valid: false, error: 'URL is required'};
   }
   try {
     new URL(url);
-    return { valid: true };
+    return {valid: true};
   } catch {
-    return { valid: false, error: 'Invalid URL format' };
+    return {valid: false, error: 'Invalid URL format'};
   }
 }

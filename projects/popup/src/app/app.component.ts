@@ -1,17 +1,17 @@
-import { Component, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MarkdownPipe } from '@shared/lib/pipes/markdown.pipe';
+import {Component, signal} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {MarkdownPipe} from '@shared/lib/pipes/markdown.pipe';
 import browser from 'webextension-polyfill';
 import {SummaryResult} from "@shared/lib/models/summary.model";
 import {
-  HeaderComponent,
   EmptyStateComponent,
-  LoadingStateComponent,
   ErrorStateComponent,
-  SummaryHeaderComponent,
-  SummaryMetaComponent,
   FooterComponent,
-  SummarizeButtonComponent
+  HeaderComponent,
+  LoadingStateComponent,
+  SummarizeButtonComponent,
+  SummaryHeaderComponent,
+  SummaryMetaComponent
 } from '@shared/public-api';
 
 @Component({
@@ -21,65 +21,65 @@ import {
   template: `
     <div class="container">
       <shared-header></shared-header>
-      
+
       <div class="main-content">
         @if (state() === 'idle') {
           <shared-empty-state
-            icon="📰"
-            title="Ready to summarize"
-            message="Click the button below to summarize the current article">
+                  icon="📰"
+                  title="Ready to summarize"
+                  message="Click the button below to summarize the current article">
           </shared-empty-state>
         }
-        
+
         @if (state() === 'loading') {
           <shared-loading-state [message]="loadingMessage()"></shared-loading-state>
         }
-        
+
         @if (state() === 'error') {
-          <shared-error-state 
-            [error]="errorMessage()" 
-            [showRetry]="true" 
-            [retryText]="'Retry'" 
-            (retry)="retry()">
+          <shared-error-state
+                  [error]="errorMessage()"
+                  [showRetry]="true"
+                  [retryText]="'Retry'"
+                  (retry)="retry()">
           </shared-error-state>
         }
-        
+
         @if (state() === 'success' && summary()) {
           <div class="summary-view">
             <shared-summary-header
-              [title]="title()"
-              [showActions]="true"
-              [showCopyButton]="true"
-              [copying]="copying()"
-              [copied]="copied()"
-              [copyDisabled]="false"
-              (copyClick)="copyToClipboard()">
+                    [title]="title()"
+                    [showActions]="true"
+                    [showCopyButton]="true"
+                    [copying]="copying()"
+                    [copied]="copied()"
+                    [copyDisabled]="false"
+                    (copyClick)="copyToClipboard()">
             </shared-summary-header>
             <div class="summary-text markdown-content" [innerHTML]="summary() | markdown"></div>
             <shared-summary-meta
-              [characterCount]="characterCount()"
-              [cached]="cached()">
+                    [characterCount]="characterCount()"
+                    [cached]="cached()">
             </shared-summary-meta>
           </div>
         }
       </div>
-      
+
       <shared-footer
-        [showViewArticle]="state() === 'success' && !!articleUrl()"
-        [articleUrl]="articleUrl()"
-        [showClearHistory]="false"
-        [historyCount]="0"
-        (viewArticle)="viewArticle()"
-        (clearHistory)="clearHistory()"
-        (openSettings)="openOptions()">
+              [showViewArticle]="state() === 'success' && !!articleUrl()"
+              [articleUrl]="articleUrl()"
+              [showClearHistory]="false"
+              [historyCount]="0"
+              (viewArticle)="viewArticle()"
+              (clearHistory)="clearHistory()"
+              (openSettings)="openOptions()">
       </shared-footer>
-      
+
       <shared-summarize-button
-        [loading]="state() === 'loading'"
-        [disabled]="false"
-        [text]="'Summarize Article'"
-        [loadingText]="'Summarizing...'"
-        (buttonClick)="summarize()">
+              [loading]="state() === 'loading'"
+              [disabled]="false"
+              [text]="'Summarize Article'"
+              [loadingText]="'Summarizing...'"
+              (buttonClick)="summarize()">
       </shared-summarize-button>
     </div>
   `,
@@ -89,7 +89,7 @@ import {
       width: 100%;
       height: 100%;
     }
-    
+
 
   `],
 })
@@ -102,12 +102,13 @@ export class AppComponent {
   errorMessage = signal<string>('');
   loadingMessage = signal<string>('Extracting article...');
   cached = signal<boolean>(false);
-  
+
   // Copy to clipboard state
   copying = signal<boolean>(false);
   copied = signal<boolean>(false);
 
-  constructor() {}
+  constructor() {
+  }
 
   characterCount() {
     return this.summary().length;
@@ -134,8 +135,8 @@ export class AppComponent {
       }
 
       // Send message to background script to extract and summarize
-      const response = await browser.runtime.sendMessage({ 
-        type: 'EXTRACT_AND_SUMMARIZE' 
+      const response = await browser.runtime.sendMessage({
+        type: 'EXTRACT_AND_SUMMARIZE'
       }) as SummaryResult & { success: boolean, error: string };
 
       if (response.success) {
@@ -176,7 +177,7 @@ export class AppComponent {
     try {
       await navigator.clipboard.writeText(summary);
       this.copied.set(true);
-      
+
       // Reset copied state after 2 seconds
       setTimeout(() => {
         this.copied.set(false);

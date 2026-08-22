@@ -1,7 +1,7 @@
-import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ControlContainer, FormGroupDirective, ReactiveFormsModule } from '@angular/forms';
-import { SummaryStyle, SUMMARY_PROMPTS } from '@shared/public-api';
+import {Component, inject} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {ControlContainer, FormGroupDirective, ReactiveFormsModule} from '@angular/forms';
+import {SUMMARY_PROMPTS, SummaryStyle} from '@shared/public-api';
 
 /**
  * Summarization settings section component
@@ -13,7 +13,7 @@ import { SummaryStyle, SUMMARY_PROMPTS } from '@shared/public-api';
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: 'summarization-settings.component.html',
   styleUrl: 'summarization-settings.component.scss',
-  viewProviders: [{ provide: ControlContainer, useExisting: FormGroupDirective }],
+  viewProviders: [{provide: ControlContainer, useExisting: FormGroupDirective}],
 })
 export class SummarizationSettingsComponent {
   private formDirective = inject(FormGroupDirective);

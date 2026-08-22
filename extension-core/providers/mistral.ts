@@ -3,16 +3,8 @@
  * Extends OpenAI-compatible provider — only overrides body params and validation.
  */
 
-import type {AIProviderConfig, AIProviderSettings, ProviderSettings} from './provider.model';
-import { OpenAICompatibleProvider } from './openai-compatible-provider';
-import {
-  type ValidationResult,
-  validateApiKeyFormat,
-  validateMaxTokens,
-  validateModel,
-  validateRequiredApiKey,
-  validateTemperature,
-} from './provider.utils';
+import type {AIProviderConfig} from './provider.model';
+import {OpenAICompatibleProvider} from './openai-compatible-provider';
 
 // Mistral API configuration
 const MISTRAL_CONFIG: AIProviderConfig = {
@@ -44,29 +36,9 @@ export class MistralProvider extends OpenAICompatibleProvider {
   }
 
   protected getExtraBodyParams(): Record<string, any> {
-    return { random_seed: 42 };
+    return {random_seed: 42};
   }
 
-  validateConfig(apiKey: string, settings?: AIProviderSettings): ValidationResult {
-    const apiKeyCheck = validateRequiredApiKey(apiKey);
-    if (!apiKeyCheck.valid) return apiKeyCheck;
-
-    const apiKeyFormat = validateApiKeyFormat(apiKey, ['sk-', 'mx-']);
-    if (!apiKeyFormat.valid) {
-      return { valid: false, error: 'Invalid Mistral API key format. Expected to start with sk- or mx-' };
-    }
-
-    const modelCheck = validateModel(settings?.model, this.config.availableModels, 'Mistral');
-    if (!modelCheck.valid) return modelCheck;
-
-    const tempCheck = validateTemperature(settings?.temperature, 0, 1);
-    if (!tempCheck.valid) return tempCheck;
-
-    const maxTokensCheck = validateMaxTokens(settings?.maxTokens);
-    if (!maxTokensCheck.valid) return maxTokensCheck;
-
-    return { valid: true };
-  }
 }
 
 /**

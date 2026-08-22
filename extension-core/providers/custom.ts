@@ -3,15 +3,8 @@
  * Extends OpenAI-compatible provider — only the endpoint URL is user-configurable.
  */
 
-import type {AIProviderConfig, AIProviderSettings} from './provider.model';
-import { OpenAICompatibleProvider } from './openai-compatible-provider';
-import {
-  type ValidationResult,
-  validateMaxTokens,
-  validateRequiredApiKey,
-  validateTemperature,
-  validateUrl,
-} from './provider.utils';
+import type {AIProviderConfig} from './provider.model';
+import {OpenAICompatibleProvider} from './openai-compatible-provider';
 
 /**
  * Custom Provider Implementation
@@ -36,22 +29,6 @@ export class CustomProvider extends OpenAICompatibleProvider {
 
   protected getExtraBodyParams(): Record<string, any> {
     return {};
-  }
-
-  validateConfig(apiKey: string, settings?: AIProviderSettings): ValidationResult {
-    const apiKeyCheck = validateRequiredApiKey(apiKey);
-    if (!apiKeyCheck.valid) return apiKeyCheck;
-
-    const endpointCheck = validateUrl(settings?.customEndpoint);
-    if (!endpointCheck.valid) return endpointCheck;
-
-    const tempCheck = validateTemperature(settings?.temperature, 0, 1);
-    if (!tempCheck.valid) return tempCheck;
-
-    const maxTokensCheck = validateMaxTokens(settings?.maxTokens);
-    if (!maxTokensCheck.valid) return maxTokensCheck;
-
-    return { valid: true };
   }
 }
 

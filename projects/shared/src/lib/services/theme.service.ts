@@ -3,10 +3,10 @@
  * Provides theme management with persistent storage
  */
 
-import {Injectable, inject, signal, effect} from '@angular/core';
+import {effect, inject, Injectable, signal} from '@angular/core';
 import browser from "webextension-polyfill";
-import { MessagingService } from "./messaging.service";
-import { Theme } from "../models/theme.model";
+import {MessagingService} from "./messaging.service";
+import {Theme} from "../models/theme.model";
 
 /**
  * Storage key for theme preference
@@ -41,43 +41,6 @@ export class ThemeService {
     });
 
     effect(() => this.applyThemeToDocument());
-  }
-
-  /**
-   * Load theme from storage
-   */
-  private async loadTheme(): Promise<void> {
-    try {
-      // Check if we're in a browser extension context
-      if (typeof browser !== 'undefined' && browser.storage) {
-        const result = await browser.storage.local.get(THEME_STORAGE_KEY);
-        if (result[THEME_STORAGE_KEY] != null) {
-          const stored = result[THEME_STORAGE_KEY] as Theme;
-          // Sync localStorage so the blocking script in index.html can read it
-          localStorage.setItem(THEME_STORAGE_KEY, stored);
-          if (stored !== this._theme()) {
-            this._theme.set(stored);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load theme:', error);
-    }
-  }
-
-  /**
-   * Save theme to storage
-   */
-  private async saveTheme(): Promise<void> {
-    try {
-      // Check if we're in a browser extension context
-      if (typeof browser !== 'undefined' && browser.storage) {
-        await browser.storage.local.set({ [THEME_STORAGE_KEY]: this._theme() });
-        localStorage.setItem(THEME_STORAGE_KEY, this._theme());
-      }
-    } catch (error) {
-      console.error('Failed to save theme:', error);
-    }
   }
 
   /**
@@ -124,13 +87,50 @@ export class ThemeService {
   applyThemeToDocument(): void {
     const themeClass = this.getThemeClass();
     const html = document.documentElement;
-    
+
     // Remove existing theme classes
     html.classList.remove('dark-theme', 'light-theme');
-    
+
     // Add current theme class
     html.classList.add(themeClass);
-    
+
     html.setAttribute('data-theme', this._theme());
+  }
+
+  /**
+   * Load theme from storage
+   */
+  private async loadTheme(): Promise<void> {
+    try {
+      // Check if we're in a browser extension context
+      if (typeof browser !== 'undefined' && browser.storage) {
+        const result = await browser.storage.local.get(THEME_STORAGE_KEY);
+        if (result[THEME_STORAGE_KEY] != null) {
+          const stored = result[THEME_STORAGE_KEY] as Theme;
+          // Sync localStorage so the blocking script in index.html can read it
+          localStorage.setItem(THEME_STORAGE_KEY, stored);
+          if (stored !== this._theme()) {
+            this._theme.set(stored);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load theme:', error);
+    }
+  }
+
+  /**
+   * Save theme to storage
+   */
+  private async saveTheme(): Promise<void> {
+    try {
+      // Check if we're in a browser extension context
+      if (typeof browser !== 'undefined' && browser.storage) {
+        await browser.storage.local.set({[THEME_STORAGE_KEY]: this._theme()});
+        localStorage.setItem(THEME_STORAGE_KEY, this._theme());
+      }
+    } catch (error) {
+      console.error('Failed to save theme:', error);
+    }
   }
 }

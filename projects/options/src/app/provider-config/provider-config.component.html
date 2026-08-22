@@ -6,10 +6,10 @@
     </div>
     <div class="section-actions">
       <button
-              type="button"
-              class="btn btn--secondary btn--small"
               (click)="onTestConnection()"
-              [disabled]="isTesting()">
+              [disabled]="isTesting()"
+              class="btn btn--secondary btn--small"
+              type="button">
         @if (isTesting()) {
           <span class="spinner"></span>
           Testing...
@@ -24,135 +24,138 @@
   </div>
 
   <div class="grid-2">
-      <div class="form-group">
-        <label class="form-label" for="provider">AI Provider</label>
-        <select
-                id="provider"
-                formControlName="provider"
-                class="form-select"
-                (change)="onProviderChange($event)">
-          @for (provider of providerTypes(); track provider) {
-            <option [value]="provider">{{ getProviderDisplayName(provider) }}</option>
-          }
-        </select>
-        <div class="form-description">Choose your preferred AI provider</div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="model">Model</label>
-        @if (isFirefoxMLProvider() || isCustomProvider) {
-          <input
-                  id="model"
-                  type="text"
-                  formControlName="model"
-                  class="form-input"
-          />
-        } @else {
-          <div class="model-select-wrapper">
-            <select id="model" formControlName="model" class="form-select">
-              @for (model of availableModels(); track model) {
-                <option [value]="model">{{ model }}</option>
-              }
-            </select>
-            <button
-                    type="button"
-                    class="btn btn--refresh"
-                    (click)="onRefreshModels()"
-                    [disabled]="modelsLoading()"
-                    title="Refresh model list">
-              @if (modelsLoading()) {
-                <span class="spinner"></span>
-              } @else {
-                🔄
-              }
-            </button>
-          </div>
+    <div class="form-group">
+      <label class="form-label" for="provider">AI Provider</label>
+      <select
+              (change)="onProviderChange($event)"
+              class="form-select"
+              formControlName="provider"
+              id="provider">
+        @for (provider of providerTypes(); track provider) {
+          <option [value]="provider">{{ getProviderDisplayName(provider) }}</option>
         }
-        @if (isFirefoxMLProvider()) {
-          <div class="form-description">Enter the Hugging Face model identifier for offline summarization</div>
-        } @else {
-          <div class="form-description">Select the model to use for summarization</div>
-        }
-        @if (modelsError()) {
-          <div class="form-error">{{ modelsError() }}</div>
-        }
-      </div>
+      </select>
+      <div class="form-description">Choose your preferred AI provider</div>
     </div>
 
-    @if (isFirefoxMLProvider()) {
-      <div class="form-group">
-        <span class="form-label">Firefox ML Information</span>
-        <div class="firefox-ml-info">
-          <div class="info-icon">🤖</div>
-          <div class="info-content">
-            <p><strong>Firefox ML (Local)</strong> uses Firefox's built-in machine learning runtime for offline summarization.</p>
-            <p><strong>Requirements:</strong> Firefox Nightly or Beta with <code>browser.ml.enable</code> and <code>extensions.ml.enabled</code> set to <code>true</code> in <code>about:config</code>.</p>
-            <p><strong>Features:</strong> No API key required, works offline after initial model download, privacy-friendly.</p>
-          </div>
-        </div>
-      </div>
-    } @else {
-      <div class="form-group">
-        <label class="form-label" for="apiKey">API Key</label>
-        <div class="password-container">
-          <input
-                  id="apiKey"
-                  [type]="showApiKey() ? 'text' : 'password'"
-                  formControlName="apiKey"
-                  class="form-input"
-                  placeholder="Enter your API key..."
-          >
+    <div class="form-group">
+      <label class="form-label" for="model">Model</label>
+      @if (isFirefoxMLProvider() || isCustomProvider) {
+        <input
+                class="form-input"
+                formControlName="model"
+                id="model"
+                type="text"
+        />
+      } @else {
+        <div class="model-select-wrapper">
+          <select class="form-select" formControlName="model" id="model">
+            @for (model of availableModels(); track model) {
+              <option [value]="model">{{ model }}</option>
+            }
+          </select>
           <button
-                  type="button"
-                  class="password-toggle"
-                  (click)="onToggleShowApiKey()"
-                  [attr.aria-label]="showApiKey() ? 'Hide API key' : 'Show API key'">
-            @if (showApiKey()) {
-              👁️
+                  (click)="onRefreshModels()"
+                  [disabled]="modelsLoading()"
+                  class="btn btn--refresh"
+                  title="Refresh model list"
+                  type="button">
+            @if (modelsLoading()) {
+              <span class="spinner"></span>
             } @else {
-              🔒
+              🔄
             }
           </button>
         </div>
-        <div class="form-description">
-          Your API key will be stored locally and never sent to third parties
-        </div>
-        @if (apiKeyErrors?.['required']) {
-          <div class="form-error">API key is required</div>
-        }
-      </div>
-    }
-    
-    @if (isCustomProvider) {
-      <div class="form-group">
-        <label class="form-label" for="customEndpoint">Custom Endpoint URL</label>
-        <input
-                id="customEndpoint"
-                type="url"
-                formControlName="customEndpoint"
-                class="form-input"
-                placeholder="https://api.example.com/v1/chat/completions"
-        >
-        <div class="form-description">
-          Enter the API endpoint URL for your custom provider
-        </div>
-      </div>
-    }
+      }
+      @if (isFirefoxMLProvider()) {
+        <div class="form-description">Enter the Hugging Face model identifier for offline summarization</div>
+      } @else {
+        <div class="form-description">Select the model to use for summarization</div>
+      }
+      @if (modelsError()) {
+        <div class="form-error">{{ modelsError() }}</div>
+      }
+    </div>
+  </div>
 
-    @if (connectionStatus()) {
-      <div class="form-group">
-        @if (connectionStatus() === 'connected') {
-          <div class="status-badge status-connected">
-            <span class="status-dot status-connected"></span>
-            Connection successful
-          </div>
-        }
-        @if (connectionStatus() === 'failed') {
-          <div class="status-badge status-disconnected">
-            <span class="status-dot status-disconnected"></span>
-            Connection failed
-          </div>
-        }
+  @if (isFirefoxMLProvider()) {
+    <div class="form-group">
+      <span class="form-label">Firefox ML Information</span>
+      <div class="firefox-ml-info">
+        <div class="info-icon">🤖</div>
+        <div class="info-content">
+          <p><strong>Firefox ML (Local)</strong> uses Firefox's built-in machine learning runtime for offline
+            summarization.</p>
+          <p><strong>Requirements:</strong> Firefox Nightly or Beta with <code>browser.ml.enable</code> and <code>extensions.ml.enabled</code>
+            set to <code>true</code> in <code>about:config</code>.</p>
+          <p><strong>Features:</strong> No API key required, works offline after initial model download,
+            privacy-friendly.</p>
+        </div>
       </div>
-    }
+    </div>
+  } @else {
+    <div class="form-group">
+      <label class="form-label" for="apiKey">API Key</label>
+      <div class="password-container">
+        <input
+                [type]="showApiKey() ? 'text' : 'password'"
+                class="form-input"
+                formControlName="apiKey"
+                id="apiKey"
+                placeholder="Enter your API key..."
+        >
+        <button
+                (click)="onToggleShowApiKey()"
+                [attr.aria-label]="showApiKey() ? 'Hide API key' : 'Show API key'"
+                class="password-toggle"
+                type="button">
+          @if (showApiKey()) {
+            👁️
+          } @else {
+            🔒
+          }
+        </button>
+      </div>
+      <div class="form-description">
+        Your API key will be stored locally and never sent to third parties
+      </div>
+      @if (apiKeyErrors?.['required']) {
+        <div class="form-error">API key is required</div>
+      }
+    </div>
+  }
+
+  @if (isCustomProvider) {
+    <div class="form-group">
+      <label class="form-label" for="customEndpoint">Custom Endpoint URL</label>
+      <input
+              class="form-input"
+              formControlName="customEndpoint"
+              id="customEndpoint"
+              placeholder="https://api.example.com/v1/chat/completions"
+              type="url"
+      >
+      <div class="form-description">
+        Enter the API endpoint URL for your custom provider
+      </div>
+    </div>
+  }
+
+  @if (connectionStatus()) {
+    <div class="form-group">
+      @if (connectionStatus() === 'connected') {
+        <div class="status-badge status-connected">
+          <span class="status-dot status-connected"></span>
+          Connection successful
+        </div>
+      }
+      @if (connectionStatus() === 'failed') {
+        <div class="status-badge status-disconnected">
+          <span class="status-dot status-disconnected"></span>
+          Connection failed
+        </div>
+      }
+    </div>
+  }
 </div>

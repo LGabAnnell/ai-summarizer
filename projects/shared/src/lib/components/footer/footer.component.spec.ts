@@ -1,7 +1,7 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { FooterComponent } from './footer.component';
-import { By } from '@angular/platform-browser';
-import { describe, it, beforeEach, expect, vi } from "vitest";
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {FooterComponent} from './footer.component';
+import {By} from '@angular/platform-browser';
+import {beforeEach, describe, expect, it, vi} from "vitest";
 
 describe('FooterComponent', () => {
   let component: FooterComponent;
@@ -152,7 +152,7 @@ describe('FooterComponent', () => {
     it('should have footer-left and footer-right sections', () => {
       const leftSection = fixture.debugElement.query(By.css('.footer-left'));
       const rightSection = fixture.debugElement.query(By.css('.footer-right'));
-      
+
       expect(leftSection).toBeTruthy();
       expect(rightSection).toBeTruthy();
     });

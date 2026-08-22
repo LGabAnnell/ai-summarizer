@@ -1,61 +1,61 @@
 <div class="section">
-    <div class="section-header">
-      <div class="section-title">
-        <span>💾</span>
-        Cache Settings
-      </div>
+  <div class="section-header">
+    <div class="section-title">
+      <span>💾</span>
+      Cache Settings
     </div>
-    <div class="section-description">
-      Manage summary caching to avoid unnecessary API calls
-    </div>
+  </div>
+  <div class="section-description">
+    Manage summary caching to avoid unnecessary API calls
+  </div>
 
+  <div class="form-group">
+    <div class="form-switch">
+      <label class="switch" for="cacheEnabled">
+        <input
+                [checked]="cacheEnabledValue"
+                formControlName="cacheEnabled"
+                id="cacheEnabled"
+                type="checkbox"
+        >
+        <span class="slider"></span>
+        <span class="switch-label">Enable Summary Caching</span>
+      </label>
+    </div>
+    <div class="form-description">
+      Cache summaries to avoid re-processing the same articles
+    </div>
+  </div>
+
+  @if (cacheEnabledValue) {
     <div class="form-group">
-      <div class="form-switch">
-        <label class="switch" for="cacheEnabled">
-          <input
-                  type="checkbox"
-                  id="cacheEnabled"
-                  formControlName="cacheEnabled"
-                  [checked]="cacheEnabledValue"
-          >
-          <span class="slider"></span>
-          <span class="switch-label">Enable Summary Caching</span>
-        </label>
+      <label class="form-label" for="cacheTTL">Cache Expiration (days)</label>
+      <div class="number-input-container">
+        <input
+                class="form-input"
+                formControlName="cacheTTL"
+                id="cacheTTL"
+                max="30"
+                min="1"
+                type="number"
+        >
       </div>
       <div class="form-description">
-        Cache summaries to avoid re-processing the same articles
+        Number of days to keep cached summaries
       </div>
     </div>
+  }
 
-    @if (cacheEnabledValue) {
-      <div class="form-group">
-        <label class="form-label" for="cacheTTL">Cache Expiration (days)</label>
-        <div class="number-input-container">
-          <input
-                  id="cacheTTL"
-                  type="number"
-                  formControlName="cacheTTL"
-                  class="form-input"
-                  min="1"
-                  max="30"
-          >
-        </div>
-        <div class="form-description">
-          Number of days to keep cached summaries
-        </div>
-      </div>
-    }
-
-    <div class="form-group">
-      <button
-              type="button"
-              class="btn btn--secondary"
-              (click)="onClearCache()"
-              [disabled]="isLoading()">
-        Clear Cache
-      </button>
-      <div class="form-description">
-        Remove all cached summaries
-      </div>
+  <div class="form-group">
+    <button
+            (click)="onClearCache()"
+            [disabled]="isLoading()"
+            class="btn btn--secondary"
+            type="button">
+      Clear Cache
+    </button>
+    <div class="form-description">
+      Remove all cached summaries
     </div>
+  </div>
 </div>

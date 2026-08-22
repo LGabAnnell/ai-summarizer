@@ -1,15 +1,15 @@
 /**
  * Models for summary functionality
  */
-import { ArticleData } from "./article.model";
+import {ArticleData} from "./article.model";
 import {ExtensionSettings, ProviderType} from "./settings.model";
 import {
-  ClassifyTextRequest,
-  GetMLPermissionStatusRequest,
-  NotifyMLPermissionGrantedRequest,
-  ClearMLCacheRequest,
   CheckMLAvailabilityRequest,
-  ClassificationResult
+  ClassificationResult,
+  ClassifyTextRequest,
+  ClearMLCacheRequest,
+  GetMLPermissionStatusRequest,
+  NotifyMLPermissionGrantedRequest
 } from "./classification.model";
 import {Theme} from "./theme.model";
 

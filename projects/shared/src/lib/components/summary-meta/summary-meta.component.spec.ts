@@ -1,7 +1,7 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { SummaryMetaComponent } from './summary-meta.component';
-import { By } from '@angular/platform-browser';
-import { describe, it, beforeEach, expect } from "vitest";
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {SummaryMetaComponent} from './summary-meta.component';
+import {By} from '@angular/platform-browser';
+import {beforeEach, describe, expect, it} from "vitest";
 
 describe('SummaryMetaComponent', () => {
   let component: SummaryMetaComponent;
@@ -112,7 +112,7 @@ describe('SummaryMetaComponent', () => {
 
       const metaElement = fixture.debugElement.query(By.css('.summary-meta'));
       const textContent = metaElement.nativeElement.textContent;
-      
+
       expect(textContent).toContain('500 characters');
       expect(textContent).toContain('Cached');
       expect(textContent).toContain('OpenAI / gpt-4o-mini');
@@ -146,7 +146,7 @@ describe('SummaryMetaComponent', () => {
   describe('Style Bindings', () => {
     it('should apply correct CSS variables in styles', () => {
       const metaElement = fixture.debugElement.query(By.css('.summary-meta')).nativeElement;
-      
+
       // Check that the element has the expected computed styles
       expect(getComputedStyle(metaElement).display).toBe('flex');
       expect(getComputedStyle(metaElement).flexWrap).toBe('wrap');

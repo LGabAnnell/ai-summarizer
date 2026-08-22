@@ -3,9 +3,9 @@
  * the OpenAI chat completions API format (mistral, openai, deepseek).
  */
 
-import { BaseProvider } from './base-provider';
-import type { AIProviderConfig, AIProviderResponse } from './provider.model';
-import { buildUserMessage } from './provider.utils';
+import {BaseProvider} from './base-provider';
+import type {AIProviderConfig, AIProviderResponse} from './provider.model';
+import {buildUserMessage} from './provider.utils';
 
 export abstract class OpenAICompatibleProvider extends BaseProvider {
   // ── Concrete methods (shared body shape + response parsing) ─────────
@@ -28,8 +28,8 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
     const userMessage = buildUserMessage(articleText, title);
 
     const messages = [
-      { role: 'system' as const, content: systemPrompt },
-      { role: 'user' as const, content: userMessage },
+      {role: 'system' as const, content: systemPrompt},
+      {role: 'user' as const, content: userMessage},
     ];
 
     return {
@@ -94,7 +94,7 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
    */
   async fetchModels(apiKey: string): Promise<string[]> {
     const modelsEndpoint = (this.config as AIProviderConfig).modelsEndpoint;
-    
+
     if (!modelsEndpoint) {
       // Fallback to hardcoded models if no models endpoint is configured
       return this.config.availableModels || [];
@@ -104,7 +104,7 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
-      
+
       // Add authentication header
       if (this.config.authHeader && this.config.useBearerToken) {
         headers[this.config.authHeader] = `Bearer ${apiKey}`;
@@ -124,12 +124,12 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
       }
 
       const data = await response.json();
-      
+
       // Handle OpenAI/Mistral/DeepSeek response format: { data: [{ id: string, ... }] }
       if (data.data && Array.isArray(data.data)) {
         return data.data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');
       }
-      
+
       // Handle alternative format where models are directly in the response
       if (Array.isArray(data)) {
         return data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');

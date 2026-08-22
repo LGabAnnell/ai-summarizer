@@ -3,9 +3,9 @@
  * Provides local text classification capabilities
  */
 
-export { MLPermissionService, MLPermissionState } from './ml-permission.service';
-export { MLEngineManager } from './ml-engine-manager';
-export { TextClassifierService } from './text-classifier.service';
+export {MLPermissionService, MLPermissionState} from './ml-permission.service';
+export {MLEngineManager} from './ml-engine-manager';
+export {TextClassifierService} from './text-classifier.service';
 export {
   ClassificationResult,
   MLConfig,

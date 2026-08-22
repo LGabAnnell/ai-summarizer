@@ -3,17 +3,8 @@
  * Extends OpenAI-compatible provider — only overrides body params and validation.
  */
 
-import type {AIProviderConfig, AIProviderSettings} from './provider.model';
-import { OpenAICompatibleProvider } from './openai-compatible-provider';
-import {
-  type ValidationResult,
-  validateApiKeyFormat,
-  validateApiKeyLength,
-  validateMaxTokens,
-  validateModel,
-  validateRequiredApiKey,
-  validateTemperature,
-} from './provider.utils';
+import type {AIProviderConfig} from './provider.model';
+import {OpenAICompatibleProvider} from './openai-compatible-provider';
 
 // DeepSeek API configuration
 const DEEPSEEK_CONFIG: AIProviderConfig = {
@@ -42,30 +33,9 @@ export class DeepSeekProvider extends OpenAICompatibleProvider {
   }
 
   protected getExtraBodyParams(): Record<string, any> {
-    return { frequency_penalty: 0.0, presence_penalty: 0.0 };
+    return {frequency_penalty: 0.0, presence_penalty: 0.0};
   }
 
-  validateConfig(apiKey: string, settings?: AIProviderSettings): ValidationResult {
-    const apiKeyCheck = validateRequiredApiKey(apiKey);
-    if (!apiKeyCheck.valid) return apiKeyCheck;
-
-    const apiKeyFormat = validateApiKeyFormat(apiKey, ['sk-']);
-    const apiKeyLength = validateApiKeyLength(apiKey, 30);
-    if (!apiKeyFormat.valid && !apiKeyLength.valid) {
-      return { valid: false, error: 'Invalid DeepSeek API key format' };
-    }
-
-    const modelCheck = validateModel(settings?.model, this.config.availableModels, 'DeepSeek');
-    if (!modelCheck.valid) return modelCheck;
-
-    const tempCheck = validateTemperature(settings?.temperature, 0, 1);
-    if (!tempCheck.valid) return tempCheck;
-
-    const maxTokensCheck = validateMaxTokens(settings?.maxTokens);
-    if (!maxTokensCheck.valid) return maxTokensCheck;
-
-    return { valid: true };
-  }
 }
 
 /**

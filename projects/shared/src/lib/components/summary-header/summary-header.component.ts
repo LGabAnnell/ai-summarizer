@@ -1,6 +1,6 @@
-import { Component, input, output } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { CopyButtonComponent } from '../copy-button/copy-button.component';
+import {Component, input, output} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {CopyButtonComponent} from '../copy-button/copy-button.component';
 
 /**
  * Reusable summary header component
@@ -17,42 +17,42 @@ import { CopyButtonComponent } from '../copy-button/copy-button.component';
         <div class="summary-actions">
           @if (showCopyButton()) {
             <shared-copy-button
-              [copying]="copying()"
-              [copied]="copied()"
-              [disabled]="copyDisabled()"
-              [text]="copyText()"
-              [successText]="copySuccessText()"
-              [loadingText]="copyLoadingText()"
-              (click)="copyClick.emit()">
+                    [copying]="copying()"
+                    [copied]="copied()"
+                    [disabled]="copyDisabled()"
+                    [text]="copyText()"
+                    [successText]="copySuccessText()"
+                    [loadingText]="copyLoadingText()"
+                    (click)="copyClick.emit()">
             </shared-copy-button>
           }
-                  <ng-content select="[additional-actions]"></ng-content>
+          <ng-content select="[additional-actions]"></ng-content>
         </div>
       }
     </div>
   `,
   styles: [
     `
-    .summary-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
+      .summary-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
 
-    .summary-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--text-primary);
-      word-break: break-word;
-      flex: 1;
-      margin-right: 12px;
-    }
+      .summary-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+        word-break: break-word;
+        flex: 1;
+        margin-right: 12px;
+      }
 
-    .summary-actions {
-      display: flex;
-      gap: 8px;
-    }
+      .summary-actions {
+        display: flex;
+        gap: 8px;
+      }
     `
   ]
 })
@@ -66,6 +66,6 @@ export class SummaryHeaderComponent {
   copyText = input<string>('Copy');
   copySuccessText = input<string>('✓ Copied!');
   copyLoadingText = input<string>('Copying...');
-  
+
   copyClick = output<void>();
 }

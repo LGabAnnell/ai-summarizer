@@ -4,12 +4,12 @@
  * NO direct dependency on browser.trial.ml - all ML complexity isolated to background
  */
 
-import { Injectable, inject } from '@angular/core';
-import { Observable, of, throwError, from } from 'rxjs';
-import { catchError, map, mergeMap } from 'rxjs/operators';
+import {inject, Injectable} from '@angular/core';
+import {from, Observable, of, throwError} from 'rxjs';
+import {catchError, map, mergeMap} from 'rxjs/operators';
 import * as browser from 'webextension-polyfill';
-import { MessagingService } from './messaging.service';
-import { ExtensionSettings } from '../models/settings.model';
+import {MessagingService} from './messaging.service';
+import {ExtensionSettings} from '../models/settings.model';
 import {
   ClassificationResult,
   MLSettings,
@@ -27,7 +27,8 @@ import {
 export class ClassificationService {
   private messagingService = inject(MessagingService);
 
-  constructor() {}
+  constructor() {
+  }
 
   /**
    * Classify text using ML
@@ -40,7 +41,7 @@ export class ClassificationService {
     modelId?: string,
     timeout?: number
   ): Observable<ClassificationResult> {
-    
+
     if (typeof browser === 'undefined') {
       console.error('ClassificationService.classifyText: Not running in browser extension context');
       return throwError(() => new Error('Not running in browser extension context'));
@@ -53,7 +54,7 @@ export class ClassificationService {
       timeout
     }).pipe(
       map(response => {
-        
+
         // Extract data from response
         let classificationData: ClassificationResult;
         if (response.data && typeof response.data === 'object') {
@@ -61,7 +62,7 @@ export class ClassificationService {
         } else {
           classificationData = response as unknown as ClassificationResult;
         }
-        
+
         // Ensure we have the expected structure
         if (classificationData && typeof classificationData === 'object') {
           return {
@@ -73,7 +74,7 @@ export class ClassificationService {
             inferenceTime: classificationData.inferenceTime,
           };
         }
-        
+
         console.error('ClassificationService.classifyText: Invalid response format:', response);
         return {
           ok: false,
@@ -93,12 +94,12 @@ export class ClassificationService {
   /**
    * Request ML permission from user - MUST be called from a user gesture context (e.g., button click)
    * This calls browser.permissions.request() directly in the UI context, then notifies the background script
-   * 
+   *
    * NOTE: This method should be called directly from a user gesture context (button click handler).
    * For the Options page, use the requestMLPermission() method which handles this properly.
    */
   requestMLPermissionFromUserGesture(): Observable<{ granted: boolean; error?: string }> {
-    
+
     if (typeof browser === 'undefined' || typeof browser.permissions === 'undefined') {
       console.error('ClassificationService.requestMLPermissionFromUserGesture: browser.permissions API not available');
       return of({
@@ -110,10 +111,10 @@ export class ClassificationService {
     // Call browser.permissions.request() directly - this must be synchronous from user gesture
     // We wrap it in from() to make it an Observable
     return from(
-      browser.permissions.request({ permissions: ['trialML'] })
+      browser.permissions.request({permissions: ['trialML']})
     ).pipe(
       mergeMap((granted: boolean) => {
-        
+
         if (granted) {
           // Notify background script that permission was granted
           return this.messagingService.notifyMLPermissionGranted().pipe(
@@ -152,7 +153,7 @@ export class ClassificationService {
    * Check current ML permission status
    */
   getMLPermissionStatus(): Observable<boolean> {
-    
+
     if (typeof browser === 'undefined') {
       console.error('ClassificationService.getMLPermissionStatus: Not running in browser extension context');
       return throwError(() => new Error('Not running in browser extension context'));
@@ -180,21 +181,21 @@ export class ClassificationService {
   /**
    * Check if ML is available (API available and permission granted)
    */
-  checkMLAvailability(): Observable<{ 
-    available: boolean; 
-    apiAvailable: boolean; 
-    permissionGranted: boolean; 
+  checkMLAvailability(): Observable<{
+    available: boolean;
+    apiAvailable: boolean;
+    permissionGranted: boolean;
   }> {
-    
+
     if (typeof browser === 'undefined') {
       console.error('ClassificationService.checkMLAvailability: Not running in browser extension context');
       return throwError(() => new Error('Not running in browser extension context'));
     }
 
-    return this.messagingService.sendMessage<{ 
-      available: boolean; 
-      apiAvailable: boolean; 
-      permissionGranted: boolean; 
+    return this.messagingService.sendMessage<{
+      available: boolean;
+      apiAvailable: boolean;
+      permissionGranted: boolean;
     }>({
       type: 'CHECK_ML_AVAILABILITY'
     }).pipe(
@@ -226,7 +227,7 @@ export class ClassificationService {
    * Clear ML model cache
    */
   clearMLCache(): Observable<{ success: boolean; error?: string }> {
-    
+
     if (typeof browser === 'undefined') {
       console.error('ClassificationService.clearMLCache: Not running in browser extension context');
       return throwError(() => new Error('Not running in browser extension context'));
@@ -261,14 +262,14 @@ export class ClassificationService {
    * Get ML settings from extension settings
    */
   getMLSettings(): Observable<MLSettings> {
-    
+
     return this.messagingService.getSettings().pipe(
       map(response => {
         const settingsData = response.data as ExtensionSettings || {} as ExtensionSettings;
         const mlSettings: MLSettings = {
           mlEnabled: settingsData.mlEnabled === true,
-          mlModelHub: settingsData.mlModelHub === 'mozilla' || settingsData.mlModelHub === 'huggingface' 
-            ? settingsData.mlModelHub 
+          mlModelHub: settingsData.mlModelHub === 'mozilla' || settingsData.mlModelHub === 'huggingface'
+            ? settingsData.mlModelHub
             : 'mozilla',
           mlModelId: settingsData.mlModelId || 'distilbert-base-uncased-finetuned-sst-2-english',
         };
@@ -290,7 +291,7 @@ export class ClassificationService {
    * Save ML settings
    */
   saveMLSettings(settings: Partial<MLSettings>): Observable<void> {
-    
+
     return this.messagingService.saveSettings(settings).pipe(
       mergeMap(response => {
         if (!response.success) {
@@ -315,14 +316,14 @@ export class ClassificationService {
    * Enable ML classification
    */
   enableML(): Observable<void> {
-    return this.saveMLSettings({ mlEnabled: true });
+    return this.saveMLSettings({mlEnabled: true});
   }
 
   /**
    * Disable ML classification
    */
   disableML(): Observable<void> {
-    return this.saveMLSettings({ mlEnabled: false });
+    return this.saveMLSettings({mlEnabled: false});
   }
 
   /**
@@ -330,7 +331,7 @@ export class ClassificationService {
    * This listens for broadcast messages from the background script
    */
   onModelDownloadProgress(): Observable<ModelDownloadProgress> {
-    
+
     if (typeof browser === 'undefined') {
       console.error('ClassificationService.onModelDownloadProgress: Not running in browser extension context');
       return throwError(() => new Error('Not running in browser extension context'));
@@ -339,7 +340,7 @@ export class ClassificationService {
     // Return an observable that listens for progress messages
     return new Observable<ModelDownloadProgress>(subscriber => {
       const listener = (message: unknown) => {
-        
+
         const progressMessage = message as ModelDownloadProgressMessage;
         if (progressMessage && progressMessage.type === 'MODEL_DOWNLOAD_PROGRESS') {
           const progress: ModelDownloadProgress = {
@@ -367,11 +368,11 @@ export class ClassificationService {
    * @param articleText The article text to classify
    */
   classifyArticle(articleText: string): Observable<ClassificationResult> {
-    
+
     // Truncate very long articles for classification
     const maxLength = 10000;
-    const text = articleText.length > maxLength 
-      ? articleText.substring(0, maxLength) + '...' 
+    const text = articleText.length > maxLength
+      ? articleText.substring(0, maxLength) + '...'
       : articleText;
 
     return this.classifyText(text);

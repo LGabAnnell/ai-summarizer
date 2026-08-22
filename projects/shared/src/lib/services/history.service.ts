@@ -3,9 +3,9 @@
  * Stores and retrieves recent summaries for the sidebar
  */
 
-import { Injectable, inject, signal } from '@angular/core';
-import { SummaryResult } from '../models/summary.model';
-import { MessagingService } from './messaging.service';
+import {inject, Injectable, signal} from '@angular/core';
+import {SummaryResult} from '../models/summary.model';
+import {MessagingService} from './messaging.service';
 import browser from 'webextension-polyfill';
 import {firstValueFrom} from "rxjs";
 
@@ -54,48 +54,11 @@ export class HistoryService {
   }
 
   /**
-   * Load history from storage
-   */
-  private async loadHistory(): Promise<void> {
-    try {
-      // Check if we're in a browser extension context
-      if (typeof browser !== 'undefined' && browser.storage) {
-        const result = await browser.storage.local.get([HISTORY_STORAGE_KEY]) as Record<string, HistoryItem[]> ;
-        if (result[HISTORY_STORAGE_KEY]) {
-          const storedHistory: HistoryItem[] = result[HISTORY_STORAGE_KEY];
-          this._history.set(storedHistory.sort((a, b) => 
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-          ));
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load history:', error);
-    }
-  }
-
-  /**
-   * Save history to storage
-   */
-  private async saveHistory(): Promise<void> {
-    try {
-      // Check if we're in a browser extension context
-      if (typeof browser !== 'undefined' && browser.storage) {
-        const history = this._history();
-        // Limit history to maximum items
-        const limitedHistory = history.slice(0, MAX_HISTORY_ITEMS);
-        await browser.storage.local.set({ [HISTORY_STORAGE_KEY]: limitedHistory });
-      }
-    } catch (error) {
-      console.error('Failed to save history:', error);
-    }
-  }
-
-  /**
    * Add a new summary to history
    */
   async addSummary(summaryResult: SummaryResult): Promise<void> {
     const history = this._history();
-    
+
     // Create a new history item
     const newItem: HistoryItem = {
       id: this.generateId(),
@@ -112,7 +75,7 @@ export class HistoryService {
 
     // Add to beginning of history
     this._history.set([newItem, ...history]);
-    
+
     // Save to storage
     await this.saveHistory();
 
@@ -120,33 +83,6 @@ export class HistoryService {
     if (history.length === 0 || new Date(newItem.timestamp) >= new Date(history[0].timestamp)) {
       this._selectedItem.set(newItem);
     }
-  }
-
-  /**
-   * Generate a unique ID
-   */
-  private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2);
-  }
-
-  /**
-   * Generate a preview from summary text
-   */
-  private generatePreview(summary: string): string {
-    if (!summary) return '';
-    
-    // Remove markdown formatting for preview
-    let preview = summary.replace(/[#*_~`\\]/g, '');
-    
-    // Take first 100 characters
-    preview = preview.substring(0, 100);
-    
-    // Add ellipsis if truncated
-    if (summary.length > 100) {
-      preview += '...';
-    }
-    
-    return preview;
   }
 
   /**
@@ -163,12 +99,12 @@ export class HistoryService {
     const history = this._history();
     const updatedHistory = history.filter(item => item.id !== id);
     this._history.set(updatedHistory);
-    
+
     // If deleted item was selected, clear selection
     if (this._selectedItem()?.id === id) {
       this._selectedItem.set(null);
     }
-    
+
     await this.saveHistory();
   }
 
@@ -208,5 +144,69 @@ export class HistoryService {
    */
   getCount(): number {
     return this._history().length;
+  }
+
+  /**
+   * Load history from storage
+   */
+  private async loadHistory(): Promise<void> {
+    try {
+      // Check if we're in a browser extension context
+      if (typeof browser !== 'undefined' && browser.storage) {
+        const result = await browser.storage.local.get([HISTORY_STORAGE_KEY]) as Record<string, HistoryItem[]>;
+        if (result[HISTORY_STORAGE_KEY]) {
+          const storedHistory: HistoryItem[] = result[HISTORY_STORAGE_KEY];
+          this._history.set(storedHistory.sort((a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          ));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load history:', error);
+    }
+  }
+
+  /**
+   * Save history to storage
+   */
+  private async saveHistory(): Promise<void> {
+    try {
+      // Check if we're in a browser extension context
+      if (typeof browser !== 'undefined' && browser.storage) {
+        const history = this._history();
+        // Limit history to maximum items
+        const limitedHistory = history.slice(0, MAX_HISTORY_ITEMS);
+        await browser.storage.local.set({[HISTORY_STORAGE_KEY]: limitedHistory});
+      }
+    } catch (error) {
+      console.error('Failed to save history:', error);
+    }
+  }
+
+  /**
+   * Generate a unique ID
+   */
+  private generateId(): string {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
+  }
+
+  /**
+   * Generate a preview from summary text
+   */
+  private generatePreview(summary: string): string {
+    if (!summary) return '';
+
+    // Remove markdown formatting for preview
+    let preview = summary.replace(/[#*_~`\\]/g, '');
+
+    // Take first 100 characters
+    preview = preview.substring(0, 100);
+
+    // Add ellipsis if truncated
+    if (summary.length > 100) {
+      preview += '...';
+    }
+
+    return preview;
   }
 }

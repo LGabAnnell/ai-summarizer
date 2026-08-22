@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const { defineConfig } = require('eslint/config');
+const {defineConfig} = require('eslint/config');
 const eslint = require('@eslint/js');
 const tseslint = require('typescript-eslint');
 const path = require('path');

@@ -1,6 +1,6 @@
-import { Component, inject, input, output } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ControlContainer, FormGroupDirective, ReactiveFormsModule } from '@angular/forms';
+import {Component, inject, input, output} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {ControlContainer, FormGroupDirective, ReactiveFormsModule} from '@angular/forms';
 
 /**
  * Cache settings section component
@@ -12,7 +12,7 @@ import { ControlContainer, FormGroupDirective, ReactiveFormsModule } from '@angu
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: 'cache-settings.component.html',
   styleUrl: 'cache-settings.component.scss',
-  viewProviders: [{ provide: ControlContainer, useExisting: FormGroupDirective }],
+  viewProviders: [{provide: ControlContainer, useExisting: FormGroupDirective}],
 })
 export class CacheSettingsComponent {
   isLoading = input<boolean>(false);

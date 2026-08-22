@@ -1,7 +1,7 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ErrorStateComponent } from './error-state.component';
-import { By } from '@angular/platform-browser';
-import { describe, it, beforeEach, expect, vi } from "vitest";
+import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {ErrorStateComponent} from './error-state.component';
+import {By} from '@angular/platform-browser';
+import {beforeEach, describe, expect, it, vi} from "vitest";
 
 describe('ErrorStateComponent', () => {
   let component: ErrorStateComponent;

@@ -1,26 +1,26 @@
-import {Component, inject, signal, OnInit, OnDestroy, effect, computed} from '@angular/core';
+import {Component, computed, effect, inject, OnDestroy, OnInit, signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {
-  MarkdownPipe,
-  SummaryService,
-  SettingsService,
-  HistoryService,
-  ThemeService,
-  SummaryState,
-  SummaryResult,
-  HistoryItem,
-  ClassificationService,
   ClassificationResult,
+  ClassificationService,
   ClassificationState,
-  MLSettings,
-  HeaderComponent,
   EmptyStateComponent,
-  LoadingStateComponent,
   ErrorStateComponent,
+  FooterComponent,
+  HeaderComponent,
+  HistoryItem,
+  HistoryService,
+  LoadingStateComponent,
+  MarkdownPipe,
+  MLSettings,
+  SettingsService,
+  SummarizeButtonComponent,
   SummaryHeaderComponent,
   SummaryMetaComponent,
-  FooterComponent,
-  SummarizeButtonComponent
+  SummaryResult,
+  SummaryService,
+  SummaryState,
+  ThemeService
 } from '@shared/public-api';
 import browser from "webextension-polyfill";
 
@@ -36,9 +36,9 @@ type ViewMode = 'current' | 'history' | 'history-detail';
   template: `
     <div class="container" [class.dark-theme]="themeService.isDarkTheme()">
       <shared-header
-        [showThemeToggle]="true"
-        [themeService]="themeService"
-        (themeToggle)="toggleTheme()">
+              [showThemeToggle]="true"
+              [themeService]="themeService"
+              (themeToggle)="toggleTheme()">
       </shared-header>
 
       <!-- Tabs -->
@@ -66,9 +66,9 @@ type ViewMode = 'current' | 'history' | 'history-detail';
         @if (currentView() === 'current') {
           @if (summaryState().state === 'idle') {
             <shared-empty-state
-              icon="📰"
-              title="Ready to summarize"
-              message="Click the button below to summarize the current article">
+                    icon="📰"
+                    title="Ready to summarize"
+                    message="Click the button below to summarize the current article">
             </shared-empty-state>
           }
 
@@ -78,40 +78,42 @@ type ViewMode = 'current' | 'history' | 'history-detail';
 
           @if (summaryState().state === 'error') {
             <shared-error-state
-              [error]="summaryState().error || 'Failed to summarize article'"
-              [showRetry]="true"
-              [retryText]="'Retry'"
-              (retry)="retry()">
+                    [error]="summaryState().error || 'Failed to summarize article'"
+                    [showRetry]="true"
+                    [retryText]="'Retry'"
+                    (retry)="retry()">
             </shared-error-state>
           }
 
           @if (summaryState().state === 'success' && currentSummary()) {
             <div class="summary-view">
               <shared-summary-header
-                [title]="currentSummary()?.title || 'Article Summary'"
-                [showActions]="true"
-                [showCopyButton]="true"
-                [copying]="copying()"
-                [copied]="copySuccess()"
-                [copyDisabled]="false"
-                (copyClick)="copyToClipboard()">
-                <button class="expand-btn" slot="additional-actions" (click)="addToHistory()" title="Save to history" [disabled]="isArticleInHistory()">
+                      [title]="currentSummary()?.title || 'Article Summary'"
+                      [showActions]="true"
+                      [showCopyButton]="true"
+                      [copying]="copying()"
+                      [copied]="copySuccess()"
+                      [copyDisabled]="false"
+                      (copyClick)="copyToClipboard()">
+                <button class="expand-btn" slot="additional-actions" (click)="addToHistory()" title="Save to history"
+                        [disabled]="isArticleInHistory()">
                   💾 Save
                 </button>
               </shared-summary-header>
               <div class="summary-text markdown-content" [innerHTML]="currentSummary()?.summary | markdown"></div>
               <shared-summary-meta
-                [characterCount]="characterCount()"
-                [cached]="isCached()"
-                [provider]="currentSummary()?.provider || ''"
-                [model]="currentSummary()?.model || ''">
+                      [characterCount]="characterCount()"
+                      [cached]="isCached()"
+                      [provider]="currentSummary()?.provider || ''"
+                      [model]="currentSummary()?.model || ''">
               </shared-summary-meta>
               <!-- NEW: Automatic classification display -->
               @if (classificationFromSummary()) {
                 <div class="summary-classification">
                   <div class="classification-badge">
                     <span class="classification-label">{{ classificationFromSummary()?.label }}</span>
-                    <span class="classification-confidence">{{ (classificationFromSummary()?.score || 0) * 100 | number:'1.0-0' }}%</span>
+                    <span class="classification-confidence">{{ (classificationFromSummary()?.score || 0) * 100 | number:'1.0-0' }}
+                      %</span>
                   </div>
                 </div>
               }
@@ -123,9 +125,9 @@ type ViewMode = 'current' | 'history' | 'history-detail';
         @if (currentView() === 'history') {
           @if (historyItems().length === 0) {
             <shared-empty-state
-              icon="📜"
-              title="No history yet"
-              message="Summarize articles to save them to your history">
+                    icon="📜"
+                    title="No history yet"
+                    message="Summarize articles to save them to your history">
             </shared-empty-state>
           } @else {
             <div class="history-list">
@@ -165,23 +167,23 @@ type ViewMode = 'current' | 'history' | 'history-detail';
             ← Back to History
           </button>
           <shared-summary-header
-            [title]="selectedHistoryItem()?.title || 'History Item'"
-            [showActions]="true"
-            [showCopyButton]="true"
-            [copying]="detailCopying()"
-            [copied]="detailCopySuccess()"
-            [copyDisabled]="false"
-            (copyClick)="copyHistoryToClipboard()">
+                  [title]="selectedHistoryItem()?.title || 'History Item'"
+                  [showActions]="true"
+                  [showCopyButton]="true"
+                  [copying]="detailCopying()"
+                  [copied]="detailCopySuccess()"
+                  [copyDisabled]="false"
+                  (copyClick)="copyHistoryToClipboard()">
             <button class="delete-btn" slot="additional-actions" (click)="deleteSelectedHistoryItem()" title="Delete">
               🗑️ Delete
             </button>
           </shared-summary-header>
           <div class="summary-text markdown-content" [innerHTML]="selectedHistoryItem()?.summary | markdown"></div>
           <shared-summary-meta
-            [characterCount]="selectedHistoryItem()?.summary?.length || 0"
-            [cached]="selectedHistoryItem()?.cached || false"
-            [provider]="selectedHistoryItem()?.provider || ''"
-            [model]="selectedHistoryItem()?.model || ''">
+                  [characterCount]="selectedHistoryItem()?.summary?.length || 0"
+                  [cached]="selectedHistoryItem()?.cached || false"
+                  [provider]="selectedHistoryItem()?.provider || ''"
+                  [model]="selectedHistoryItem()?.model || ''">
           </shared-summary-meta>
           <div class="summary-meta">
             <div class="meta-item">
@@ -198,13 +200,13 @@ type ViewMode = 'current' | 'history' | 'history-detail';
       </div>
 
       <shared-footer
-        [showViewArticle]="false"
-        [articleUrl]="''"
-        [showClearHistory]="historyService.getCount() > 0"
-        [historyCount]="historyService.getCount()"
-        (viewArticle)="viewArticle()"
-        (clearHistory)="clearAllHistory()"
-        (openSettings)="openOptions()">
+              [showViewArticle]="false"
+              [articleUrl]="''"
+              [showClearHistory]="historyService.getCount() > 0"
+              [historyCount]="historyService.getCount()"
+              (viewArticle)="viewArticle()"
+              (clearHistory)="clearAllHistory()"
+              (openSettings)="openOptions()">
       </shared-footer>
 
       <!-- Classification Section -->
@@ -214,7 +216,7 @@ type ViewMode = 'current' | 'history' | 'history-detail';
             <span>🤖</span>
             Local AI Classification
           </div>
-          
+
           @if (classificationState().state === 'idle') {
             <button
                     class="btn btn--secondary btn--classification"
@@ -238,7 +240,7 @@ type ViewMode = 'current' | 'history' | 'history-detail';
               </div>
             }
           }
-          
+
           @if (classificationState().state === 'loading') {
             <div class="classification-loading">
               <div class="spinner"></div>
@@ -250,7 +252,7 @@ type ViewMode = 'current' | 'history' | 'history-detail';
               }
             </div>
           }
-          
+
           @if (classificationState().state === 'success' && classificationResult()) {
             <div class="classification-result-card">
               <div class="classification-result-header">
@@ -272,7 +274,7 @@ type ViewMode = 'current' | 'history' | 'history-detail';
               </div>
             </div>
           }
-          
+
           @if (classificationState().state === 'error') {
             <div class="classification-error">
               <span class="error-icon">⚠️</span>
@@ -284,11 +286,11 @@ type ViewMode = 'current' | 'history' | 'history-detail';
       }
 
       <shared-summarize-button
-        [loading]="summaryState().state === 'loading'"
-        [disabled]="false"
-        [text]="'Summarize Current Article'"
-        [loadingText]="'Summarizing...'"
-        (buttonClick)="summarize()">
+              [loading]="summaryState().state === 'loading'"
+              [disabled]="false"
+              [text]="'Summarize Current Article'"
+              [loadingText]="'Summarizing...'"
+              (buttonClick)="summarize()">
       </shared-summarize-button>
     </div>
   `,
@@ -299,7 +301,6 @@ type ViewMode = 'current' | 'history' | 'history-detail';
         width: 100%;
         height: 100%;
       }
-
 
 
       .action-button {
@@ -434,13 +435,13 @@ type ViewMode = 'current' | 'history' | 'history-detail';
         cursor: pointer;
         font-size: 12px;
       }
-      
+
       /* NEW: Automatic classification display styles */
       .summary-classification {
         margin-top: 12px;
         padding: 8px 0;
       }
-      
+
       .classification-badge {
         display: inline-flex;
         align-items: center;
@@ -451,12 +452,12 @@ type ViewMode = 'current' | 'history' | 'history-detail';
         border-radius: 16px;
         font-size: 13px;
       }
-      
+
       .classification-label {
         font-weight: 600;
         color: var(--text-primary, #333);
       }
-      
+
       .classification-confidence {
         color: var(--text-muted, #666);
         font-size: 12px;
@@ -465,87 +466,71 @@ type ViewMode = 'current' | 'history' | 'history-detail';
   ],
 })
 export class AppComponent implements OnInit, OnDestroy {
-  // Services
-  private summaryService = inject(SummaryService);
-  private settingsService = inject(SettingsService);
-  private classificationService = inject(ClassificationService);
   public historyService = inject(HistoryService);
   public themeService = inject(ThemeService);
-
   // State signals
   currentView = signal<ViewMode>('current');
   summaryState = signal<SummaryState>({state: 'idle'});
-
-  // Track last added summary to prevent infinite loop
-  private lastAddedSummaryId = signal<string | null>(null);
-
-  // Store message listener for cleanup
-  private messageListener: ((message: unknown) => void) | null = null;
-
   // Classification state
-  classificationState = signal<ClassificationState>({ state: 'idle' });
+  classificationState = signal<ClassificationState>({state: 'idle'});
   classificationResult = signal<ClassificationResult | undefined>(undefined);
   classificationProgress = signal<number>(0);
   mlSettings = signal<MLSettings | undefined>(undefined);
-
-  // Private variables for cleanup
-  private classificationSubscription: { unsubscribe: () => void } | null = null;
-
   // Copy state for current summary
   copying = signal<boolean>(false);
   copySuccess = signal<boolean>(false);
-
   // Copy state for history detail
   detailCopying = signal<boolean>(false);
   detailCopySuccess = signal<boolean>(false);
-
   // Computed values
   currentSummary = computed<SummaryResult | null>(() => {
     const state = this.summaryState();
     return state.state === 'success' ? state.summary || null : null;
   });
-
   // NEW: Classification from summary (automatic classification result)
   classificationFromSummary = computed<ClassificationResult | undefined>(() => {
     const summary = this.currentSummary();
     return summary?.classification;
   });
-
   currentArticleUrl = computed<string>(() => {
     const summary = this.currentSummary();
     return summary?.articleUrl || '';
   });
-
   isCached = computed<boolean>(() => {
     const summary = this.currentSummary();
     return summary?.cached || false;
   });
-
   selectedHistoryItem = computed<HistoryItem | null>(() => {
     return this.historyService.getSelectedItem();
   });
-
   historyItems = computed<HistoryItem[]>(() => {
     return this.historyService.getItems();
   });
-
   isArticleInHistory = computed<boolean>(() => {
     const currentUrl = this.currentArticleUrl();
     if (!currentUrl) return false;
     const items = this.historyItems();
     return items.some(item => item.articleUrl === currentUrl);
   });
-
   // Classification computed properties
   isMLAvailable = computed<boolean>(() => {
     const mlSettings = this.mlSettings();
     return mlSettings?.mlEnabled === true;
   });
-
   canClassify = computed<boolean>(() => {
     const state = this.classificationState();
     return this.isMLAvailable() && state.state === 'idle';
   });
+  // Services
+  private summaryService = inject(SummaryService);
+  private settingsService = inject(SettingsService);
+  private classificationService = inject(ClassificationService);
+  // Track last added summary to prevent infinite loop
+  private lastAddedSummaryId = signal<string | null>(null);
+  // Store message listener for cleanup
+  private messageListener: ((message: unknown) => void) | null = null;
+  // Private variables for cleanup
+  private classificationSubscription: { unsubscribe: () => void } | null = null;
 
   constructor() {
     // Set up effect to watch summary state changes
@@ -595,7 +580,7 @@ export class AppComponent implements OnInit, OnDestroy {
       browser.runtime.onMessage.removeListener(this.messageListener);
       this.messageListener = null;
     }
-    
+
     // Clean up classification progress listener
     this.cleanupClassificationProgressListener();
   }
@@ -835,23 +820,23 @@ export class AppComponent implements OnInit, OnDestroy {
    * Check ML availability
    */
   checkMLAvailability(): void {
-    
+
     this.classificationService.checkMLAvailability().subscribe({
       next: (result) => {
-        
+
         if (result.available) {
-          this.classificationState.set({ state: 'idle' });
+          this.classificationState.set({state: 'idle'});
         } else if (!result.apiAvailable) {
-          this.classificationState.set({ state: 'not_available' });
+          this.classificationState.set({state: 'not_available'});
         } else if (!result.permissionGranted) {
-          this.classificationState.set({ state: 'permission_required' });
+          this.classificationState.set({state: 'permission_required'});
         } else {
-          this.classificationState.set({ state: 'idle' });
+          this.classificationState.set({state: 'idle'});
         }
       },
       error: (error) => {
         console.error('Sidebar: Error checking ML availability:', error);
-        this.classificationState.set({ state: 'not_available', error: 'API not available' });
+        this.classificationState.set({state: 'not_available', error: 'API not available'});
       }
     });
   }
@@ -860,31 +845,31 @@ export class AppComponent implements OnInit, OnDestroy {
    * Classify the current article
    */
   classifyArticle(): void {
-    
+
     const currentSummary = this.currentSummary();
     if (!currentSummary?.summary) {
-      this.classificationState.set({ state: 'error', error: 'No article content available' });
+      this.classificationState.set({state: 'error', error: 'No article content available'});
       return;
     }
 
-    this.classificationState.set({ state: 'loading' });
+    this.classificationState.set({state: 'loading'});
     this.classificationResult.set(undefined);
 
     // Use the article text for classification
     const articleText = currentSummary.summary;
-    
+
     // Set up progress listener
     this.setupClassificationProgressListener();
 
     this.classificationService.classifyText(articleText).subscribe({
       next: (result) => {
-        
+
         this.classificationState.set({
           state: result.ok ? 'success' : 'error',
           result,
           error: result.ok ? undefined : result.error,
         });
-        
+
         if (result.ok) {
           this.classificationResult.set(result);
         } else {
@@ -896,9 +881,9 @@ export class AppComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Sidebar: Classification error:', error);
-        this.classificationState.set({ 
-          state: 'error', 
-          error: error instanceof Error ? error.message : 'Classification failed' 
+        this.classificationState.set({
+          state: 'error',
+          error: error instanceof Error ? error.message : 'Classification failed'
         });
         this.classificationResult.set(undefined);
         this.cleanupClassificationProgressListener();
@@ -911,11 +896,11 @@ export class AppComponent implements OnInit, OnDestroy {
    */
   setupClassificationProgressListener(): void {
     this.cleanupClassificationProgressListener();
-    
+
     this.classificationSubscription = this.classificationService.onModelDownloadProgress().subscribe({
       next: (progress) => {
         this.classificationProgress.set(progress.progress);
-        
+
         if (progress.status === 'complete') {
           // Progress is complete, don't reset yet as classification might still be running
         }
@@ -941,7 +926,7 @@ export class AppComponent implements OnInit, OnDestroy {
    * Clear classification result
    */
   clearClassification(): void {
-    this.classificationState.set({ state: 'idle' });
+    this.classificationState.set({state: 'idle'});
     this.classificationResult.set(undefined);
     this.classificationProgress.set(0);
   }

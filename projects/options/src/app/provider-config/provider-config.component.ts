@@ -1,7 +1,7 @@
-import { Component, inject, input, output, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ControlContainer, FormGroupDirective, ReactiveFormsModule } from '@angular/forms';
-import { ProviderType, SettingsService } from '@shared/public-api';
+import {Component, inject, input, output, signal} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {ControlContainer, FormGroupDirective, ReactiveFormsModule} from '@angular/forms';
+import {ProviderType, SettingsService} from '@shared/public-api';
 
 /**
  * Provider configuration section component
@@ -13,7 +13,7 @@ import { ProviderType, SettingsService } from '@shared/public-api';
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: 'provider-config.component.html',
   styleUrl: 'provider-config.component.scss',
-  viewProviders: [{ provide: ControlContainer, useExisting: FormGroupDirective }],
+  viewProviders: [{provide: ControlContainer, useExisting: FormGroupDirective}],
 })
 export class ProviderConfigComponent {
   // Inputs

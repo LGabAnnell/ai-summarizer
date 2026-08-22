@@ -5,7 +5,7 @@
 
 // Import the vendored Readability.js
 // In the final build, this will be bundled with the content script
-import { Readability } from '@mozilla/readability';
+import {Readability} from '@mozilla/readability';
 import browser, {Runtime} from 'webextension-polyfill';
 import OnMessageListener = Runtime.OnMessageListener;
 
@@ -31,6 +31,7 @@ interface ExtractResponse {
 
 interface Message {
   type: string;
+
   [key: string]: any;
 }
 
@@ -55,7 +56,7 @@ function extractArticle(): ArticleData | null {
       // Truncate if necessary
       let textContent = article.textContent;
       if (textContent.length > MAX_TEXT_LENGTH) {
-        textContent = `${textContent.substring(0, MAX_TEXT_LENGTH)  }...`;
+        textContent = `${textContent.substring(0, MAX_TEXT_LENGTH)}...`;
       }
 
       return {
@@ -81,11 +82,11 @@ function extractArticleFallback(): ArticleData | null {
   try {
     // Try to find article element
     const articleElement = document.querySelector('article') ||
-                        document.querySelector('main') ||
-                        document.querySelector('.article') ||
-                        document.querySelector('.content') ||
-                        document.querySelector('.post') ||
-                        document.body;
+      document.querySelector('main') ||
+      document.querySelector('.article') ||
+      document.querySelector('.content') ||
+      document.querySelector('.post') ||
+      document.body;
 
     if (!articleElement) {
       return null;
@@ -103,7 +104,7 @@ function extractArticleFallback(): ArticleData | null {
 
     // Get text content
     let textContent = clone.textContent || '';
-    
+
     // Normalize whitespace
     textContent = textContent
       .replace(/\s+/g, ' ')
@@ -111,7 +112,7 @@ function extractArticleFallback(): ArticleData | null {
 
     // Truncate if necessary
     if (textContent.length > MAX_TEXT_LENGTH) {
-      textContent = `${textContent.substring(0, MAX_TEXT_LENGTH)  }...`;
+      textContent = `${textContent.substring(0, MAX_TEXT_LENGTH)}...`;
     }
 
     // Try to find a title
@@ -167,7 +168,7 @@ const handleMessage: OnMessageListener = (request: unknown, sender: any, sendRes
       sendResponse(response);
     }
   }
-  
+
   // Return true to indicate we will send a response asynchronously
   // This is required for Manifest V3
   return true;

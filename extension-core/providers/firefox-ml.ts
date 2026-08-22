@@ -9,11 +9,9 @@ import type {
   AIProviderConfig,
   AIProviderRequest,
   AIProviderResponse,
-  AIProviderSettings,
   ProviderSettings,
 } from './provider.model';
 import {
-  type ValidationResult,
   buildBaseHeaders,
   estimateTokenCount,
   getSystemPrompt as getSystemPromptUtil,
@@ -85,7 +83,7 @@ export class FirefoxMLProvider implements AIProvider {
     // Handle Firefox ML response format
     if (response && Array.isArray(response) && response.length > 0) {
       const firstResult = response[0];
-      
+
       // Firefox ML summarization returns text directly
       if (typeof firstResult === 'string') {
         return {
@@ -94,7 +92,7 @@ export class FirefoxMLProvider implements AIProvider {
           tokenCount: this.getTokenCount(firstResult),
         };
       }
-      
+
       // Handle object response format
       if (firstResult && typeof firstResult === 'object') {
         // Try to extract summary from different possible fields
@@ -110,7 +108,7 @@ export class FirefoxMLProvider implements AIProvider {
         }
       }
     }
-    
+
     // Fallback: try to extract any string from the response
     if (response && typeof response === 'object') {
       for (const key in response) {
@@ -123,47 +121,13 @@ export class FirefoxMLProvider implements AIProvider {
         }
       }
     }
-    
+
     // If no summary found, return empty response
     return {
       summary: '',
       rawResponse: response,
       tokenCount: 0,
     };
-  }
-
-  /**
-   * Validate configuration - Firefox ML doesn't require API key
-   */
-  validateConfig(apiKey: string, settings?: AIProviderSettings): ValidationResult {
-    // Firefox ML doesn't require an API key - it's always valid
-    
-    // Validate model if provided
-    if (settings?.model) {
-      const availableModels = this.config.availableModels || [];
-      if (!availableModels.includes(settings.model)) {
-        return {
-          valid: false,
-          error: `Invalid model: ${settings.model}. Available Firefox ML models: ${availableModels.join(', ')}`,
-        };
-      }
-    }
-    
-    // Validate temperature if provided
-    if (settings?.temperature !== undefined) {
-      if (typeof settings.temperature !== 'number' || settings.temperature < 0 || settings.temperature > 1) {
-        return { valid: false, error: 'Temperature must be a number between 0 and 1' };
-      }
-    }
-    
-    // Validate maxTokens if provided
-    if (settings?.maxTokens !== undefined) {
-      if (typeof settings.maxTokens !== 'number' || settings.maxTokens <= 0) {
-        return { valid: false, error: 'Max tokens must be a positive number' };
-      }
-    }
-    
-    return { valid: true };
   }
 
   /**
