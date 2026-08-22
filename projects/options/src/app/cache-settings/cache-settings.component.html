@@ -31,13 +31,6 @@
       <div class="form-group">
         <label class="form-label" for="cacheTTL">Cache Expiration (days)</label>
         <div class="number-input-container">
-          <button
-                  type="button"
-                  class="number-decrement"
-                  (click)="decrementCacheTTL()"
-                  [disabled]="isLoading()">
-            −
-          </button>
           <input
                   id="cacheTTL"
                   type="number"
@@ -46,13 +39,6 @@
                   min="1"
                   max="30"
           >
-          <button
-                  type="button"
-                  class="number-increment"
-                  (click)="incrementCacheTTL()"
-                  [disabled]="isLoading()">
-            +
-          </button>
         </div>
         <div class="form-description">
           Number of days to keep cached summaries

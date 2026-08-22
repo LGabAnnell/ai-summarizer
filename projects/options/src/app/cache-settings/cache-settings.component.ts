@@ -25,20 +25,6 @@ export class CacheSettingsComponent {
     return this.formDirective.control.get('cacheEnabled')?.value;
   }
 
-  incrementCacheTTL(): void {
-    const current = this.formDirective.control.get('cacheTTL')?.value || 7;
-    if (current < 30) {
-      this.formDirective.control.patchValue({cacheTTL: current + 1});
-    }
-  }
-
-  decrementCacheTTL(): void {
-    const current = this.formDirective.control.get('cacheTTL')?.value || 7;
-    if (current > 1) {
-      this.formDirective.control.patchValue({cacheTTL: current - 1});
-    }
-  }
-
   onClearCache(): void {
     this.clearCache.emit();
   }

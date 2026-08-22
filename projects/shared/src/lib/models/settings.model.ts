@@ -165,7 +165,7 @@ export const PROVIDER_CONFIGS: Record<ProviderType, ProviderConfig> = {
   },
   custom: {
     name: 'custom',
-    displayName: 'Custom',
+    displayName: 'Custom (OpenAI Compatible)',
     endpoint: '',
     authHeader: 'Authorization',
     useBearerToken: true,

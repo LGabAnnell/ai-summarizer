@@ -2,9 +2,10 @@
  * Model Service for managing dynamic model lists from provider APIs
  */
 
-import { Injectable, signal } from '@angular/core';
+import {Injectable, Service, signal} from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
+import browser from 'webextension-polyfill';
 import { ProviderType } from '../models/settings.model';
 
 // Interface for AI provider instances that can fetch models
@@ -20,9 +21,17 @@ interface ModelCacheEntry {
   error?: string;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+/**
+ * Storage key for persisted model lists, differentiated by provider.
+ */
+const MODELS_STORAGE_KEY = 'ai-summarizer-models';
+
+/**
+ * Shape of the persisted model cache: a map of provider -> cache entry.
+ */
+type PersistedModelCache = Record<string, ModelCacheEntry>;
+
+@Service()
 export class ModelService {
   // Cache TTL in milliseconds (5 minutes)
   private readonly CACHE_TTL = 5 * 60 * 1000;
@@ -37,6 +46,65 @@ export class ModelService {
     custom: { models: [], timestamp: 0, loading: false },
     'firefox-ml': { models: [], timestamp: 0, loading: false },
   });
+
+  constructor() {
+    this.loadFromStorage();
+  }
+
+  /**
+   * Hydrate the in-memory cache from browser.storage.local so previously
+   * fetched models remain available across sessions. The timestamp is
+   * refreshed to now so the in-memory TTL treats persisted entries as fresh.
+   */
+  private async loadFromStorage(): Promise<void> {
+    try {
+      if (typeof browser === 'undefined' || !browser.storage) return;
+      const result = await browser.storage.local.get(MODELS_STORAGE_KEY) as Record<string, PersistedModelCache>;
+      const persisted = result[MODELS_STORAGE_KEY];
+      if (!persisted) return;
+
+      const now = Date.now();
+      this._modelsCache.update(cache => {
+        const next = { ...cache };
+        for (const [provider, entry] of Object.entries(persisted)) {
+          if (entry && Array.isArray(entry.models) && entry.models.length > 0) {
+            next[provider as ProviderType] = {
+              models: entry.models,
+              timestamp: now,
+              loading: false,
+              error: undefined,
+            };
+          }
+        }
+        return next;
+      });
+    } catch (error) {
+      console.error('Failed to load cached models from storage:', error);
+    }
+  }
+
+  /**
+   * Persist the current cache to browser.storage.local, differentiated by provider.
+   */
+  private async saveToStorage(): Promise<void> {
+    try {
+      if (typeof browser === 'undefined' || !browser.storage) return;
+      const cache = this._modelsCache();
+      const persisted: PersistedModelCache = {};
+      for (const [provider, entry] of Object.entries(cache)) {
+        if (entry.models.length > 0 && !entry.error) {
+          persisted[provider] = {
+            models: entry.models,
+            timestamp: entry.timestamp,
+            loading: false,
+          };
+        }
+      }
+      await browser.storage.local.set({ [MODELS_STORAGE_KEY]: persisted });
+    } catch (error) {
+      console.error('Failed to persist cached models to storage:', error);
+    }
+  }
 
   /**
    * Get the loading state for a specific provider
@@ -88,6 +156,7 @@ export class ModelService {
       ...cache,
       [provider]: { models: [], timestamp: 0, loading: false, error: undefined }
     }));
+    this.saveToStorage();
   }
 
   /**
@@ -101,6 +170,7 @@ export class ModelService {
       });
       return newCache;
     });
+    this.saveToStorage();
   }
 
   /**
@@ -130,6 +200,7 @@ export class ModelService {
         error
       }
     }));
+    this.saveToStorage();
   }
 
   /**
