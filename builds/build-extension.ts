@@ -1,5 +1,6 @@
 import esbuild from 'esbuild';
 import path from 'path';
+import { spawnSync } from 'child_process';
 
 const __dirname = path.resolve();
 
@@ -9,8 +10,24 @@ const buildConfig: esbuild.BuildOptions = {
   platform: 'browser',
   target: ['es2022'],
   minify: true,
-  sourcemap: false,
+  sourcemap: false
 };
+
+// Type-check extension-core against tsconfig.extension.json.
+// esbuild only transpiles; it does not enforce compilerOptions like
+// strict, noUnusedLocals, noImplicitAny, etc. Run tsc --noEmit first
+// so the build fails on type errors.
+function typeCheck(): void {
+  const result = spawnSync(
+    'npx',
+    ['tsc', '--noEmit', '-p', path.resolve(__dirname, 'tsconfig.extension.json')],
+    { stdio: 'inherit', shell: true },
+  );
+  if (result.status !== 0) {
+    console.error('Type-check failed. Aborting extension build.');
+    process.exit(1);
+  }
+}
 
 // Build background service worker
 function getBackgroundConfig(debug: boolean): esbuild.BuildOptions {
@@ -22,11 +39,12 @@ function getBackgroundConfig(debug: boolean): esbuild.BuildOptions {
     define: {
       global: 'globalThis',
     },
+    tsconfig: path.resolve(__dirname + '/tsconfig.json'),
   };
 }
 
 // Build content script
-function getContentConfig(debug: boolean): esbuild.BuildOptions {
+function getContentConfig(_: boolean): esbuild.BuildOptions {
   return {
     ...buildConfig,
     entryPoints: [path.join(__dirname, 'extension-core/content/content.ts')],
@@ -34,12 +52,16 @@ function getContentConfig(debug: boolean): esbuild.BuildOptions {
     define: {
       global: 'globalThis',
     },
+    tsconfig: path.resolve(__dirname + '/tsconfig.json'),
   };
 }
 
 async function buildExtension(debug: boolean = false) {
   console.log(`Building extension core... (debug: ${debug})`);
-  
+
+  // Fail fast on type errors before esbuild strips types.
+  typeCheck();
+
   const backgroundConfig = getBackgroundConfig(debug);
   const contentConfig = getContentConfig(debug);
   

@@ -67,7 +67,7 @@ module.exports = defineConfig([
       'comma-dangle': ['error', 'always-multiline'],
       'quotes': ['error', 'single'],
       'semi': ['error', 'always'],
-      'indent': ['error', 2],
+      'indent': ['error', 2, {SwitchCase: 1}],
       'max-len': ['warn', {code: 120, ignoreStrings: true, ignoreTemplateLiterals: true}],
       'object-curly-newline': ['warn', {multiline: true, consistent: true}],
       'padded-blocks': ['error', 'never'],

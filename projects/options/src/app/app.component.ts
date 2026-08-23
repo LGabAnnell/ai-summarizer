@@ -1,12 +1,10 @@
 import {Component, computed, DestroyRef, HostListener, inject, OnInit, signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
-import {FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
+import {FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
 import {
   ClassificationResult,
-  ClassificationService,
   ExtensionSettings,
   HeaderComponent,
-  ModelService,
   ProviderType,
   SaveBarComponent,
   SettingsService,
@@ -16,7 +14,7 @@ import {
 import {ProviderConfigComponent} from './provider-config/provider-config.component';
 import {SummarizationSettingsComponent} from './summarization-settings/summarization-settings.component';
 import {CacheSettingsComponent} from './cache-settings/cache-settings.component';
-import {takeUntilDestroyed, toSignal} from "@angular/core/rxjs-interop";
+import {takeUntilDestroyed} from "@angular/core/rxjs-interop";
 import {combineLatest, distinctUntilChanged} from "rxjs";
 import {map} from "rxjs/operators";
 
@@ -76,9 +74,6 @@ export class AppComponent implements OnInit {
       provider: this.settingsService.getSetting('provider')
     } : {}
   );
-  private modelService = inject(ModelService);
-  private classificationService = inject(ClassificationService);
-  private formValueSignal;
   private destroyRef = inject(DestroyRef);
 
   constructor() {
@@ -111,8 +106,6 @@ export class AppComponent implements OnInit {
     ).subscribe(() => {
       this.onRefreshModels();
     });
-
-    this.formValueSignal = toSignal(this.settingsForm.valueChanges, {initialValue: this.settingsForm.value});
   }
 
   ngOnInit(): void {
@@ -222,7 +215,7 @@ export class AppComponent implements OnInit {
           setTimeout(() => this.onClearSuccess(), 3000);
         }
       },
-      error: (error) => {
+      error: () => {
         // Error is already stored in ModelService via SettingsService
         this.settingsForm.get('model')?.setErrors({refreshFailed: true});
       }
@@ -357,6 +350,7 @@ export class AppComponent implements OnInit {
   setupMLProgressListener(): void {
   }
 
+  // @ts-expect-error next line is unused - but will be used in future
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   toggleMLEnabled(event: Event): void {
   }
@@ -364,10 +358,12 @@ export class AppComponent implements OnInit {
   requestMLPermission(): void {
   }
 
+  // @ts-expect-error next line is unused - but will be used in future
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setMLModelHub(hub: 'mozilla' | 'huggingface'): void {
   }
 
+  // @ts-expect-error next line is unused - but will be used in future
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setMLModelId(modelId: string): void {
   }

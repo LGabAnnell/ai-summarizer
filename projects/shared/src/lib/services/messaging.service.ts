@@ -4,7 +4,7 @@
  */
 
 import {Injectable} from '@angular/core';
-import {first, from, Observable, of, throwError} from 'rxjs';
+import {from, Observable, of, throwError} from 'rxjs';
 import {catchError, map} from 'rxjs/operators';
 
 import * as browser from 'webextension-polyfill';

@@ -18,10 +18,6 @@ export interface ArticleData {
   url: string;
 }
 
-interface ExtractRequest {
-  type: 'EXTRACT_ARTICLE';
-}
-
 interface ExtractResponse {
   type: 'EXTRACT_ARTICLE_RESPONSE';
   data?: ArticleData;
@@ -134,11 +130,10 @@ function extractArticleFallback(): ArticleData | null {
     return null;
   }
 }
-
 /**
  * Handle messages from the background script
  */
-const handleMessage: OnMessageListener = (request: unknown, sender: any, sendResponse: (response: unknown) => void) => {
+const handleMessage: OnMessageListener = (request: unknown, _: unknown, sendResponse: (response: unknown) => void) => {
   const castRequest = request as Message;
   if (castRequest.type === 'EXTRACT_ARTICLE') {
     try {

@@ -30,14 +30,14 @@ export interface AIProviderRequest {
   /** Request headers */
   headers: Record<string, string>;
   /** Request body */
-  body?: any;
+  body?: Record<string, unknown>;
 }
 
 export interface AIProviderResponse {
   /** Extracted summary text */
   summary: string;
   /** Raw response from the API (for debugging) */
-  rawResponse?: any;
+  rawResponse?: unknown;
   /** Number of tokens used */
   tokenCount?: number;
   /** Whether the response was truncated */
@@ -75,14 +75,14 @@ export interface AIProvider {
   buildRequest(
     articleText: string,
     title?: string,
-    settings?: Record<string, any>
+    settings?: Record<string, unknown>
   ): AIProviderRequest;
 
   /**
    * Parse the API response to extract the summary
    * @param response - The raw API response
    */
-  parseResponse(response: any): AIProviderResponse;
+  parseResponse(response: unknown): AIProviderResponse;
 
   /**
    * Get the estimated token count for the request

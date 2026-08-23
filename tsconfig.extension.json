@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node", "webextension-polyfill"]
+  },
+  "include": ["extension-core/**/*.ts"],
+  "exclude": ["extension-core/**/*.spec.ts", "extension-core/**/*.test.ts"]
+}

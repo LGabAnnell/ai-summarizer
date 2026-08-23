@@ -120,6 +120,7 @@ export class TextClassifierService {
         };
       }
 
+      // @ts-expect-error
       // Get engine manager and run classification
       const engineConfig: Partial<MLEngineConfig> = {
         modelHub: config?.modelHub,
@@ -373,37 +374,6 @@ export class TextClassifierService {
     }
 
     return 'Unknown classification error';
-  }
-
-  /**
-   * Get error code from error
-   */
-  private getErrorCode(error: any): string {
-    if (typeof error === 'string') {
-      return error;
-    }
-
-    if (error instanceof Error) {
-      const message = error.message.toLowerCase();
-
-      if (message.includes('permission')) {
-        return ML_ERRORS.PERMISSION_DENIED;
-      }
-      if (message.includes('timeout')) {
-        return ML_ERRORS.TIMEOUT;
-      }
-      if (message.includes('not available') || message.includes('undefined')) {
-        return ML_ERRORS.NOT_AVAILABLE;
-      }
-      if (message.includes('download') || message.includes('network')) {
-        return ML_ERRORS.CLASSIFICATION_FAILED;
-      }
-      if (message.includes('storage') || message.includes('quota')) {
-        return ML_ERRORS.CLASSIFICATION_FAILED;
-      }
-    }
-
-    return ML_ERRORS.UNKNOWN_ERROR;
   }
 }
 

@@ -40,10 +40,8 @@ const FIREFOX_ML_CONFIG: AIProviderConfig = {
  */
 export class FirefoxMLProvider implements AIProvider {
   readonly config = FIREFOX_ML_CONFIG;
-  private apiKey: string; // Not used, but required by interface
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey; // Firefox ML doesn't need API key
+  constructor(_: string) {
   }
 
   /**
@@ -79,10 +77,10 @@ export class FirefoxMLProvider implements AIProvider {
    * Parse the Firefox ML response
    * The response from browser.trial.ml.runEngine() contains the generated summary
    */
-  parseResponse(response: any): AIProviderResponse {
+  parseResponse(response: unknown): AIProviderResponse {
     // Handle Firefox ML response format
     if (response && Array.isArray(response) && response.length > 0) {
-      const firstResult = response[0];
+      const firstResult = response[0] as unknown;
 
       // Firefox ML summarization returns text directly
       if (typeof firstResult === 'string') {
@@ -95,14 +93,15 @@ export class FirefoxMLProvider implements AIProvider {
 
       // Handle object response format
       if (firstResult && typeof firstResult === 'object') {
+        const resultRecord = firstResult as Record<string, unknown>;
         // Try to extract summary from different possible fields
         const possibleFields = ['generated_text', 'summary', 'text', 'output', 'result'];
         for (const field of possibleFields) {
-          if (firstResult[field] && typeof firstResult[field] === 'string') {
+          if (resultRecord[field] && typeof resultRecord[field] === 'string') {
             return {
-              summary: firstResult[field],
+              summary: resultRecord[field],
               rawResponse: response,
-              tokenCount: this.getTokenCount(firstResult[field]),
+              tokenCount: this.getTokenCount(resultRecord[field]),
             };
           }
         }
@@ -111,12 +110,14 @@ export class FirefoxMLProvider implements AIProvider {
 
     // Fallback: try to extract any string from the response
     if (response && typeof response === 'object') {
-      for (const key in response) {
-        if (typeof response[key] === 'string' && response[key].length > 0) {
+      const responseRecord = response as Record<string, unknown>;
+      for (const key in responseRecord) {
+        const value: unknown = responseRecord[key];
+        if (typeof value === 'string' && value.length > 0) {
           return {
-            summary: response[key],
+            summary: value,
             rawResponse: response,
-            tokenCount: this.getTokenCount(response[key]),
+            tokenCount: this.getTokenCount(value),
           };
         }
       }
@@ -148,17 +149,10 @@ export class FirefoxMLProvider implements AIProvider {
   /**
    * Fetch available models - Firefox ML has a fixed list of summarization models
    */
-  async fetchModels(apiKey: string): Promise<string[]> {
+  async fetchModels(_: string): Promise<string[]> {
     // Firefox ML summarization models are fixed
     // In the future, this could use browser.trial.ml.listEngines() if available
     return this.config.availableModels || [];
-  }
-
-  /**
-   * Update the API key - not used for Firefox ML but required by interface
-   */
-  updateApiKey(apiKey: string): void {
-    this.apiKey = apiKey;
   }
 }
 
