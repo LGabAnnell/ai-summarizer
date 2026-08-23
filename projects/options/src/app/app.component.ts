@@ -1,4 +1,4 @@
-import {Component, computed, DestroyRef, HostListener, inject, OnInit, signal} from '@angular/core';
+import {Component, Signal, computed, DestroyRef, HostListener, inject, OnInit, signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
 import {
@@ -6,6 +6,7 @@ import {
   ClassificationService,
   ExtensionSettings,
   HeaderComponent,
+  ModelService,
   ProviderType,
   SaveBarComponent,
   SettingsService,
@@ -43,15 +44,13 @@ export class AppComponent implements OnInit {
   error = signal<string | undefined>(undefined);
   successMessage = signal<string | undefined>(undefined);
   connectionStatus = signal<'connected' | 'failed' | undefined>(undefined);
-  modelsLoading = signal<boolean>(false);
-  modelsError = signal<string | undefined>(undefined);
   isScrolled = signal<boolean>(false);
   settingsForm!: FormGroup;
 
   // Computed
-  isFirefoxMLProvider = signal(false);
   public themeService = inject(ThemeService);
   // ML State (commented out as per user decision)
+  isFirefoxMLProvider = signal(false);
   isRequestingPermission = signal<boolean>(false);
   permissionRequestError = signal<string | undefined>(undefined);
   isTestingClassification = signal<boolean>(false);
@@ -62,7 +61,16 @@ export class AppComponent implements OnInit {
   // Injected services
   private fb = inject(FormBuilder);
   private settingsService = inject(SettingsService);
+  private modelService = inject(ModelService);
   providerTypes = computed(() => this.settingsService.getProviderTypes());
+  
+  // Get current provider from form
+  currentProvider = computed(() => this.settingsForm.get('provider')?.value || 'mistral');
+  
+  // Get loading/error state from SettingsService (which delegates to ModelService)
+  modelsLoading = computed(() => this.settingsService.isModelsLoading(this.currentProvider()));
+  modelsError = computed(() => this.settingsService.getModelsErrorSignal(this.currentProvider())());
+  
   availableModels = computed(() => {
     const provider = this.settingsForm?.get('provider')?.value || 'mistral';
     return this.settingsService.getAvailableModelsForProvider(provider);
@@ -177,6 +185,10 @@ export class AppComponent implements OnInit {
   // ============================================================================
 
   onProviderChange(provider: ProviderType): void {
+    // Clear success message and form errors
+    this.successMessage.set(undefined);
+    this.settingsForm.get('model')?.setErrors(null);
+
     const models = this.settingsService.getAvailableModelsForProvider(provider);
     if (models.length > 0 && provider !== 'firefox-ml') {
       this.settingsForm.patchValue({model: models[0]});
@@ -201,7 +213,7 @@ export class AppComponent implements OnInit {
     }
     this.isTesting.set(true);
     this.connectionStatus.set(undefined);
-    this.settingsService.testCurrentProvider().subscribe({
+    this.settingsService.testCurrentProvider(provider, apiKey).subscribe({
       next: (result) => {
         this.connectionStatus.set(result.valid ? 'connected' : 'failed');
         if (!result.valid && result.error) {
@@ -227,28 +239,24 @@ export class AppComponent implements OnInit {
   onRefreshModels(): void {
     const apiKey = this.settingsForm?.get('apiKey')?.value || '';
     const provider = this.settingsForm?.get('provider')?.value || 'mistral';
-    this.modelsLoading.set(true);
-    this.modelsError.set(undefined);
+    this.successMessage.set(undefined);
+    this.settingsForm.get('model')?.setErrors(null);
     this.settingsService.refreshModels(provider as ProviderType, apiKey).subscribe({
       next: (models) => {
-        this.modelsLoading.set(false);
         if (models.length > 0) {
           const currentModel = this.settingsForm?.get('model')?.value;
           if (currentModel && !models.includes(currentModel)) {
             this.settingsForm.patchValue({model: models[0]});
           }
           this.successMessage.set(`Successfully refreshed ${models.length} models!`);
+          setTimeout(() => this.onClearSuccess(), 3000);
         }
       },
       error: (error) => {
-        this.modelsLoading.set(false);
-        this.modelsError.set(`Failed to refresh models: ${error.message || 'Unknown error'}`);
+        // Error is already stored in ModelService via SettingsService
+        this.settingsForm.get('model')?.setErrors({refreshFailed: true});
       }
     });
-  }
-
-  onClearModelsError(): void {
-    this.modelsError.set(undefined);
   }
 
   // ============================================================================

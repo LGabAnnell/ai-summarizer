@@ -2,16 +2,9 @@
  * Model Service for managing dynamic model lists from provider APIs
  */
 
-import {Service, signal} from '@angular/core';
-import {Observable, of, throwError} from 'rxjs';
-import {catchError, map, switchMap} from 'rxjs/operators';
+import {Service, Signal, computed, signal} from '@angular/core';
 import browser from 'webextension-polyfill';
 import {ProviderType} from '../models/settings.model';
-
-// Interface for AI provider instances that can fetch models
-export interface ModelProvider {
-  fetchModels(apiKey: string): Promise<string[]>;
-}
 
 // Cache for fetched models
 interface ModelCacheEntry {
@@ -63,6 +56,14 @@ export class ModelService {
    */
   getError(provider: ProviderType): string | undefined {
     return this._modelsCache()[provider]?.error;
+  }
+
+  /**
+   * Get the error state for a specific provider as a signal
+   * This allows proper signal dependency tracking in computed signals
+   */
+  getErrorSignal(provider: ProviderType): Signal<string | undefined> {
+    return computed(() => this._modelsCache()[provider]?.error);
   }
 
   /**
@@ -120,67 +121,7 @@ export class ModelService {
     this.saveToStorage();
   }
 
-  /**
-   * Fetch models from a provider API using the provider's fetchModels method
-   * This is a proxy method that will be used by the settings service
-   */
-  async fetchModelsFromProvider(
-    provider: ProviderType,
-    apiKey: string,
-    providerInstance: ModelProvider
-  ): Promise<string[]> {
-    // Set loading state
-    this.setLoading(provider, true);
 
-    try {
-      // Call the provider's fetchModels method
-      const models = await providerInstance.fetchModels(apiKey);
-
-      // Update cache
-      this.updateCachedModels(provider, models);
-
-      return models;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch models';
-      this.updateCachedModels(provider, [], errorMessage);
-      throw error;
-    }
-  }
-
-  /**
-   * Refresh models for a specific provider
-   * This creates an observable for Angular integration
-   */
-  refreshModels(
-    provider: ProviderType,
-    apiKey: string,
-    providerInstance: ModelProvider
-  ): Observable<string[]> {
-    return of([]).pipe(
-      map(() => {
-        // Clear previous cache
-        this.clearCache(provider);
-        this.setLoading(provider, true);
-        return [];
-      }),
-      switchMap(() => {
-        return new Observable<string[]>(subscriber => {
-          this.fetchModelsFromProvider(provider, apiKey, providerInstance)
-            .then(models => {
-              subscriber.next(models);
-              subscriber.complete();
-            })
-            .catch(error => {
-              subscriber.error(error);
-            });
-        });
-      }),
-      catchError((error) => {
-        this.setLoading(provider, false, error.message);
-        return throwError(() => error);
-      })
-    );
-  }
 
   /**
    * Hydrate the in-memory cache from browser.storage.local so previously
@@ -240,7 +181,7 @@ export class ModelService {
   /**
    * Set loading state for a provider
    */
-  private setLoading(provider: ProviderType, loading: boolean, error?: string): void {
+  setLoading(provider: ProviderType, loading: boolean, error?: string): void {
     this._modelsCache.update(cache => ({
       ...cache,
       [provider]: {

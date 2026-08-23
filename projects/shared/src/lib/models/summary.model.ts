@@ -63,7 +63,7 @@ export interface SaveSettingsRequest {
 
 export interface TestProviderRequest {
   type: 'TEST_PROVIDER';
-  provider: string;
+  provider: ProviderType;
   apiKey: string;
 }
 

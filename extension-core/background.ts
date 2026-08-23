@@ -644,7 +644,7 @@ async function handleRefreshModels(providerType: ProviderType, apiKey: string): 
 /**
  * Test a provider connection
  */
-async function testProviderConnection(providerType: string, apiKey: string): Promise<{
+async function testProviderConnection(providerType: ProviderType, apiKey: string): Promise<{
   type: string;
   success: boolean;
   data?: { valid: boolean };
@@ -666,7 +666,14 @@ async function testProviderConnection(providerType: string, apiKey: string): Pro
       return {type: 'TEST_PROVIDER_RESPONSE', success: true, data: {valid: true}};
     }
 
-    return {type: 'TEST_PROVIDER_RESPONSE', success: true, data: {valid: true}};
+    const result = await handleRefreshModels(providerType, apiKey);
+    console.log('Background: Provider test result:', result);
+    return {
+      type: 'TEST_PROVIDER_RESPONSE',
+      success: true,
+      data: {valid: result.success},
+      error: result.error,
+    };
   } catch (error) {
     return {
       type: 'TEST_PROVIDER_RESPONSE',

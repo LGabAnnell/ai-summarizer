@@ -159,7 +159,7 @@ export class MessagingService {
   /**
    * Test a provider connection
    */
-  testProvider(provider: string, apiKey: string): Observable<MessageResponse<{ valid: boolean }>> {
+  testProvider(provider: ProviderType, apiKey: string): Observable<MessageResponse<{ valid: boolean }>> {
     return this.sendMessage<{ valid: boolean }>({
       type: 'TEST_PROVIDER',
       provider,

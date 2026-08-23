@@ -145,12 +145,12 @@ Key message types: `EXTRACT_AND_SUMMARIZE`, `SUMMARIZE`, `GET_SETTINGS`, `SAVE_S
 
 ### 4.6 Build Pipeline
 ```
-npm run build
-├── npm run build:shared       # ng build shared
-├── npm run build:popup        # ng build popup --configuration production
-├── npm run build:options      # ng build options --configuration production
-├── npm run build:sidebar      # ng build sidebar --configuration production
-└── npm run build:extension    # esbuild background.ts + content.ts, then package-dist.ts
+npm run build:debug
+├── npm run build:shared:debug       # ng build shared
+├── npm run build:popup:debug        # ng build popup --configuration production
+├── npm run build:options:debug      # ng build options --configuration production
+├── npm run build:sidebar:debug      # ng build sidebar --configuration production
+└── npm run build:extension:debug    # esbuild background.ts + content.ts, then package-dist.ts
 ```
 
 ---
@@ -286,9 +286,8 @@ npm run build
 
 When modifying code:
 - [ ] Update corresponding tests if they exist
-- [ ] Verify TypeScript compiles without errors (`npm run build`)
+- [ ] Verify TypeScript compiles without errors (`npm run build:debug`)
 - [ ] Check Angular lint passes (`npm run lint`)
-- [ ] Test in Firefox with `npm run build && load dist/`
 - [ ] Clear cache if testing caching behavior
 - [ ] Test with multiple providers
 - [ ] Verify error states display properly
@@ -334,6 +333,5 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 - Do not assume globals like (`new Date()`) are available.
 ## Services
 - Design services around a single responsibility
-- Use the `providedIn: 'root'` option for singleton services
 - Prefer the `@Service` decorator over `@Injectable({providedIn: 'root'})` for new singleton services (Angular v22+)
 - Use the `inject()` function instead of constructor injection

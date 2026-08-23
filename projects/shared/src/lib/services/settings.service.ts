@@ -2,7 +2,7 @@
  * Settings Service for managing extension settings
  */
 
-import {inject, Injectable, signal} from '@angular/core';
+import {inject, Injectable, Signal, signal} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
 import {catchError, map, switchMap} from 'rxjs/operators';
 import {MessagingService} from './messaging.service';
@@ -133,11 +133,10 @@ export class SettingsService {
   }
 
   /**
-   * Test the current provider connection
+   * Test a provider connection
    */
-  testCurrentProvider(): Observable<{ valid: boolean; error?: string }> {
-    const settings = this._settings();
-    return this.messaging.testProvider(settings.provider, settings.apiKey).pipe(
+  testCurrentProvider(provider: ProviderType, apiKey: string): Observable<{ valid: boolean; error?: string }> {
+    return this.messaging.testProvider(provider, apiKey).pipe(
       map((response) => {
         if (response.success && response.data) {
           return {valid: response.data.valid};
@@ -155,22 +154,27 @@ export class SettingsService {
    * Refresh models for a specific provider from the API
    */
   refreshModels(provider: ProviderType, apiKey: string): Observable<string[]> {
+    // Clear cache to start fresh and set loading state
+    this.modelService.clearCache(provider);
+    this.modelService.setLoading(provider, true);
+    
     return this.messaging.refreshModels(provider, apiKey).pipe(
       map((response) => {
         if (response.success && response.data && response.data.models) {
-          // Update the model cache in the model service
           this.modelService.updateCachedModels(provider, response.data.models);
           return response.data.models;
         } else {
-          // Clear cache on error and return hardcoded models
-          this.modelService.clearCache(provider);
-          throw new Error(response.error || 'Failed to refresh models');
+          // Store error in ModelService
+          const errorMsg = response.error || 'Failed to refresh models';
+          this.modelService.updateCachedModels(provider, [], errorMsg);
+          throw new Error(errorMsg);
         }
       }),
-      catchError(() => {
-        // Clear cache on error and return hardcoded models
-        this.modelService.clearCache(provider);
-        return of(PROVIDER_MODELS[provider] || []);
+      catchError((error) => {
+        // Handle network/other errors
+        const errorMessage = error.message || 'Failed to refresh models';
+        this.modelService.updateCachedModels(provider, [], errorMessage);
+        return throwError(() => error);
       })
     );
   }
@@ -187,6 +191,14 @@ export class SettingsService {
    */
   getModelsError(provider: ProviderType): string | undefined {
     return this.modelService.getError(provider);
+  }
+
+  /**
+   * Get model error state for a provider as a signal
+   * This allows proper signal dependency tracking in computed signals
+   */
+  getModelsErrorSignal(provider: ProviderType): Signal<string | undefined> {
+    return this.modelService.getErrorSignal(provider);
   }
 
   /**
