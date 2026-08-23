@@ -249,21 +249,21 @@ npm run build:debug
 
 ### 6.4 Build & Test Commands
 
-| Command | Purpose |
-|---------|---------|
-| `npm install` | Install dependencies |
-| `npm run build` | Full production build |
-| `npm run build:debug` | Full debug build with source maps |
-| `npm run build:popup` | Build popup only |
-| `npm run build:options` | Build options only |
-| `npm run build:sidebar` | Build sidebar only |
-| `npm run build:shared` | Build shared library only |
-| `npm run build:extension` | Build extension core (esbuild) |
-| `npm run watch` | Watch mode for development |
-| `npm run test` | Run Angular tests |
-| `npm run lint` | Lint all projects |
-| `npm run package` | Package with `web-ext build` |
-| `npm run run` | Run with `web-ext run` |
+| Command                         | Purpose |
+|---------------------------------|---------|
+| `npm install`                   | Install dependencies |
+| `npm run build`                 | Full production build |
+| `npm run build:debug`           | Full debug build with source maps |
+| `npm run build:popup:debug`     | Build popup only |
+| `npm run build:options:debug`   | Build options only |
+| `npm run build:sidebar:debug`   | Build sidebar only |
+| `npm run build:shared:debug`    | Build shared library only |
+| `npm run build:extension:debug` | Build extension core (esbuild) |
+| `npm run watch`                 | Watch mode for development |
+| `npm run test`                  | Run Angular tests |
+| `npm run lint`                  | Lint all projects |
+| `npm run package`               | Package with `web-ext build` |
+| `npm run run`                   | Run with `web-ext run` |
 
 ### 6.5 Debugging Tips
 

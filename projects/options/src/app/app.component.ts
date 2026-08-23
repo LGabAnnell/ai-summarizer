@@ -1,4 +1,4 @@
-import {Component, Signal, computed, DestroyRef, HostListener, inject, OnInit, signal} from '@angular/core';
+import {Component, computed, DestroyRef, HostListener, inject, OnInit, signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {FormBuilder, FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
 import {
@@ -17,7 +17,7 @@ import {ProviderConfigComponent} from './provider-config/provider-config.compone
 import {SummarizationSettingsComponent} from './summarization-settings/summarization-settings.component';
 import {CacheSettingsComponent} from './cache-settings/cache-settings.component';
 import {takeUntilDestroyed, toSignal} from "@angular/core/rxjs-interop";
-import {distinctUntilChanged} from "rxjs";
+import {combineLatest, distinctUntilChanged} from "rxjs";
 import {map} from "rxjs/operators";
 
 @Component({
@@ -58,19 +58,15 @@ export class AppComponent implements OnInit {
   mlModelDownloadProgress = signal<number>(0);
   mlDownloadStatus = signal<string | undefined>(undefined);
   mlAvailabilityChecked = signal<boolean>(false);
+  // Get current provider from form
+  currentProvider = computed(() => this.settingsForm.get('provider')?.value || 'mistral');
   // Injected services
   private fb = inject(FormBuilder);
   private settingsService = inject(SettingsService);
-  private modelService = inject(ModelService);
   providerTypes = computed(() => this.settingsService.getProviderTypes());
-  
-  // Get current provider from form
-  currentProvider = computed(() => this.settingsForm.get('provider')?.value || 'mistral');
-  
   // Get loading/error state from SettingsService (which delegates to ModelService)
   modelsLoading = computed(() => this.settingsService.isModelsLoading(this.currentProvider()));
   modelsError = computed(() => this.settingsService.getModelsErrorSignal(this.currentProvider())());
-  
   availableModels = computed(() => {
     const provider = this.settingsForm?.get('provider')?.value || 'mistral';
     return this.settingsService.getAvailableModelsForProvider(provider);
@@ -80,6 +76,7 @@ export class AppComponent implements OnInit {
       provider: this.settingsService.getSetting('provider')
     } : {}
   );
+  private modelService = inject(ModelService);
   private classificationService = inject(ClassificationService);
   private formValueSignal;
   private destroyRef = inject(DestroyRef);
@@ -104,8 +101,17 @@ export class AppComponent implements OnInit {
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(value => {
       this.isFirefoxMLProvider.set(value);
-      this.updateApiKeyValidators();
     });
+
+    combineLatest([
+      this.settingsForm.get('provider')!.valueChanges,
+      this.settingsForm.get('apiKey')!.valueChanges
+    ]).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(() => {
+      this.onRefreshModels();
+    });
+
     this.formValueSignal = toSignal(this.settingsForm.valueChanges, {initialValue: this.settingsForm.value});
   }
 
@@ -142,42 +148,6 @@ export class AppComponent implements OnInit {
         this.isLoading.set(false);
       }
     });
-  }
-
-  /**
-   * Update API key validators based on current provider
-   */
-  updateApiKeyValidators(): void {
-    const apiKeyControl = this.settingsForm.get('apiKey');
-    const providerValue = this.settingsForm.get('provider')?.value ?? 'mistral';
-    const isFirefoxML = providerValue === 'firefox-ml';
-
-    if (!apiKeyControl) return;
-
-    // Clear existing validators
-    apiKeyControl.clearValidators();
-    apiKeyControl.setValidators([]);
-
-    if (isFirefoxML) {
-      // No validators for Firefox ML provider
-      return;
-    }
-
-    // Add required validator for API key (non-Firefox ML providers)
-    apiKeyControl.addValidators(Validators.required);
-    apiKeyControl.updateValueAndValidity();
-  }
-
-  /**
-   * Get validators for API key field based on current provider (legacy method kept for compatibility)
-   */
-  getApiKeyValidators() {
-    return (control: FormControl<string>) => {
-      const provider = this.settingsForm?.get('provider')?.value ?? 'mistral';
-      if (provider === 'firefox-ml') return null;
-      if (!control.value || control.value.trim() === '') return {required: true};
-      return null;
-    };
   }
 
   // ============================================================================

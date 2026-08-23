@@ -169,12 +169,6 @@ export class SettingsService {
           this.modelService.updateCachedModels(provider, [], errorMsg);
           throw new Error(errorMsg);
         }
-      }),
-      catchError((error) => {
-        // Handle network/other errors
-        const errorMessage = error.message || 'Failed to refresh models';
-        this.modelService.updateCachedModels(provider, [], errorMessage);
-        return throwError(() => error);
       })
     );
   }

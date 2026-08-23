@@ -118,9 +118,17 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
       });
 
       if (!response.ok) {
-        // If API call fails, fall back to hardcoded models
-        console.warn(`Failed to fetch models from ${modelsEndpoint}: ${response.status} ${response.statusText}`);
-        return this.config.availableModels || [];
+        const errorText = await response.text();
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error?.message || errorJson.message || errorMessage;
+        } catch {
+          if (errorText) {
+            errorMessage = `${errorMessage}: ${errorText}`;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -139,8 +147,7 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
       return this.config.availableModels || [];
     } catch (error) {
       console.error('Error fetching models:', error);
-      // Fall back to hardcoded models on any error
-      return this.config.availableModels || [];
+      throw error instanceof Error ? error : new Error(String(error));
     }
   }
 

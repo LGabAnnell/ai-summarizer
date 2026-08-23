@@ -4,7 +4,7 @@
  */
 
 import {Injectable} from '@angular/core';
-import {from, Observable, of, throwError} from 'rxjs';
+import {first, from, Observable, of, throwError} from 'rxjs';
 import {catchError, map} from 'rxjs/operators';
 
 import * as browser from 'webextension-polyfill';
@@ -51,7 +51,6 @@ export class MessagingService {
     // Return an observable that wraps the message sending
     return from(browser.runtime.sendMessage(message)).pipe(
       map((response: unknown) => {
-
         // Handle both direct responses and wrapped responses
         if (response && typeof response === 'object' && !Array.isArray(response)) {
           // If response has a data property, use it. Otherwise, the response itself is the data
