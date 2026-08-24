@@ -104,7 +104,7 @@ export class MLPermissionService {
    */
   isAPIAvailable(): boolean {
     // Check if browser.trial and browser.trial.ml exist
-    const hasTrialAPI = typeof (browser as any).trial !== 'undefined';
+    const hasTrialAPI = typeof browser.trial !== 'undefined';
     const hasMLAPI = hasTrialAPI && typeof browser.trial.ml !== 'undefined';
 
     console.log('MLPermissionService.isAPIAvailable: trial API available:', hasTrialAPI, '| trial.ml available:', hasMLAPI);

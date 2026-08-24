@@ -27,7 +27,7 @@ export class CustomProvider extends OpenAICompatibleProvider {
     };
   }
 
-  protected getExtraBodyParams(): Record<string, any> {
+  protected getExtraBodyParams(): Record<string, never> {
     return {};
   }
 }

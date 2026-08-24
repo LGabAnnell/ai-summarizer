@@ -395,12 +395,20 @@ export class MLEngineManager {
     browser.trial.ml.onProgress.addListener((progressEvent: { [p: string]: unknown }) => {
       console.log('MLEngineManager: Progress event received:', progressEvent);
 
+      const castEvent = progressEvent as {
+        modelId?: string;
+        progress?: number;
+        status?: string;
+        message?: string;
+        error?: string;
+      };
+
       // Notify all registered callbacks
       const event: MLEngineProgressEvent = {
-        modelId: progressEvent['modelId'] as string ?? 'unknown',
-        progress: Math.round(progressEvent['progress'] as number * 100) || 0,
+        modelId: castEvent.modelId ?? 'unknown',
+        progress: Math.round((castEvent.progress ?? 0) * 100) || 0,
         status: this.mapProgressStatus(progressEvent),
-        message: progressEvent['message'] as string,
+        message: castEvent.message,
       };
 
       this.progressCallbacks.forEach(callback => {
@@ -419,9 +427,12 @@ export class MLEngineManager {
    * Map browser progress status to our internal status
    */
   private mapProgressStatus(event: { [p: string]: unknown }): MLEngineProgressEvent['status'] {
-    const status = (event['status'] as string)?.toLowerCase();
-    if (status === 'complete' || event['progress'] as number >= 1.0) return 'complete';
-    if (status === 'error' || event['error']) return 'error';
+    const status = (event as { status?: string }).status?.toLowerCase();
+    const progress = (event as { progress?: number }).progress;
+    const error = (event as { error?: unknown }).error;
+
+    if (status === 'complete' || (progress ?? 0) >= 1.0) return 'complete';
+    if (status === 'error' || error) return 'error';
     if (status === 'extracting') return 'extracting';
     return 'downloading';
   }

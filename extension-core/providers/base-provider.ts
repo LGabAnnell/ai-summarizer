@@ -15,6 +15,7 @@ import {
   getTokenCount as getTokenCountUtil,
 } from './provider.utils';
 import {SummaryStyle} from './summary-prompts';
+import {AIRequestSettings} from '@shared/lib/models/settings.model';
 
 export abstract class BaseProvider implements AIProvider {
   abstract readonly config: AIProviderConfig;
@@ -30,11 +31,11 @@ export abstract class BaseProvider implements AIProvider {
   abstract buildRequestBody(
     articleText: string,
     title?: string,
-    settings?: Record<string, any>
-  ): Record<string, any>;
+    settings?: AIRequestSettings
+  ): Record<string, unknown>;
 
   /** Parse the response body — format varies by provider API. */
-  abstract parseResponseBody(response: any): AIProviderResponse;
+  abstract parseResponseBody(response: unknown): AIProviderResponse;
 
   /**
    * Fetch available models from the provider's API
@@ -49,7 +50,7 @@ export abstract class BaseProvider implements AIProvider {
   buildRequest(
     articleText: string,
     title?: string,
-    settings?: Record<string, any>,
+    settings?: AIRequestSettings,
   ): AIProviderRequest {
     const headers = {
       ...buildBaseHeaders(),
@@ -58,8 +59,8 @@ export abstract class BaseProvider implements AIProvider {
     addAuthHeader(
       headers,
       this.apiKey,
-      this.config.authHeader!,
-      this.config.useBearerToken!,
+      this.config.authHeader ?? '',
+      this.config.useBearerToken ?? false,
     );
     return {
       url: this.config.endpoint,
@@ -72,7 +73,7 @@ export abstract class BaseProvider implements AIProvider {
   // ── Concrete methods (shared across all providers) ──────────────────
 
   /** Parse the API response to extract the summary. */
-  parseResponse(response: any): AIProviderResponse {
+  parseResponse(response: unknown): AIProviderResponse {
     return this.parseResponseBody(response);
   }
 

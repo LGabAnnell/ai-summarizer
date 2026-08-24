@@ -36,7 +36,7 @@ export class OpenAIProvider extends OpenAICompatibleProvider {
     super(apiKey);
   }
 
-  protected getExtraBodyParams(): Record<string, any> {
+  protected getExtraBodyParams(): { frequency_penalty: number; presence_penalty: number } {
     return {frequency_penalty: 0.0, presence_penalty: 0.0};
   }
 }

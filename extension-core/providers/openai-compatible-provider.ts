@@ -6,6 +6,7 @@
 import {BaseProvider} from './base-provider';
 import type {AIProviderConfig, AIProviderResponse} from './provider.model';
 import {buildUserMessage} from './provider.utils';
+import {AIRequestSettings} from '@shared/lib/models/settings.model';
 
 export abstract class OpenAICompatibleProvider extends BaseProvider {
   // ── Concrete methods (shared body shape + response parsing) ─────────
@@ -14,8 +15,8 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
   buildRequestBody(
     articleText: string,
     title?: string,
-    settings?: Record<string, any>,
-  ): Record<string, any> {
+    settings?: AIRequestSettings,
+  ): Record<string, unknown> {
     const {
       model = this.config.defaultModel,
       temperature = 0.7,
@@ -43,16 +44,22 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
   }
 
   /** Parse the response — standard OpenAI choices format. */
-  parseResponseBody(response: any): AIProviderResponse {
+  parseResponseBody(response: unknown): AIProviderResponse {
+    const castResponse = response as {
+      choices?: Array<{ message?: { content?: string }; text?: string }>;
+      error?: { message?: string };
+      usage?: { total_tokens?: number };
+    };
+
     try {
-      if (response.choices && response.choices.length > 0) {
-        const firstChoice = response.choices[0];
+      if (castResponse.choices && castResponse.choices.length > 0) {
+        const firstChoice = castResponse.choices[0];
 
         if (firstChoice.message?.content) {
           return {
             summary: firstChoice.message.content,
             rawResponse: response,
-            tokenCount: response.usage?.total_tokens,
+            tokenCount: castResponse.usage?.total_tokens,
             truncated: false,
           };
         }
@@ -62,15 +69,15 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
           return {
             summary: firstChoice.text,
             rawResponse: response,
-            tokenCount: response.usage?.total_tokens,
+            tokenCount: castResponse.usage?.total_tokens,
             truncated: false,
           };
         }
       }
 
-      if (response.error) {
+      if (castResponse.error) {
         throw new Error(
-          response.error.message ?? `Unknown ${this.config.name} API error`,
+          castResponse.error.message ?? `Unknown ${this.config.name} API error`,
         );
       }
 
@@ -135,12 +142,12 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
 
       // Handle OpenAI/Mistral/DeepSeek response format: { data: [{ id: string, ... }] }
       if (data.data && Array.isArray(data.data)) {
-        return data.data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');
+        return data.data.map((model: { id: string }) => model.id).filter((id: string) => typeof id === 'string');
       }
 
       // Handle alternative format where models are directly in the response
       if (Array.isArray(data)) {
-        return data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');
+        return data.map((model: { id: string }) => model.id).filter((id: string) => typeof id === 'string');
       }
 
       console.warn('Unexpected models API response format', data);
@@ -157,5 +164,5 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
    * Override to add provider-specific body parameters.
    * e.g., Mistral adds `random_seed`, OpenAI adds penalties.
    */
-  protected abstract getExtraBodyParams(): Record<string, any>;
+  protected abstract getExtraBodyParams(): Record<string, unknown>;
 }

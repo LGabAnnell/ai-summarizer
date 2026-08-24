@@ -6,6 +6,7 @@
 import type {AIProviderConfig, AIProviderResponse} from './provider.model';
 import {BaseProvider} from './base-provider';
 import {buildUserMessage} from './provider.utils';
+import {AIRequestSettings} from '@shared/lib/models/settings.model';
 
 // Qwen API configuration
 const QWEN_CONFIG: AIProviderConfig = {
@@ -43,8 +44,8 @@ export class QwenProvider extends BaseProvider {
   buildRequestBody(
     articleText: string,
     title?: string,
-    settings?: Record<string, any>,
-  ): Record<string, any> {
+    settings?: AIRequestSettings,
+  ): Record<string, unknown> {
     const {
       model = this.config.defaultModel,
       temperature = 0.7,
@@ -74,37 +75,44 @@ export class QwenProvider extends BaseProvider {
   }
 
   /** Parse the response — DashScope format. */
-  parseResponseBody(response: any): AIProviderResponse {
+  parseResponseBody(response: unknown): AIProviderResponse {
+    const castResponse = response as {
+      output?: {choices?: {message?: {content?: string}}[]};
+      choices?: {message?: {content?: string}}[];
+      usage?: {input_tokens?: number; output_tokens?: number; total_tokens?: number};
+      error?: {message?: string};
+    };
     try {
       // Qwen API response format
-      if (response.output?.choices && response.output.choices.length > 0) {
-        const firstChoice = response.output.choices[0];
+      if (castResponse.output?.choices && castResponse.output.choices.length > 0) {
+        const firstChoice = castResponse.output.choices[0];
 
         if (firstChoice.message?.content) {
           return {
             summary: firstChoice.message.content,
             rawResponse: response,
-            tokenCount: response.usage?.input_tokens + response.usage?.output_tokens,
+            // @ts-expect-error undefined + undefined don't care
+            tokenCount: castResponse.usage?.input_tokens + castResponse.usage?.output_tokens,
             truncated: false,
           };
         }
       }
 
-      // Alternative response format
-      if (response.choices && response.choices.length > 0) {
-        const firstChoice = response.choices[0];
+      // Alternative castResponse format
+      if (castResponse.choices && castResponse.choices.length > 0) {
+        const firstChoice = castResponse.choices[0];
         if (firstChoice.message?.content) {
           return {
             summary: firstChoice.message.content,
             rawResponse: response,
-            tokenCount: response.usage?.total_tokens,
+            tokenCount: castResponse.usage?.total_tokens,
             truncated: false,
           };
         }
       }
 
-      if (response.error) {
-        throw new Error(response.error.message ?? 'Unknown Qwen API error');
+      if (castResponse.error) {
+        throw new Error(castResponse.error.message ?? 'Unknown Qwen API error');
       }
 
       throw new Error('Invalid Qwen API response format');
@@ -157,12 +165,12 @@ export class QwenProvider extends BaseProvider {
 
       // Handle DashScope response format
       if (data.data && Array.isArray(data.data)) {
-        return data.data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');
+        return data.data.map((model: unknown) => (model as { id: string }).id).filter((id: string) => typeof id === 'string');
       }
 
       // Handle alternative format where models are directly in the response
       if (Array.isArray(data)) {
-        return data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');
+        return data.map((model: unknown) => (model as { id: string }).id).filter((id: string) => typeof id === 'string');
       }
 
       console.warn('Unexpected models API response format from DashScope', data);

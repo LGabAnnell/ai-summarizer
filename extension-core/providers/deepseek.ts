@@ -32,7 +32,7 @@ export class DeepSeekProvider extends OpenAICompatibleProvider {
     super(apiKey);
   }
 
-  protected getExtraBodyParams(): Record<string, any> {
+  protected getExtraBodyParams(): Record<string, number> {
     return {frequency_penalty: 0.0, presence_penalty: 0.0};
   }
 }

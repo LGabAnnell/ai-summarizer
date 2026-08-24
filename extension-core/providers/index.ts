@@ -53,7 +53,7 @@ export function createProvider(
     }
     case 'firefox-ml':
       // Firefox ML provider doesn't need API key or endpoint
-      return createFirefoxMLProvider(apiKey);
+      return createFirefoxMLProvider();
     default:
       throw new Error(`Unknown provider type: ${providerType}`);
   }

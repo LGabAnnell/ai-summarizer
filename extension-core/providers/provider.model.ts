@@ -2,6 +2,7 @@
  * AI Provider Interface for Article Summarizer
  * Defines the contract that all AI providers must implement
  */
+import {AIRequestSettings} from '@shared/lib/models/settings.model';
 
 export interface AIProviderConfig {
   /** Provider name (e.g., 'mistral', 'openai', 'anthropic') */
@@ -44,24 +45,6 @@ export interface AIProviderResponse {
   truncated?: boolean;
 }
 
-
-// Mistral provider settings type
-export interface AIProviderSettings {
-  /** Model to use for completion */
-  model?: string;
-  /** Sampling temperature (0-1) */
-  temperature?: number;
-  /** Maximum tokens to generate */
-  maxTokens?: number;
-  /** Summary style */
-  summaryStyle?: string;
-  /** Custom system prompt */
-  customPrompt?: string;
-  endpoint?: string;
-  customEndpoint?: string;
-}
-
-
 export interface AIProvider {
   /** Provider configuration */
   config: AIProviderConfig;
@@ -75,7 +58,7 @@ export interface AIProvider {
   buildRequest(
     articleText: string,
     title?: string,
-    settings?: Record<string, unknown>
+    settings?: AIRequestSettings
   ): AIProviderRequest;
 
   /**
@@ -130,30 +113,4 @@ export interface ProviderSettings {
   maxTokens?: number;
   /** Sampling temperature (0-1) */
   temperature?: number;
-}
-
-/**
- * Factory function to create the appropriate provider instance
- */
-export function createProvider(providerType: ProviderType): AIProvider {
-  switch (providerType) {
-    case 'mistral':
-      // Import and return Mistral provider
-      // Note: Dynamic imports will be used in the actual implementation
-      return null as any; // Placeholder
-    case 'openai':
-      return null as any; // Placeholder
-    case 'anthropic':
-      return null as any; // Placeholder
-    case 'qwen':
-      return null as any; // Placeholder
-    case 'deepseek':
-      return null as any; // Placeholder
-    case 'custom':
-      return null as any; // Placeholder
-    case 'firefox-ml':
-      return null as any; // Placeholder
-    default:
-      throw new Error(`Unknown provider type: ${providerType}`);
-  }
 }

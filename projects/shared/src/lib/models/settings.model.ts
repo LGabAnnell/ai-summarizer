@@ -1,6 +1,7 @@
 /**
  * Models for extension settings
  */
+import {SummaryStyle} from "@shared/lib/models/summary-prompts.model";
 
 export type ProviderType = 'mistral' | 'openai' | 'anthropic' | 'qwen' | 'deepseek' | 'custom' | 'firefox-ml';
 
@@ -43,7 +44,7 @@ export interface AIRequestSettings {
   /** Maximum tokens to generate */
   maxTokens?: number;
   /** Summary style (e.g., 'concise', 'detailed', 'bullet_points') */
-  summaryStyle?: string;
+  summaryStyle?: SummaryStyle;
   /** Custom system prompt */
   customPrompt?: string;
 }

@@ -6,6 +6,7 @@
 import type {AIProviderConfig, AIProviderResponse} from './provider.model';
 import {BaseProvider} from './base-provider';
 import {buildUserMessage} from './provider.utils';
+import {AIRequestSettings} from '@shared/lib/models/settings.model';
 
 // Anthropic API configuration
 const ANTHROPIC_CONFIG: AIProviderConfig = {
@@ -47,11 +48,11 @@ export class AnthropicProvider extends BaseProvider {
   }
 
   /** Build the request body — Anthropic Messages API format. */
-  buildRequestBody(
+  override buildRequestBody(
     articleText: string,
     title?: string,
-    settings?: Record<string, any>,
-  ): Record<string, any> {
+    settings?: AIRequestSettings,
+  ): Record<string, unknown> {
     const {
       model = this.config.defaultModel,
       temperature = 0.7,
@@ -77,28 +78,35 @@ export class AnthropicProvider extends BaseProvider {
   }
 
   /** Parse the response — Anthropic Messages API format. */
-  parseResponseBody(response: any): AIProviderResponse {
+  parseResponseBody(response: unknown): AIProviderResponse {
+    const castResponse = response as {
+      content: Array<{type: string; text: string}>;
+      usage?: {input_tokens: number; output_tokens: number};
+      error?: {message: string};
+    };
+
     try {
-      if (response.content && response.content.length > 0) {
-        const content = response.content[0];
+      if (castResponse.content && castResponse.content.length > 0) {
+        const content = castResponse.content[0];
 
         if (content.type === 'text') {
           return {
             summary: content.text,
             rawResponse: response,
-            tokenCount: response.usage?.input_tokens + response.usage?.output_tokens,
+            tokenCount: (castResponse.usage?.input_tokens ?? 0) + (castResponse.usage?.output_tokens ?? 0),
             truncated: false,
           };
         }
 
         // Fallback to first content block
-        if (Array.isArray(response.content)) {
-          for (const block of response.content) {
+        if (Array.isArray(castResponse.content)) {
+          for (const block of castResponse.content) {
             if (block.type === 'text' && block.text) {
               return {
                 summary: block.text,
                 rawResponse: response,
-                tokenCount: response.usage?.input_tokens + response.usage?.output_tokens,
+                // @ts-expect-error undefined + undefined don't care
+                tokenCount: castResponse.usage?.input_tokens + castResponse.usage?.output_tokens,
                 truncated: false,
               };
             }
@@ -106,8 +114,8 @@ export class AnthropicProvider extends BaseProvider {
         }
       }
 
-      if (response.error) {
-        throw new Error(response.error.message ?? 'Unknown Anthropic API error');
+      if (castResponse.error) {
+        throw new Error(castResponse.error.message ?? 'Unknown Anthropic API error');
       }
 
       throw new Error('Invalid Anthropic API response format');
@@ -158,12 +166,12 @@ export class AnthropicProvider extends BaseProvider {
 
       // Handle Anthropic response format: { data: [{ id: string, ... }] }
       if (data.data && Array.isArray(data.data)) {
-        return data.data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');
+        return data.data.map((model: { id: string }) => model.id).filter((id: string) => typeof id === 'string');
       }
 
       // Handle alternative format
       if (Array.isArray(data)) {
-        return data.map((model: any) => model.id).filter((id: string) => typeof id === 'string');
+        return data.map((model: { id: string }) => model.id).filter((id: string) => typeof id === 'string');
       }
 
       console.warn('Unexpected models API response format from Anthropic', data);

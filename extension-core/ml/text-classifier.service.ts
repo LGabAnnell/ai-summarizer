@@ -243,7 +243,7 @@ export class TextClassifierService {
    * Normalizes different possible result formats
    */
   private parseResult(
-    result: any,
+    result: unknown,
     metadata: { modelId?: string; inferenceTime?: number },
   ): ClassificationResult {
     try {
@@ -275,11 +275,11 @@ export class TextClassifierService {
       }
 
       // Handle single object result
-      if (result && typeof result === 'object' && result.label && result.score) {
+      if (result && typeof result === 'object' && 'label' in result && 'score' in result) {
         return {
           ok: true,
-          label: result.label,
-          score: result.score,
+          label: result.label as string,
+          score: result.score as number,
           modelId: metadata.modelId,
           inferenceTime: metadata.inferenceTime,
         };
@@ -287,10 +287,17 @@ export class TextClassifierService {
 
       // Handle result with different property names
       if (result && typeof result === 'object') {
-        const label = result.label ?? result.result ?? result.output;
-        const score = result.score ?? result.confidence ?? result.probability;
+        const label =
+          (result as { label?: unknown }).label ??
+          (result as { result?: unknown }).result ??
+          (result as { output?: unknown }).output;
 
-        if (label && score) {
+        const score =
+          (result as { score?: unknown }).score ??
+          (result as { confidence?: unknown }).confidence ??
+          (result as { probability?: unknown }).probability;
+
+        if (label !== undefined && score !== undefined) {
           return {
             ok: true,
             label: String(label),
@@ -321,7 +328,7 @@ export class TextClassifierService {
   /**
    * Normalize error to consistent format
    */
-  private normalizeError(error: any, inferenceTime?: number): ClassificationResult {
+  private normalizeError(error: unknown, inferenceTime?: number): ClassificationResult {
     const errorMessage = this.getErrorMessage(error);
     // const errorCode = this.getErrorCode(error); // Not using code for now
 
@@ -335,7 +342,7 @@ export class TextClassifierService {
   /**
    * Get user-friendly error message
    */
-  private getErrorMessage(error: any): string {
+  private getErrorMessage(error: unknown): string {
     if (typeof error === 'string') {
       return error;
     }

@@ -9,7 +9,6 @@ import type {
   AIProviderConfig,
   AIProviderRequest,
   AIProviderResponse,
-  ProviderSettings,
 } from './provider.model';
 import {
   buildBaseHeaders,
@@ -40,9 +39,6 @@ const FIREFOX_ML_CONFIG: AIProviderConfig = {
  */
 export class FirefoxMLProvider implements AIProvider {
   readonly config = FIREFOX_ML_CONFIG;
-
-  constructor(_: string) {
-  }
 
   /**
    * Build the API request for Firefox ML
@@ -159,13 +155,13 @@ export class FirefoxMLProvider implements AIProvider {
 /**
  * Create a new Firefox ML provider instance
  */
-export function createFirefoxMLProvider(apiKey: string): FirefoxMLProvider {
-  return new FirefoxMLProvider(apiKey);
+export function createFirefoxMLProvider(): FirefoxMLProvider {
+  return new FirefoxMLProvider();
 }
 
 /**
  * Create a Firefox ML provider from settings
  */
-export function createFirefoxMLProviderFromSettings(settings: ProviderSettings): FirefoxMLProvider {
-  return new FirefoxMLProvider(settings.apiKey || '');
+export function createFirefoxMLProviderFromSettings(): FirefoxMLProvider {
+  return new FirefoxMLProvider();
 }
