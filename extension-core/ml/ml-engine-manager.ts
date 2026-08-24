@@ -15,7 +15,7 @@ interface MLCreateEngineRequest {
   taskName: string;
   modelId?: string;
   model?: string;
-  options?: Record<string, any>;
+  options?: Record<string, unknown>;
 }
 
 /**
@@ -26,7 +26,7 @@ export interface MLEngineConfig {
   taskName: 'text-classification' | 'summarization';
   modelId?: string; // Make modelId optional for task-based approach
   maxTextLength?: number;
-  taskOptions?: Record<string, any>; // Task-specific options (e.g., max_length, temperature for summarization)
+  taskOptions?: Record<string, unknown>; // Task-specific options (e.g., max_length, temperature for summarization)
 }
 
 /**
@@ -35,7 +35,7 @@ export interface MLEngineConfig {
 export interface MLEngine {
   id: string;
   config: MLEngineConfig;
-  engine: any; // The actual browser.trial.ml engine object
+  engine: unknown; // The actual browser.trial.ml engine object
   createdAt: number;
   lastUsedAt: number;
 }
@@ -81,7 +81,7 @@ const DEFAULT_CONFIG: MLEngineConfig = {
  * Generate a unique engine key based on task type and model
  */
 function generateEngineKey(config: MLEngineConfig): string {
-  return `${config.taskName}_${config.modelHub || 'mozilla'}_${config.modelId || 'default'}`;
+  return `${config.taskName}_${config.modelHub ?? 'mozilla'}_${config.modelId ?? 'default'}`;
 }
 
 /**
@@ -100,9 +100,7 @@ export class MLEngineManager {
    * Singleton instance
    */
   public static getInstance(): MLEngineManager {
-    if (!MLEngineManager.instance) {
-      MLEngineManager.instance = new MLEngineManager();
-    }
+    MLEngineManager.instance ??= new MLEngineManager();
     return MLEngineManager.instance;
   }
 
@@ -197,7 +195,7 @@ export class MLEngineManager {
    * Accepts optional config to specify which engine to use
    * Note: Task-specific options should be passed in the config parameter
    */
-  async runEngine(text: string, timeoutMs = 30000, config?: Partial<MLEngineConfig>): Promise<any> {
+  async runEngine(text: string, timeoutMs = 30000, config?: Partial<MLEngineConfig>): Promise<unknown> {
     try {
       const engine = await this.getEngine(config);
       const trialML = browser.trial.ml;
@@ -219,7 +217,7 @@ export class MLEngineManager {
       // The API signature is: runEngine(engine, inputText)
       const result = await Promise.race([
         trialML.runEngine({
-          args: text
+          args: text,
         }),
         timeoutPromise,
       ]);
@@ -242,45 +240,12 @@ export class MLEngineManager {
       // Dispose specific engine
       const engine = this.engines.get(key);
       if (engine?.engine) {
-        try {
-          const trialML = (browser as any).trial.ml;
-          if (typeof trialML.deleteEngine === 'function') {
-            console.log(`MLEngineManager: Disposing engine ${key}`);
-            await trialML.deleteEngine(engine.engine);
-          }
-          this.engines.delete(key);
-          console.log(`MLEngineManager: Engine ${key} disposed`);
-        } catch (error) {
-          console.error(`MLEngineManager: Error disposing engine ${key}:`, error);
-          this.engines.delete(key);
-        }
+        this.engines.delete(key);
       }
     } else {
       // Dispose all engines
-      const disposalPromises: Promise<void>[] = [];
-
-      for (const [engineKey, engine] of this.engines.entries()) {
-        if (engine.engine) {
-          disposalPromises.push(
-            (async () => {
-              try {
-                const trialML = (browser as any).trial.ml;
-                if (typeof trialML.deleteEngine === 'function') {
-                  console.log(`MLEngineManager: Disposing engine ${engineKey}`);
-                  await trialML.deleteEngine(engine.engine);
-                }
-              } catch (error) {
-                console.error(`MLEngineManager: Error disposing engine ${engineKey}:`, error);
-              }
-            })(),
-          );
-        }
-      }
-
-      await Promise.all(disposalPromises);
       this.engines.clear();
       this.enginePromises.clear();
-      console.log('MLEngineManager: All engines disposed');
     }
   }
 
@@ -453,10 +418,10 @@ export class MLEngineManager {
   /**
    * Map browser progress status to our internal status
    */
-  private mapProgressStatus(event: any): MLEngineProgressEvent['status'] {
-    const status = event.status?.toLowerCase();
-    if (status === 'complete' || event.progress >= 1.0) return 'complete';
-    if (status === 'error' || event.error) return 'error';
+  private mapProgressStatus(event: { [p: string]: unknown }): MLEngineProgressEvent['status'] {
+    const status = (event['status'] as string)?.toLowerCase();
+    if (status === 'complete' || event['progress'] as number >= 1.0) return 'complete';
+    if (status === 'error' || event['error']) return 'error';
     if (status === 'extracting') return 'extracting';
     return 'downloading';
   }

@@ -6,7 +6,7 @@
  *  - parseResponseBody() (response format is provider-specific)
  */
 
-import type {AIProvider, AIProviderConfig, AIProviderRequest, AIProviderResponse,} from './provider.model';
+import type {AIProvider, AIProviderConfig, AIProviderRequest, AIProviderResponse} from './provider.model';
 import {
   addAuthHeader,
   buildBaseHeaders,
@@ -14,7 +14,7 @@ import {
   getSystemPrompt as getSystemPromptUtil,
   getTokenCount as getTokenCountUtil,
 } from './provider.utils';
-import {SummaryStyle} from "./summary-prompts";
+import {SummaryStyle} from './summary-prompts';
 
 export abstract class BaseProvider implements AIProvider {
   abstract readonly config: AIProviderConfig;

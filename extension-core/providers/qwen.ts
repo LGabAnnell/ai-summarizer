@@ -5,7 +5,7 @@
 
 import type {AIProviderConfig, AIProviderResponse} from './provider.model';
 import {BaseProvider} from './base-provider';
-import {buildUserMessage,} from './provider.utils';
+import {buildUserMessage} from './provider.utils';
 
 // Qwen API configuration
 const QWEN_CONFIG: AIProviderConfig = {
@@ -104,11 +104,11 @@ export class QwenProvider extends BaseProvider {
       }
 
       if (response.error) {
-        throw new Error(response.error.message || 'Unknown Qwen API error');
+        throw new Error(response.error.message ?? 'Unknown Qwen API error');
       }
 
       throw new Error('Invalid Qwen API response format');
-    } catch (error) {
+    } catch {
       return {
         summary: '',
         rawResponse: response,
@@ -127,7 +127,7 @@ export class QwenProvider extends BaseProvider {
 
     if (!modelsEndpoint) {
       // Fallback to hardcoded models if no models endpoint is configured
-      return this.config.availableModels || [];
+      return this.config.availableModels ?? [];
     }
 
     try {

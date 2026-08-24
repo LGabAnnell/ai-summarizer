@@ -1,6 +1,6 @@
 import esbuild from 'esbuild';
 import path from 'path';
-import { spawnSync } from 'child_process';
+import {spawnSync} from 'child_process';
 
 const __dirname = path.resolve();
 
@@ -21,7 +21,7 @@ function typeCheck(): void {
   const result = spawnSync(
     'npx',
     ['tsc', '--noEmit', '-p', path.resolve(__dirname, 'tsconfig.extension.json')],
-    { stdio: 'inherit', shell: true },
+    {stdio: 'inherit', shell: true},
   );
   if (result.status !== 0) {
     console.error('Type-check failed. Aborting extension build.');
@@ -38,8 +38,7 @@ function getBackgroundConfig(debug: boolean): esbuild.BuildOptions {
     sourcemap: debug,
     define: {
       global: 'globalThis',
-    },
-    tsconfig: path.resolve(__dirname + '/tsconfig.json'),
+    }
   };
 }
 
@@ -52,7 +51,6 @@ function getContentConfig(_: boolean): esbuild.BuildOptions {
     define: {
       global: 'globalThis',
     },
-    tsconfig: path.resolve(__dirname + '/tsconfig.json'),
   };
 }
 
@@ -64,7 +62,7 @@ async function buildExtension(debug: boolean = false) {
 
   const backgroundConfig = getBackgroundConfig(debug);
   const contentConfig = getContentConfig(debug);
-  
+
   try {
     // Build background
     console.log('Building background.js...');

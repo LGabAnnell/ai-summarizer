@@ -18,7 +18,7 @@ import {
   getTokenCount as getTokenCountUtil,
 } from './provider.utils';
 import {AIRequestSettings} from '@shared/lib/models/settings.model';
-import {SummaryStyle} from "./summary-prompts";
+import {SummaryStyle} from './summary-prompts';
 
 // Firefox ML API configuration
 const FIREFOX_ML_CONFIG: AIProviderConfig = {
@@ -63,12 +63,12 @@ export class FirefoxMLProvider implements AIProvider {
       body: {
         text: articleText,
         title: title,
-        model: settings?.model || this.config.defaultModel,
+        model: settings?.model ?? this.config.defaultModel,
         // Firefox ML summarization parameters
-        max_length: settings?.maxTokens || 500,
+        max_length: settings?.maxTokens ?? 500,
         min_length: 30,
         do_sample: settings?.temperature ? settings.temperature > 0 : false,
-        temperature: settings?.temperature || 0.7,
+        temperature: settings?.temperature ?? 0.7,
       },
     };
   }
@@ -152,7 +152,7 @@ export class FirefoxMLProvider implements AIProvider {
   async fetchModels(_: string): Promise<string[]> {
     // Firefox ML summarization models are fixed
     // In the future, this could use browser.trial.ml.listEngines() if available
-    return this.config.availableModels || [];
+    return this.config.availableModels ?? [];
   }
 }
 

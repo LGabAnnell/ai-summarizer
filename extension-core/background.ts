@@ -13,7 +13,7 @@ import {CachedSummaryData, Message, SetThemeRequest, SummarizeResponse} from '@s
 import {ClassificationResult, textClassifierService} from './ml/text-classifier.service';
 import {mlPermissionService} from './ml/ml-permission.service';
 import {MLEngineConfig, mlEngineManager} from './ml/ml-engine-manager';
-import {ProviderType} from "@shared/lib/models/settings.model";
+import {ProviderType} from '@shared/lib/models/settings.model';
 
 // ML-related types for message handling
 export interface ClassifyTextRequest {
@@ -380,7 +380,7 @@ async function callProviderAPI(
       const errorText = await response.text();
       try {
         const errorJson = JSON.parse(errorText);
-        throw new Error(errorJson.error?.message || errorJson.message || `HTTP ${response.status}`);
+        throw new Error(errorJson.error?.message ?? errorJson.message ?? `HTTP ${response.status}`);
       } catch (parseError) {
         throw new Error(`HTTP ${response.status}: ${errorText}`, {cause: parseError});
       }
@@ -463,7 +463,7 @@ async function callFirefoxMLProvider(
         const firstResult = result[0];
         let summary: string = firstResult?.summary_text ?? '';
 
-        if (summary && summary.trim()) {
+        if (summary?.trim()) {
           // Clean up the summary by removing any trailing special tokens
           // Firefox ML models may add their own stop tokens
           summary = summary.trim();
@@ -832,7 +832,7 @@ async function handleClearMLCache(): Promise<{
       success: false,
       data: {
         success: false,
-        error: `Cache clear failed: ${error instanceof Error ? error.message : String(error)}`
+        error: `Cache clear failed: ${error instanceof Error ? error.message : String(error)}`,
       },
     };
   }
@@ -1000,19 +1000,25 @@ browser.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 // This sends progress events to all connected front-ends (popup, sidebar, options)
 function setupMLProgressBroadcasting(): void {
   try {
-
     console.log('Background: Setting up ML progress event broadcasting');
 
-    browser.trial.ml.onProgress.addListener((progressEvent: any) => {
+    browser.trial.ml.onProgress.addListener((progressEvent: { [p: string]: unknown }) => {
       console.log('Background: ML progress event received:', progressEvent);
+
+      const pEvent = progressEvent as {
+        progress: number;
+        modelId?: string;
+        status?: string;
+        message?: string;
+      };
 
       // Broadcast progress to all connected front-ends
       const progressMessage = {
         type: 'MODEL_DOWNLOAD_PROGRESS',
-        progress: Math.round(progressEvent.progress * 100) || 0,
-        modelId: progressEvent.modelId || 'unknown',
-        status: progressEvent.status || 'downloading',
-        message: progressEvent.message,
+        progress: Math.round(pEvent.progress * 100) || 0,
+        modelId: pEvent.modelId ?? 'unknown',
+        status: pEvent.status ?? 'downloading',
+        message: pEvent.message,
       };
 
       // Send to all tabs that might be listening

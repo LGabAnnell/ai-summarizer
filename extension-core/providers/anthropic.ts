@@ -5,7 +5,7 @@
 
 import type {AIProviderConfig, AIProviderResponse} from './provider.model';
 import {BaseProvider} from './base-provider';
-import {buildUserMessage,} from './provider.utils';
+import {buildUserMessage} from './provider.utils';
 
 // Anthropic API configuration
 const ANTHROPIC_CONFIG: AIProviderConfig = {
@@ -58,7 +58,7 @@ export class AnthropicProvider extends BaseProvider {
       maxTokens = 500,
       summaryStyle = 'concise',
       customPrompt,
-    } = settings || {};
+    } = settings ?? {};
 
     const systemPrompt = this.getSystemPrompt(summaryStyle, customPrompt);
     const userMessage = buildUserMessage(articleText, title);
@@ -107,11 +107,11 @@ export class AnthropicProvider extends BaseProvider {
       }
 
       if (response.error) {
-        throw new Error(response.error.message || 'Unknown Anthropic API error');
+        throw new Error(response.error.message ?? 'Unknown Anthropic API error');
       }
 
       throw new Error('Invalid Anthropic API response format');
-    } catch (error) {
+    } catch {
       return {
         summary: '',
         rawResponse: response,
@@ -130,7 +130,7 @@ export class AnthropicProvider extends BaseProvider {
 
     if (!modelsEndpoint) {
       // Fallback to hardcoded models if no models endpoint is configured
-      return this.config.availableModels || [];
+      return this.config.availableModels ?? [];
     }
 
     try {
@@ -151,7 +151,7 @@ export class AnthropicProvider extends BaseProvider {
       if (!response.ok) {
         // If API call fails, fall back to hardcoded models
         console.warn(`Failed to fetch models from ${modelsEndpoint}: ${response.status} ${response.statusText}`);
-        return this.config.availableModels || [];
+        return this.config.availableModels ?? [];
       }
 
       const data = await response.json();
@@ -167,11 +167,11 @@ export class AnthropicProvider extends BaseProvider {
       }
 
       console.warn('Unexpected models API response format from Anthropic', data);
-      return this.config.availableModels || [];
+      return this.config.availableModels ?? [];
     } catch (error) {
       console.error('Error fetching Anthropic models:', error);
       // Fall back to hardcoded models on any error
-      return this.config.availableModels || [];
+      return this.config.availableModels ?? [];
     }
   }
 

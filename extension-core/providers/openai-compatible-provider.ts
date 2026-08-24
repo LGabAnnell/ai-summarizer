@@ -22,7 +22,7 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
       maxTokens = 500,
       summaryStyle = 'concise',
       customPrompt,
-    } = settings || {};
+    } = settings ?? {};
 
     const systemPrompt = this.getSystemPrompt(summaryStyle, customPrompt);
     const userMessage = buildUserMessage(articleText, title);
@@ -70,12 +70,12 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
 
       if (response.error) {
         throw new Error(
-          response.error.message || `Unknown ${this.config.name} API error`,
+          response.error.message ?? `Unknown ${this.config.name} API error`,
         );
       }
 
       throw new Error(`Invalid ${this.config.name} API response format`);
-    } catch (error) {
+    } catch {
       return {
         summary: '',
         rawResponse: response,
@@ -97,7 +97,7 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
 
     if (!modelsEndpoint) {
       // Fallback to hardcoded models if no models endpoint is configured
-      return this.config.availableModels || [];
+      return this.config.availableModels ?? [];
     }
 
     try {
@@ -122,7 +122,7 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
         let errorMessage = `HTTP ${response.status}`;
         try {
           const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.error?.message || errorJson.message || errorMessage;
+          errorMessage = errorJson.error?.message ?? errorJson.message ?? errorMessage;
         } catch {
           if (errorText) {
             errorMessage = `${errorMessage}: ${errorText}`;
@@ -144,7 +144,7 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
       }
 
       console.warn('Unexpected models API response format', data);
-      return this.config.availableModels || [];
+      return this.config.availableModels ?? [];
     } catch (error) {
       console.error('Error fetching models:', error);
       throw error instanceof Error ? error : new Error(String(error));

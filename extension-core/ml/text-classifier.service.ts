@@ -71,9 +71,7 @@ export class TextClassifierService {
    * Singleton instance
    */
   public static getInstance(): TextClassifierService {
-    if (!TextClassifierService.instance) {
-      TextClassifierService.instance = new TextClassifierService();
-    }
+    TextClassifierService.instance ??= new TextClassifierService();
     return TextClassifierService.instance;
   }
 
@@ -99,7 +97,7 @@ export class TextClassifierService {
       }
 
       // Truncate text if too long
-      const truncatedText = this.truncateText(text, config?.maxTextLength || 10000);
+      const truncatedText = this.truncateText(text, config?.maxTextLength ?? 10000);
 
       // Check API availability
       if (!mlPermissionService.isAPIAvailable()) {
@@ -120,18 +118,9 @@ export class TextClassifierService {
         };
       }
 
-      // @ts-expect-error
-      // Get engine manager and run classification
-      const engineConfig: Partial<MLEngineConfig> = {
-        modelHub: config?.modelHub,
-        modelId: config?.modelId,
-      };
-
-      console.log('TextClassifierService: Running classification with text length:', truncatedText.length);
-
       const result = await mlEngineManager.runEngine(
         truncatedText,
-        config?.timeout || 30000,
+        config?.timeout ?? 30000,
       );
 
       // Parse and normalize the result
@@ -298,8 +287,8 @@ export class TextClassifierService {
 
       // Handle result with different property names
       if (result && typeof result === 'object') {
-        const label = result.label || result.result || result.output;
-        const score = result.score || result.confidence || result.probability;
+        const label = result.label ?? result.result ?? result.output;
+        const score = result.score ?? result.confidence ?? result.probability;
 
         if (label && score) {
           return {

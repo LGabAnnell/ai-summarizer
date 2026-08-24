@@ -38,7 +38,6 @@ export class MistralProvider extends OpenAICompatibleProvider {
   protected getExtraBodyParams(): Record<string, any> {
     return {random_seed: 42};
   }
-
 }
 
 /**

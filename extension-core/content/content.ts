@@ -28,7 +28,7 @@ interface ExtractResponse {
 interface Message {
   type: string;
 
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Maximum text length to extract (to avoid sending too much data)
@@ -42,7 +42,7 @@ function extractArticle(): ArticleData | null {
   try {
     // Use Mozilla's Readability library
     const doc = document.cloneNode(true) as Document;
-    const readability = new Readability(doc/*, {
+    const readability = new Readability(doc,/*, {
       charThreshold: MAX_TEXT_LENGTH,
     }*/);
 
@@ -56,9 +56,9 @@ function extractArticle(): ArticleData | null {
       }
 
       return {
-        title: article.title || document.title || '',
+        title: article.title ?? document.title ?? '',
         textContent: textContent,
-        byline: article.byline || '',
+        byline: article.byline ?? '',
         length: textContent.length,
         url: window.location.href,
       };
@@ -77,11 +77,11 @@ function extractArticle(): ArticleData | null {
 function extractArticleFallback(): ArticleData | null {
   try {
     // Try to find article element
-    const articleElement = document.querySelector('article') ||
-      document.querySelector('main') ||
-      document.querySelector('.article') ||
-      document.querySelector('.content') ||
-      document.querySelector('.post') ||
+    const articleElement = document.querySelector('article') ??
+      document.querySelector('main') ??
+      document.querySelector('.article') ??
+      document.querySelector('.content') ??
+      document.querySelector('.post') ??
       document.body;
 
     if (!articleElement) {
@@ -167,7 +167,7 @@ const handleMessage: OnMessageListener = (request: unknown, _: unknown, sendResp
   // Return true to indicate we will send a response asynchronously
   // This is required for Manifest V3
   return true;
-}
+};
 
 // Listen for messages from the background script
 browser.runtime.onMessage.addListener(handleMessage);

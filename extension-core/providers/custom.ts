@@ -18,7 +18,7 @@ export class CustomProvider extends OpenAICompatibleProvider {
     super(apiKey);
     this.config = {
       name: 'custom',
-      endpoint: endpoint || '',
+      endpoint: endpoint ?? '',
       authHeader: 'Authorization',
       useBearerToken: true,
       defaultModel: '',

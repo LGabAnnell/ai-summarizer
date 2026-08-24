@@ -31,9 +31,7 @@ export class MLPermissionService {
    * Singleton instance
    */
   public static getInstance(): MLPermissionService {
-    if (!MLPermissionService.instance) {
-      MLPermissionService.instance = new MLPermissionService();
-    }
+    MLPermissionService.instance ??= new MLPermissionService();
     return MLPermissionService.instance;
   }
 
@@ -107,7 +105,7 @@ export class MLPermissionService {
   isAPIAvailable(): boolean {
     // Check if browser.trial and browser.trial.ml exist
     const hasTrialAPI = typeof (browser as any).trial !== 'undefined';
-    const hasMLAPI = hasTrialAPI && typeof (browser as any).trial.ml !== 'undefined';
+    const hasMLAPI = hasTrialAPI && typeof browser.trial.ml !== 'undefined';
 
     console.log('MLPermissionService.isAPIAvailable: trial API available:', hasTrialAPI, '| trial.ml available:', hasMLAPI);
     return hasMLAPI;

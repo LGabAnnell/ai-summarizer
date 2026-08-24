@@ -46,10 +46,11 @@ export function createProvider(
       return createQwenProvider(apiKey);
     case 'deepseek':
       return createDeepSeekProvider(apiKey);
-    case 'custom':
+    case 'custom': {
       // For custom provider, get endpoint from settings
-      const endpoint = settings?.endpoint || settings?.customEndpoint;
+      const endpoint = settings?.endpoint ?? settings?.customEndpoint;
       return createCustomProvider(apiKey, endpoint);
+    }
     case 'firefox-ml':
       // Firefox ML provider doesn't need API key or endpoint
       return createFirefoxMLProvider(apiKey);
