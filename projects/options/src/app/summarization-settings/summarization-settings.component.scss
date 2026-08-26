@@ -104,6 +104,12 @@
     width: 80px;
   }
 
+  input.auto-size {
+    width: auto;
+    min-width: 3ch;
+    field-sizing: content;
+  }
+
   button {
     width: 32px;
     height: 32px;
