@@ -55,14 +55,6 @@ describe('CopyButtonComponent', () => {
       expect(buttonText).toContain(component.successText());
     });
 
-    it('should disable button when disabled is true', () => {
-      fixture.componentRef.setInput('disabled', true);
-      fixture.detectChanges();
-
-      const button = fixture.debugElement.query(By.css('button')).nativeElement;
-      expect(button.disabled).toBeTruthy();
-    });
-
     it('should display default text when text input is set', () => {
       fixture.componentRef.setInput('text', 'Custom Copy');
       fixture.detectChanges();

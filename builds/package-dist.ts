@@ -61,7 +61,7 @@ async function packageDist() {
         const browserPath = path.join(srcPath, 'browser');
         if (fs.existsSync(browserPath)) {
           // Copy contents from browser/ to the destination
-          copyFolderContents(browserPath, destPath);
+          copyFolderRecursiveSync(browserPath, destPath);
           console.log(`Copied ${browserPath}/* to ${folder.dest}/`);
           
           // Remove the browser directory as it's now flattened
@@ -102,28 +102,6 @@ async function packageDist() {
   } catch (error) {
     console.error('Error packaging dist:', error);
     process.exit(1);
-  }
-}
-
-function copyFolderContents(source: string, target: string) {
-  // Ensure target directory exists
-  if (!fs.existsSync(target)) {
-    fs.mkdirSync(target, { recursive: true });
-  }
-
-  const files = fs.readdirSync(source);
-  
-  for (const file of files) {
-    const sourcePath = path.join(source, file);
-    const targetPath = path.join(target, file);
-    
-    const stats = fs.statSync(sourcePath);
-    
-    if (stats.isDirectory()) {
-      copyFolderRecursiveSync(sourcePath, targetPath);
-    } else {
-      fs.copyFileSync(sourcePath, targetPath);
-    }
   }
 }
 

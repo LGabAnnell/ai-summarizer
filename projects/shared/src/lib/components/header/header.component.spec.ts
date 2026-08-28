@@ -4,19 +4,22 @@ import {By} from '@angular/platform-browser';
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {ThemeService} from '../..//services/theme.service';
 
+function createMockThemeService(isDark: boolean): ThemeService {
+  return {
+    isDarkTheme: vi.fn(() => isDark),
+    theme: {asReadonly: () => ({})} as any,
+    systemTheme: {asReadonly: () => ({})} as any,
+    effectiveTheme: {asReadonly: () => ({})} as any,
+  } as unknown as ThemeService;
+}
+
 describe('HeaderComponent', () => {
   let component: HeaderComponent;
   let fixture: ComponentFixture<HeaderComponent>;
   let mockThemeService: ThemeService;
 
   beforeEach(async () => {
-    // Create a mock ThemeService
-    mockThemeService = {
-      isDarkTheme: vi.fn(() => false),
-      theme: {asReadonly: () => ({})} as any,
-      systemTheme: {asReadonly: () => ({})} as any,
-      effectiveTheme: {asReadonly: () => ({})} as any
-    } as unknown as ThemeService;
+    mockThemeService = createMockThemeService(false);
 
     await TestBed.configureTestingModule({
       imports: [HeaderComponent]
@@ -93,12 +96,7 @@ describe('HeaderComponent', () => {
 
   describe('Theme Toggle Button', () => {
     it('should display moon emoji when theme is light', () => {
-      const lightThemeService = {
-        isDarkTheme: vi.fn(() => false),
-        theme: {asReadonly: () => ({})} as any,
-        systemTheme: {asReadonly: () => ({})} as any,
-        effectiveTheme: {asReadonly: () => ({})} as any
-      } as unknown as ThemeService;
+      const lightThemeService = createMockThemeService(false);
 
       fixture.componentRef.setInput('showThemeToggle', true);
       fixture.componentRef.setInput('themeService', lightThemeService);
@@ -109,12 +107,7 @@ describe('HeaderComponent', () => {
     });
 
     it('should display sun emoji when theme is dark', () => {
-      const darkThemeService = {
-        isDarkTheme: vi.fn(() => true),
-        theme: {asReadonly: () => ({})} as any,
-        systemTheme: {asReadonly: () => ({})} as any,
-        effectiveTheme: {asReadonly: () => ({})} as any
-      } as unknown as ThemeService;
+      const darkThemeService = createMockThemeService(true);
 
       fixture.componentRef.setInput('showThemeToggle', true);
       fixture.componentRef.setInput('themeService', darkThemeService);
@@ -125,12 +118,7 @@ describe('HeaderComponent', () => {
     });
 
     it('should have aria-label for light mode when theme is light', () => {
-      const lightThemeService = {
-        isDarkTheme: vi.fn(() => false),
-        theme: {asReadonly: () => ({})} as any,
-        systemTheme: {asReadonly: () => ({})} as any,
-        effectiveTheme: {asReadonly: () => ({})} as any
-      } as unknown as ThemeService;
+      const lightThemeService = createMockThemeService(false);
 
       fixture.componentRef.setInput('showThemeToggle', true);
       fixture.componentRef.setInput('themeService', lightThemeService);
@@ -141,12 +129,7 @@ describe('HeaderComponent', () => {
     });
 
     it('should have aria-label for dark mode when theme is dark', () => {
-      const darkThemeService = {
-        isDarkTheme: vi.fn(() => true),
-        theme: {asReadonly: () => ({})} as any,
-        systemTheme: {asReadonly: () => ({})} as any,
-        effectiveTheme: {asReadonly: () => ({})} as any
-      } as unknown as ThemeService;
+      const darkThemeService = createMockThemeService(true);
 
       fixture.componentRef.setInput('showThemeToggle', true);
       fixture.componentRef.setInput('themeService', darkThemeService);
@@ -157,12 +140,7 @@ describe('HeaderComponent', () => {
     });
 
     it('should not have theme-toggle--active class when theme is light', () => {
-      const lightThemeService = {
-        isDarkTheme: vi.fn(() => false),
-        theme: {asReadonly: () => ({})} as any,
-        systemTheme: {asReadonly: () => ({})} as any,
-        effectiveTheme: {asReadonly: () => ({})} as any
-      } as unknown as ThemeService;
+      const lightThemeService = createMockThemeService(false);
 
       fixture.componentRef.setInput('showThemeToggle', true);
       fixture.componentRef.setInput('themeService', lightThemeService);
@@ -173,12 +151,7 @@ describe('HeaderComponent', () => {
     });
 
     it('should have theme-toggle--active class when theme is dark', () => {
-      const darkThemeService = {
-        isDarkTheme: vi.fn(() => true),
-        theme: {asReadonly: () => ({})} as any,
-        systemTheme: {asReadonly: () => ({})} as any,
-        effectiveTheme: {asReadonly: () => ({})} as any
-      } as unknown as ThemeService;
+      const darkThemeService = createMockThemeService(true);
 
       fixture.componentRef.setInput('showThemeToggle', true);
       fixture.componentRef.setInput('themeService', darkThemeService);

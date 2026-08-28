@@ -38,6 +38,16 @@ export class MessagingService {
   }
 
   /**
+   * Extract data from message response, handling both wrapped and direct formats
+   */
+  private extractData<T>(response: MessageResponse<T>): T {
+    if (response.data && typeof response.data === 'object') {
+      return response.data as T;
+    }
+    return response as unknown as T;
+  }
+
+  /**
    * Send a message to the background script
    */
   sendMessage<T>(message: Message): Observable<MessageResponse<T>> {
@@ -227,12 +237,7 @@ export class MessagingService {
       type: 'NOTIFY_ML_PERMISSION_GRANTED'
     }).pipe(
       map(response => {
-        let result: { success: boolean; error?: string };
-        if (response.data && typeof response.data === 'object') {
-          result = response.data as { success: boolean; error?: string };
-        } else {
-          result = response as unknown as { success: boolean; error?: string };
-        }
+        const result = this.extractData<{ success: boolean; error?: string }>(response);
         return {
           success: result.success || false,
           error: result.error,
@@ -287,12 +292,7 @@ export class MessagingService {
       type: 'CHECK_ML_AVAILABILITY'
     }).pipe(
       map(response => {
-        let result: { available: boolean; apiAvailable: boolean; permissionGranted: boolean };
-        if (response.data && typeof response.data === 'object') {
-          result = response.data as { available: boolean; apiAvailable: boolean; permissionGranted: boolean };
-        } else {
-          result = response as unknown as { available: boolean; apiAvailable: boolean; permissionGranted: boolean };
-        }
+        const result = this.extractData<{ available: boolean; apiAvailable: boolean; permissionGranted: boolean }>(response);
         return {
           available: result.available || false,
           apiAvailable: result.apiAvailable || false,
@@ -318,12 +318,7 @@ export class MessagingService {
       type: 'CLEAR_ML_CACHE'
     }).pipe(
       map(response => {
-        let result: { success: boolean; error?: string };
-        if (response.data && typeof response.data === 'object') {
-          result = response.data as { success: boolean; error?: string };
-        } else {
-          result = response as unknown as { success: boolean; error?: string };
-        }
+        const result = this.extractData<{ success: boolean; error?: string }>(response);
         return {
           success: result.success || false,
           error: result.error,

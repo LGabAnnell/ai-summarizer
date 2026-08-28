@@ -13,8 +13,7 @@ import {ExtensionSettings} from '../models/settings.model';
 import {
   ClassificationResult,
   MLSettings,
-  ModelDownloadProgress,
-  ModelDownloadProgressMessage
+  ModelDownloadProgress
 } from '../models/classification.model';
 
 /**
@@ -186,76 +185,14 @@ export class ClassificationService {
     apiAvailable: boolean;
     permissionGranted: boolean;
   }> {
-
-    if (typeof browser === 'undefined') {
-      console.error('ClassificationService.checkMLAvailability: Not running in browser extension context');
-      return throwError(() => new Error('Not running in browser extension context'));
-    }
-
-    return this.messagingService.sendMessage<{
-      available: boolean;
-      apiAvailable: boolean;
-      permissionGranted: boolean;
-    }>({
-      type: 'CHECK_ML_AVAILABILITY'
-    }).pipe(
-      map(response => {
-        let result: { available: boolean; apiAvailable: boolean; permissionGranted: boolean };
-        if (response.data && typeof response.data === 'object') {
-          result = response.data as { available: boolean; apiAvailable: boolean; permissionGranted: boolean };
-        } else {
-          result = response as unknown as { available: boolean; apiAvailable: boolean; permissionGranted: boolean };
-        }
-        return {
-          available: result.available || false,
-          apiAvailable: result.apiAvailable || false,
-          permissionGranted: result.permissionGranted || false,
-        };
-      }),
-      catchError((error) => {
-        console.error('ClassificationService.checkMLAvailability: Error:', error);
-        return of({
-          available: false,
-          apiAvailable: false,
-          permissionGranted: false,
-        });
-      })
-    );
+    return this.messagingService.checkMLAvailability();
   }
 
   /**
    * Clear ML model cache
    */
   clearMLCache(): Observable<{ success: boolean; error?: string }> {
-
-    if (typeof browser === 'undefined') {
-      console.error('ClassificationService.clearMLCache: Not running in browser extension context');
-      return throwError(() => new Error('Not running in browser extension context'));
-    }
-
-    return this.messagingService.sendMessage<{ success: boolean; error?: string }>({
-      type: 'CLEAR_ML_CACHE'
-    }).pipe(
-      map(response => {
-        let result: { success: boolean; error?: string };
-        if (response.data && typeof response.data === 'object') {
-          result = response.data as { success: boolean; error?: string };
-        } else {
-          result = response as unknown as { success: boolean; error?: string };
-        }
-        return {
-          success: result.success || false,
-          error: result.error,
-        };
-      }),
-      catchError((error) => {
-        console.error('ClassificationService.clearMLCache: Error:', error);
-        return of({
-          success: false,
-          error: error instanceof Error ? error.message : 'Cache clear failed',
-        });
-      })
-    );
+    return this.messagingService.clearMLCache();
   }
 
   /**
@@ -331,36 +268,7 @@ export class ClassificationService {
    * This listens for broadcast messages from the background script
    */
   onModelDownloadProgress(): Observable<ModelDownloadProgress> {
-
-    if (typeof browser === 'undefined') {
-      console.error('ClassificationService.onModelDownloadProgress: Not running in browser extension context');
-      return throwError(() => new Error('Not running in browser extension context'));
-    }
-
-    // Return an observable that listens for progress messages
-    return new Observable<ModelDownloadProgress>(subscriber => {
-      const listener = (message: unknown) => {
-
-        const progressMessage = message as ModelDownloadProgressMessage;
-        if (progressMessage && progressMessage.type === 'MODEL_DOWNLOAD_PROGRESS') {
-          const progress: ModelDownloadProgress = {
-            progress: progressMessage.progress || 0,
-            modelId: progressMessage.modelId || 'unknown',
-            status: progressMessage.status || 'downloading',
-            message: progressMessage.message,
-          };
-          subscriber.next(progress);
-        }
-      };
-
-      // Add listener
-      browser.runtime.onMessage.addListener(listener);
-
-      // Cleanup on unsubscribe
-      return () => {
-        browser.runtime.onMessage.removeListener(listener);
-      };
-    });
+    return this.messagingService.onModelDownloadProgress();
   }
 
   /**

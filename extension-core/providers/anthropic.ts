@@ -5,7 +5,7 @@
 
 import type {AIProviderConfig, AIProviderResponse} from './provider.model';
 import {BaseProvider} from './base-provider';
-import {buildUserMessage} from './provider.utils';
+import {buildUserMessage, parseModelsResponse} from './provider.utils';
 import {AIRequestSettings} from '@shared/lib/models/settings.model';
 
 // Anthropic API configuration
@@ -164,14 +164,10 @@ export class AnthropicProvider extends BaseProvider {
 
       const data = await response.json();
 
-      // Handle Anthropic response format: { data: [{ id: string, ... }] }
-      if (data.data && Array.isArray(data.data)) {
-        return data.data.map((model: { id: string }) => model.id).filter((id: string) => typeof id === 'string');
-      }
-
-      // Handle alternative format
-      if (Array.isArray(data)) {
-        return data.map((model: { id: string }) => model.id).filter((id: string) => typeof id === 'string');
+      // Parse models response using shared utility
+      const models = parseModelsResponse(data);
+      if (models.length) {
+        return models;
       }
 
       console.warn('Unexpected models API response format from Anthropic', data);

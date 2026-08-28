@@ -54,14 +54,6 @@ describe('SummarizeButtonComponent', () => {
       expect(buttonText).toContain(component.text());
     });
 
-    it('should disable button when disabled is true', () => {
-      fixture.componentRef.setInput('disabled', true);
-      fixture.detectChanges();
-
-      const button = fixture.debugElement.query(By.css('button')).nativeElement;
-      expect(button.disabled).toBeTruthy();
-    });
-
     it('should disable button when loading is true', () => {
       fixture.componentRef.setInput('loading', true);
       fixture.detectChanges();

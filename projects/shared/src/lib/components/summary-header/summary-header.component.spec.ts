@@ -20,6 +20,14 @@ describe('SummaryHeaderComponent', () => {
 
   // ==================== Component Creation Tests ====================
 
+  function queryHeaderElements() {
+    return {
+      header: fixture.debugElement.query(By.css('.summary-header')),
+      title: fixture.debugElement.query(By.css('.summary-title')),
+      actions: fixture.debugElement.query(By.css('.summary-actions')),
+    };
+  }
+
   it('should create', () => {
     expect(component).toBeTruthy();
   });
@@ -220,13 +228,9 @@ describe('SummaryHeaderComponent', () => {
     it('should render complete header structure with all elements', () => {
       fixture.detectChanges();
 
-      const header = fixture.debugElement.query(By.css('.summary-header'));
+      const {header, title, actions} = queryHeaderElements();
       expect(header).toBeTruthy();
-
-      const title = fixture.debugElement.query(By.css('.summary-title'));
       expect(title).toBeTruthy();
-
-      const actions = fixture.debugElement.query(By.css('.summary-actions'));
       expect(actions).toBeTruthy();
 
       const copyButton = fixture.debugElement.query(By.directive(CopyButtonComponent));
@@ -237,13 +241,9 @@ describe('SummaryHeaderComponent', () => {
       fixture.componentRef.setInput('showActions', false);
       fixture.detectChanges();
 
-      const header = fixture.debugElement.query(By.css('.summary-header'));
+      const {header, title, actions} = queryHeaderElements();
       expect(header).toBeTruthy();
-
-      const title = fixture.debugElement.query(By.css('.summary-title'));
       expect(title).toBeTruthy();
-
-      const actions = fixture.debugElement.query(By.css('.summary-actions'));
       expect(actions).toBeNull();
     });
   });

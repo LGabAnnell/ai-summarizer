@@ -77,3 +77,17 @@ export function getTokenCount(
   const articleTokens = estimateFn(articleText);
   return promptTokens + articleTokens;
 }
+
+/**
+ * Parse models response from provider API
+ * Handles both { data: [{ id: string }] } and [{ id: string }] formats
+ */
+export function parseModelsResponse(data: unknown): string[] {
+  if (data && typeof data === 'object' && 'data' in data && Array.isArray((data as any).data)) {
+    return (data as any).data.map((m: { id: string }) => m.id).filter((id: string) => typeof id === 'string');
+  }
+  if (Array.isArray(data)) {
+    return data.map((m: { id: string }) => m.id).filter((id: string) => typeof id === 'string');
+  }
+  return [];
+}

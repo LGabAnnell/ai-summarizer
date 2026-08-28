@@ -5,7 +5,7 @@
 
 import {BaseProvider} from './base-provider';
 import type {AIProviderConfig, AIProviderResponse} from './provider.model';
-import {buildUserMessage} from './provider.utils';
+import {buildUserMessage, parseModelsResponse} from './provider.utils';
 import {AIRequestSettings} from '@shared/lib/models/settings.model';
 
 export abstract class OpenAICompatibleProvider extends BaseProvider {
@@ -140,14 +140,10 @@ export abstract class OpenAICompatibleProvider extends BaseProvider {
 
       const data = await response.json();
 
-      // Handle OpenAI/Mistral/DeepSeek response format: { data: [{ id: string, ... }] }
-      if (data.data && Array.isArray(data.data)) {
-        return data.data.map((model: { id: string }) => model.id).filter((id: string) => typeof id === 'string');
-      }
-
-      // Handle alternative format where models are directly in the response
-      if (Array.isArray(data)) {
-        return data.map((model: { id: string }) => model.id).filter((id: string) => typeof id === 'string');
+      // Parse models response using shared utility
+      const models = parseModelsResponse(data);
+      if (models.length) {
+        return models;
       }
 
       console.warn('Unexpected models API response format', data);
