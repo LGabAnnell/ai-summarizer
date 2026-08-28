@@ -1,10 +1,14 @@
 /* Global styles for the options page */
 // Shared styles are imported from @shared/lib/styles/index.scss
 
-html, body {
+html {
+  width: 100%;
+}
+
+body {
   background-color: var(--bg-secondary);
   width: 800px;
-  height: 700px;
+  margin: 0 auto;
 }
 
 options-root {

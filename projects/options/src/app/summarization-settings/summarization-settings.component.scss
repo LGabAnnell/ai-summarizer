@@ -53,3 +53,27 @@
     }
   }
 }
+
+.token-presets {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.token-preset {
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 6px;
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #333);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--hover-bg, #e9ecef);
+    border-color: var(--primary-color, #007bff);
+    color: var(--primary-color, #007bff);
+  }
+}

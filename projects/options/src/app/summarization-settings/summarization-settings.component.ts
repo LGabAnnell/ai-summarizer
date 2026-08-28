@@ -29,4 +29,8 @@ export class SummarizationSettingsComponent {
   get predefinedPrompt(): string {
     return SUMMARY_PROMPTS[this.currentStyle] ?? '';
   }
+
+  setMaxTokens(value: number): void {
+    this.formDirective.control.get('maxTokens')?.setValue(value);
+  }
 }

@@ -133,7 +133,7 @@ export class AppComponent implements OnInit {
           temperature: settings.temperature,
           cacheEnabled: settings.cacheEnabled,
           cacheTTL: settings.cacheTTL,
-        });
+        }, {emitEvent: false});
         this.isLoading.set(false);
       },
       error: (error) => {

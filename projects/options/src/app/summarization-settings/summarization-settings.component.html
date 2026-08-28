@@ -74,19 +74,25 @@
     </div>
   </div>
 
-  <div class="form-group">
-    <label class="form-label" for="maxTokens">Maximum Tokens</label>
-    <div class="number-input-container">
+  <div class="grid-2">
+    <div class="form-group">
+      <label class="form-label" for="maxTokens">Maximum Tokens</label>
       <input
-              class="form-input auto-size"
+              class="form-input w-full"
               formControlName="maxTokens"
               id="maxTokens"
               min="50"
               type="number"
       >
-    </div>
-    <div class="form-description">
-      Maximum number of tokens to generate in the summary
+      <div class="token-presets">
+        <button type="button" class="token-preset" (click)="setMaxTokens(500)">500</button>
+        <button type="button" class="token-preset" (click)="setMaxTokens(1000)">1000</button>
+        <button type="button" class="token-preset" (click)="setMaxTokens(5000)">5000</button>
+        <button type="button" class="token-preset" (click)="setMaxTokens(10000)">10000</button>
+      </div>
+      <div class="form-description">
+        Maximum number of tokens to generate in the summary
+      </div>
     </div>
   </div>
 </div>
