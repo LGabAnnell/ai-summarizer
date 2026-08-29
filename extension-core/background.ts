@@ -627,7 +627,7 @@ async function handleRefreshModels(providerType: ProviderType, apiKey: string): 
     const provider = createProvider(providerType, apiKey);
 
     // Call the provider's fetchModels method
-    const models = await provider.fetchModels(apiKey);
+    const models = (await provider.fetchModels(apiKey)).sort((a, b) => a.localeCompare(b));
 
     return {
       success: true,
