@@ -1,7 +1,7 @@
 /**
  * Models for extension settings
  */
-import {SummaryStyle} from "@shared/lib/models/summary-prompts.model";
+import {SummaryStyle} from "./summary-prompts.model";
 
 export type ProviderType = 'mistral' | 'openai' | 'anthropic' | 'qwen' | 'deepseek' | 'custom' | 'firefox-ml';
 
