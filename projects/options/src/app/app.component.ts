@@ -13,10 +13,9 @@ import {
 } from '@shared/public-api';
 import {ProviderConfigComponent} from './provider-config/provider-config.component';
 import {SummarizationSettingsComponent} from './summarization-settings/summarization-settings.component';
-import {CacheSettingsComponent} from './cache-settings/cache-settings.component';
 import {takeUntilDestroyed} from "@angular/core/rxjs-interop";
-import {combineLatest, distinctUntilChanged} from "rxjs";
-import {map} from "rxjs/operators";
+import {distinctUntilChanged, merge} from "rxjs";
+import {debounceTime, filter, map} from "rxjs/operators";
 
 @Component({
   selector: 'options-root',
@@ -29,8 +28,7 @@ import {map} from "rxjs/operators";
     ToastContainerComponent,
     SaveBarComponent,
     ProviderConfigComponent,
-    SummarizationSettingsComponent,
-    CacheSettingsComponent
+    SummarizationSettingsComponent
   ],
   templateUrl: 'app.component.html',
   styleUrl: 'app.component.scss',
@@ -98,10 +96,12 @@ export class AppComponent implements OnInit {
       this.isFirefoxMLProvider.set(value);
     });
 
-    combineLatest([
+    merge(
       this.settingsForm.get('provider')!.valueChanges,
       this.settingsForm.get('apiKey')!.valueChanges
-    ]).pipe(
+    ).pipe(
+      debounceTime(300),
+      filter(() => !!this.settingsForm.get('apiKey')?.value),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(() => {
       this.onRefreshModels();

@@ -4,20 +4,6 @@
       <span>🤖</span>
       AI Provider Configuration
     </div>
-    <div class="section-actions">
-      <button
-              (click)="onTestConnection()"
-              [disabled]="isTesting()"
-              class="btn btn--secondary btn--small"
-              type="button">
-        @if (isTesting()) {
-          <span class="spinner"></span>
-          Testing...
-        } @else {
-          Test Connection
-        }
-      </button>
-    </div>
   </div>
   <div class="section-description">
     Configure your AI provider and API credentials
@@ -142,20 +128,4 @@
     </div>
   }
 
-  @if (connectionStatus()) {
-    <div class="form-group">
-      @if (connectionStatus() === 'connected') {
-        <div class="status-badge status-connected">
-          <span class="status-dot status-connected"></span>
-          Connection successful
-        </div>
-      }
-      @if (connectionStatus() === 'failed') {
-        <div class="status-badge status-disconnected">
-          <span class="status-dot status-disconnected"></span>
-          Connection failed
-        </div>
-      }
-    </div>
-  }
 </div>

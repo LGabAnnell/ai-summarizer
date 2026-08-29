@@ -29,11 +29,8 @@
       <options-provider-config
               (providerChange)="onProviderChange($event)"
               (refreshModels)="onRefreshModels()"
-              (testConnection)="onTestConnection()"
               [availableModels]="availableModels()"
-              [connectionStatus]="connectionStatus()"
               [isFirefoxMLProvider]="isFirefoxMLProvider()"
-              [isTesting]="isTesting()"
               [modelsError]="modelsError()"
               [modelsLoading]="modelsLoading()"
               [providerTypes]="providerTypes()">
@@ -42,12 +39,6 @@
       <!-- Summarization Settings Section -->
       <options-summarization-settings>
       </options-summarization-settings>
-
-      <!-- Cache Settings Section -->
-      <options-cache-settings
-              (clearCache)="onClearCache()"
-              [isLoading]="isLoading()">
-      </options-cache-settings>
 
     </div>
   </form>

@@ -50,3 +50,6 @@ builds/*.js.map
 # Temporary files
 tmp/
 temp/
+
+# build zip
+ai-summarizer.zip

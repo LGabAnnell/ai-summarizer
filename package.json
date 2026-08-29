@@ -27,7 +27,7 @@
     "lint:sidebar": "ng lint sidebar",
     "lint:shared": "ng lint shared",
     "lint:all": "npm run lint:extension-core && npm run lint:shared && npm run lint:popup && npm run lint:options && npm run lint:sidebar",
-    "package": "rm -rf dist && npm run build && web-ext build --source-dir=dist --artifacts-dir=. --filename=ai-summarizer.zip --overwrite-dest",
+    "package": "rm -rf dist && npm run lint:all && npm run build && web-ext build --source-dir=dist --artifacts-dir=. --filename=ai-summarizer.zip --overwrite-dest",
     "run": "web-ext run"
   },
   "private": true,
