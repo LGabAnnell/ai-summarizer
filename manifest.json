@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Article Summarizer",
-  "version": "1.0.0",
+  "name": "AI Article Summarizer",
+  "version": "1.0.1",
   "description": "Extracts article content and summarizes it using configurable AI providers (Mistral, OpenAI, Anthropic, Qwen, DeepSeek, Custom). Includes local text classification using Firefox's built-in AI runtime.",
   "icons": {
     "48": "icons/icon-48.svg",
@@ -57,5 +57,13 @@
   ],
   "host_permissions": [
     "<all_urls>"
-  ]
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "ai-summarizer@annell.ch",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
 }
