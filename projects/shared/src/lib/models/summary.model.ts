@@ -12,6 +12,7 @@ import {
   NotifyMLPermissionGrantedRequest
 } from "./classification.model";
 import {Theme} from "./theme.model";
+import type {ClassifyWithAgentRequest} from "./agent-classification.model";
 
 export interface ExtractArticleRequest {
   type: 'EXTRACT_ARTICLE';
@@ -39,6 +40,10 @@ export interface CachedSummaryData {
   url: string;
   provider: string;
   model: string;
+  // Mistral agent classification labels
+  agentLabels?: string[];
+  agentId?: string;
+  agentVersion?: string;
 }
 
 export interface SummarizeResponse {
@@ -50,6 +55,8 @@ export interface SummarizeResponse {
   tokenCount?: number;
   // NEW: Classification result (optional)
   classification?: ClassificationResult;
+  // NEW: Mistral agent classification labels (optional)
+  agentLabels?: string[];
 }
 
 export interface GetSettingsRequest {
@@ -87,6 +94,9 @@ export interface ThemeChangedMessage {
   theme: Theme;
 }
 
+// Re-export ClassifyWithAgentRequest from agent-classification.model for external use
+export { ClassifyWithAgentRequest } from "./agent-classification.model";
+
 // Discriminated union type for all possible incoming message types
 export type Message =
   | ExtractAndSummarizeRequest
@@ -102,7 +112,8 @@ export type Message =
   | GetMLPermissionStatusRequest
   | NotifyMLPermissionGrantedRequest
   | ClearMLCacheRequest
-  | CheckMLAvailabilityRequest;
+  | CheckMLAvailabilityRequest
+  | ClassifyWithAgentRequest;
 
 
 export interface SummaryResult {
@@ -117,6 +128,8 @@ export interface SummaryResult {
   timestamp: Date;
   // NEW: Classification result (optional)
   classification?: ClassificationResult;
+  // NEW: Mistral agent classification labels (optional)
+  agentLabels?: string[];
 }
 
 export interface SummaryState {

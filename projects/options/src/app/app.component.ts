@@ -13,6 +13,7 @@ import {
 } from '@shared/public-api';
 import {ProviderConfigComponent} from './provider-config/provider-config.component';
 import {SummarizationSettingsComponent} from './summarization-settings/summarization-settings.component';
+import {MistralAgentSettingsComponent} from './mistral-agent-settings/mistral-agent-settings.component';
 import {takeUntilDestroyed} from "@angular/core/rxjs-interop";
 import {distinctUntilChanged, merge} from "rxjs";
 import {debounceTime, filter, map} from "rxjs/operators";
@@ -28,7 +29,8 @@ import {debounceTime, filter, map} from "rxjs/operators";
     ToastContainerComponent,
     SaveBarComponent,
     ProviderConfigComponent,
-    SummarizationSettingsComponent
+    SummarizationSettingsComponent,
+    MistralAgentSettingsComponent
   ],
   templateUrl: 'app.component.html',
   styleUrl: 'app.component.scss',
@@ -86,6 +88,9 @@ export class AppComponent implements OnInit {
       temperature: [0.7, [Validators.required, Validators.min(0), Validators.max(1)]],
       cacheEnabled: [true],
       cacheTTL: [7, [Validators.required, Validators.min(1), Validators.max(30)]],
+      // Mistral Agent Classification Settings
+      mistralAgentId: [''],
+      mistralAgentVersion: [''],
     });
 
     this.settingsForm.get('provider')?.valueChanges?.pipe(
@@ -133,6 +138,9 @@ export class AppComponent implements OnInit {
           temperature: settings.temperature,
           cacheEnabled: settings.cacheEnabled,
           cacheTTL: settings.cacheTTL,
+          // Mistral Agent Classification Settings
+          mistralAgentId: settings.mistralAgentId || '',
+          mistralAgentVersion: settings.mistralAgentVersion || '',
         }, {emitEvent: false});
         this.isLoading.set(false);
       },
@@ -257,6 +265,9 @@ export class AppComponent implements OnInit {
       temperature: formValue.temperature,
       cacheEnabled: formValue.cacheEnabled,
       cacheTTL: formValue.cacheTTL,
+      // Mistral Agent Classification Settings
+      mistralAgentId: formValue.mistralAgentId || undefined,
+      mistralAgentVersion: formValue.mistralAgentVersion || undefined,
     };
     this.isLoading.set(true);
     this.settingsService.saveSettings(settings).subscribe({
@@ -290,6 +301,9 @@ export class AppComponent implements OnInit {
             temperature: defaultSettings.temperature,
             cacheEnabled: defaultSettings.cacheEnabled,
             cacheTTL: defaultSettings.cacheTTL,
+            // Mistral Agent Classification Settings
+            mistralAgentId: defaultSettings.mistralAgentId || '',
+            mistralAgentVersion: defaultSettings.mistralAgentVersion || '',
           });
           this.successMessage.set('Settings reset to defaults!');
           this.isLoading.set(false);

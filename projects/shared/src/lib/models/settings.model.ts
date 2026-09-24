@@ -34,6 +34,12 @@ export interface ExtensionSettings {
   mlModelHub?: 'mozilla' | 'huggingface';
   /** Specific model ID for text-classification */
   mlModelId?: string;
+
+  // Mistral Agent Classification Settings
+  /** Mistral agent ID for classification */
+  mistralAgentId?: string;
+  /** Mistral agent version for classification */
+  mistralAgentVersion?: string;
 }
 
 export interface AIRequestSettings {
@@ -65,6 +71,9 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   mlEnabled: false,
   mlModelHub: 'mozilla',
   mlModelId: 'distilbert-base-uncased-finetuned-sst-2-english',
+  // Mistral Agent Classification Settings (both start blank)
+  mistralAgentId: '',
+  mistralAgentVersion: '',
 };
 
 /**

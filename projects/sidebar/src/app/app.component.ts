@@ -22,6 +22,7 @@ import {
   SummaryState,
   ThemeService
 } from '@shared/public-api';
+import {AgentClassificationState} from '@shared/lib/models/agent-classification.model';
 import browser from "webextension-polyfill";
 
 /**
@@ -114,6 +115,19 @@ type ViewMode = 'current' | 'history' | 'history-detail';
                     <span class="classification-label">{{ classificationFromSummary()?.label }}</span>
                     <span class="classification-confidence">{{ (classificationFromSummary()?.score || 0) * 100 | number:'1.0-0' }}
                       %</span>
+                  </div>
+                </div>
+              }
+              <!-- NEW: Mistral agent labels display -->
+              @if (agentLabelsFromSummary() && agentLabelsFromSummary()!.length > 0) {
+                <div class="agent-labels-section">
+                  <div class="agent-labels-header">
+                    <span>🎯 Agent Classification</span>
+                  </div>
+                  <div class="agent-labels">
+                    @for (label of agentLabelsFromSummary(); track label) {
+                      <span class="agent-label-badge">{{ label }}</span>
+                    }
                   </div>
                 </div>
               }
@@ -462,6 +476,41 @@ type ViewMode = 'current' | 'history' | 'history-detail';
         color: var(--text-muted, #666);
         font-size: 12px;
       }
+
+      /* NEW: Mistral agent labels styles */
+      .agent-labels-section {
+        margin-top: 16px;
+        padding: 12px;
+        background: var(--bg-secondary, #f8f9fa);
+        border-radius: 8px;
+        border: 1px solid var(--border-color, #e0e0e0);
+      }
+
+      .agent-labels-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 8px;
+        color: var(--text-primary, #333);
+      }
+
+      .agent-labels {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .agent-label-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        background: var(--primary-color, #007bff);
+        color: white;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+      }
     `
   ],
 })
@@ -476,6 +525,10 @@ export class AppComponent implements OnInit, OnDestroy {
   classificationResult = signal<ClassificationResult | undefined>(undefined);
   classificationProgress = signal<number>(0);
   mlSettings = signal<MLSettings | undefined>(undefined);
+  // Mistral Agent Classification state
+  agentClassificationState = signal<AgentClassificationState>({state: 'idle'});
+  agentLabels = signal<string[] | undefined>(undefined);
+  agentClassificationError = signal<string | undefined>(undefined);
   // Copy state for current summary
   copying = signal<boolean>(false);
   copySuccess = signal<boolean>(false);
@@ -491,6 +544,12 @@ export class AppComponent implements OnInit, OnDestroy {
   classificationFromSummary = computed<ClassificationResult | undefined>(() => {
     const summary = this.currentSummary();
     return summary?.classification;
+  });
+  
+  // NEW: Mistral agent labels from summary
+  agentLabelsFromSummary = computed<string[] | undefined>(() => {
+    const summary = this.currentSummary();
+    return summary?.agentLabels;
   });
   currentArticleUrl = computed<string>(() => {
     const summary = this.currentSummary();
@@ -527,6 +586,8 @@ export class AppComponent implements OnInit, OnDestroy {
   private classificationService = inject(ClassificationService);
   // Track last added summary to prevent infinite loop
   private lastAddedSummaryId = signal<string | null>(null);
+  // Track classification request in progress
+  private classificationRequestInProgress = signal<boolean>(false);
   // Store message listener for cleanup
   private messageListener: ((message: unknown) => void) | null = null;
   // Private variables for cleanup
@@ -553,6 +614,9 @@ export class AppComponent implements OnInit, OnDestroy {
           this.historyService.addSummary(state.summary);
           this.lastAddedSummaryId.set(summaryId);
         }
+
+        // Trigger Mistral agent classification if conditions are met
+        this.triggerMistralAgentClassification(state.summary);
       }
 
       if (state.state === 'error') {
@@ -929,6 +993,104 @@ export class AppComponent implements OnInit, OnDestroy {
     this.classificationState.set({state: 'idle'});
     this.classificationResult.set(undefined);
     this.classificationProgress.set(0);
+  }
+
+  // ============================================================================
+  // Mistral Agent Classification Methods
+  // ============================================================================
+
+  /**
+   * Check if Mistral agent classification is enabled and configured
+   */
+  isMistralAgentClassificationEnabled(): boolean {
+    const settings = this.settingsService.getSetting('provider');
+    const mistralAgentId = this.settingsService.getSetting('mistralAgentId');
+    const mistralAgentVersion = this.settingsService.getSetting('mistralAgentVersion');
+    return settings === 'mistral' && !!mistralAgentId && !!mistralAgentVersion;
+  }
+
+  /**
+   * Trigger Mistral agent classification for a summary
+   * Called after summary is displayed in the sidebar
+   */
+  triggerMistralAgentClassification(summary: SummaryResult): void {
+    // Don't trigger if already in progress or not for current view
+    if (this.classificationRequestInProgress() || this.currentView() !== 'current') {
+      return;
+    }
+
+    // Check if classification should run
+    const settings = this.settingsService.settings();
+    if (settings.provider !== 'mistral' || !settings.mistralAgentId || !settings.mistralAgentVersion) {
+      // Not configured, clear any existing labels
+      if (this.agentLabels()) {
+        this.agentLabels.set(undefined);
+      }
+      return;
+    }
+
+    // Check if we already have labels for this summary
+    if (summary.agentLabels && summary.agentLabels.length > 0) {
+      // Already have labels, display them
+      this.agentLabels.set(summary.agentLabels);
+      return;
+    }
+
+    // Get API key for Mistral
+    const apiKey = settings.apiKey;
+    if (!apiKey) {
+      console.warn('Sidebar: Mistral API key not configured for agent classification');
+      this.agentClassificationError.set('Mistral API key is required for agent classification');
+      return;
+    }
+
+    // Mark request as in progress
+    this.classificationRequestInProgress.set(true);
+    this.agentClassificationState.set({state: 'loading'});
+    this.agentClassificationError.set(undefined);
+
+    // Trigger classification
+    this.classificationService.classifyWithMistralAgent(
+      summary.summary,
+      settings.mistralAgentId!,
+      settings.mistralAgentVersion!
+    ).subscribe({
+      next: (result) => {
+        if (result.labels && result.labels.length > 0) {
+          // Success - update labels
+          this.agentLabels.set(result.labels);
+          this.agentClassificationState.set({state: 'success', labels: result.labels});
+          
+          // Update the current summary with labels
+          const currentState = this.summaryState();
+          if (currentState.state === 'success' && currentState.summary) {
+            this.summaryState.set({
+              ...currentState,
+              summary: {
+                ...currentState.summary,
+                agentLabels: result.labels,
+              },
+            });
+          }
+        } else {
+          // Error
+          this.agentClassificationState.set({state: 'error', error: result.error || 'Classification failed'});
+          this.agentClassificationError.set(result.error || 'Classification failed');
+        }
+        this.classificationRequestInProgress.set(false);
+      },
+      error: (error) => {
+        console.error('Sidebar: Mistral agent classification error:', error);
+        this.agentClassificationState.set({
+          state: 'error',
+          error: error instanceof Error ? error.message : 'Mistral agent classification failed'
+        });
+        this.agentClassificationError.set(
+          error instanceof Error ? error.message : 'Mistral agent classification failed'
+        );
+        this.classificationRequestInProgress.set(false);
+      },
+    });
   }
 
   /**

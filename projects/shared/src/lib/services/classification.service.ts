@@ -285,4 +285,19 @@ export class ClassificationService {
 
     return this.classifyText(text);
   }
+
+  /**
+   * Classify text using Mistral agent
+   * This uses the Conversations API with the configured agent
+   * @param summary The summary text to classify
+   * @param agentId The agent ID to use
+   * @param agentVersion The agent version to use
+   */
+  classifyWithMistralAgent(
+    summary: string,
+    agentId: string,
+    agentVersion: string
+  ): Observable<{ labels?: string[]; error?: string }> {
+    return this.messagingService.classifyWithMistralAgent(summary, agentId, agentVersion);
+  }
 }

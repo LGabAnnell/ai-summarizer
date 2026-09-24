@@ -1,0 +1,84 @@
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">
+      <span>🎯</span>
+      Mistral Agent Classification
+    </div>
+  </div>
+  <div class="section-description">
+    Configure Mistral agent for classifying sidebar summaries (optional)
+  </div>
+
+  <div class="agent-info-toggle">
+    <button
+            (click)="onToggleAgentInfo()"
+            class="info-toggle-btn"
+            type="button">
+      @if (showAgentInfo()) {
+        ▼ Hide Information
+      } @else {
+        ▶ Show Information
+      }
+    </button>
+  </div>
+
+  @if (showAgentInfo()) {
+    <div class="agent-info-box">
+      <p><strong>What is Mistral Agent Classification?</strong></p>
+      <p>After a sidebar summary appears, it will be sent to a configured Mistral agent for classification. 
+        The agent will return 5 labels that will be displayed beside the summary.</p>
+      <p><strong>Requirements:</strong></p>
+      <ul>
+        <li>Mistral must be selected as the provider</li>
+        <li>Valid Mistral API key</li>
+        <li>Valid agent ID and version</li>
+        <li>Agent must return a JSON array of exactly 5 nonempty strings</li>
+      </ul>
+      <p><strong>Note:</strong> Popup summaries will NOT trigger classification. Classification failures 
+        will leave the summary visible and show a separate error in the sidebar.</p>
+      <p><em>Example agent ID: <code>your-agent-id</code>, Version: <code>9</code></em></p>
+    </div>
+  }
+
+  <div class="form-group">
+    <label class="form-label" for="mistralAgentId">Agent ID</label>
+    <input
+            class="form-input"
+            formControlName="mistralAgentId"
+            id="mistralAgentId"
+            placeholder="Enter agent ID..."
+            type="text"
+    >
+    <div class="form-description">
+      The ID of your Mistral agent for classification
+    </div>
+    @if (agentIdErrors?.['required']) {
+      <div class="form-error">Agent ID is required for classification</div>
+    }
+  </div>
+
+  <div class="form-group">
+    <label class="form-label" for="mistralAgentVersion">Agent Version</label>
+    <input
+            class="form-input"
+            formControlName="mistralAgentVersion"
+            id="mistralAgentVersion"
+            placeholder="Enter agent version..."
+            type="text"
+    >
+    <div class="form-description">
+      The version of your Mistral agent
+    </div>
+    @if (agentVersionErrors?.['required']) {
+      <div class="form-error">Agent version is required for classification</div>
+    }
+  </div>
+
+  @if (isAgentConfigured()) {
+    <div class="agent-status">
+      <span class="status-indicator">✓</span>
+      <span>Agent classification is configured and will run on sidebar summaries</span>
+    </div>
+  }
+
+</div>

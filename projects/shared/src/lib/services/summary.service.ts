@@ -45,6 +45,7 @@ export class SummaryService {
             title: string;
             articleUrl: string;
             cached: boolean;
+            agentLabels?: string[];
             classification?: {
               label?: string;
               score?: number;
@@ -60,7 +61,9 @@ export class SummaryService {
             timestamp: new Date(),
             title: data.title,
             articleUrl: data.articleUrl,
-            // NEW: Include classification if present
+            // NEW: Include Mistral agent labels if present
+            agentLabels: data.agentLabels,
+            // NEW: Include ML classification if present
             classification: data.classification ? {
               ok: true,
               label: data.classification.label,
@@ -109,6 +112,7 @@ export class SummaryService {
             summary: string;
             cached: boolean;
             tokenCount?: number;
+            agentLabels?: string[];
             classification?: {
               label?: string;
               score?: number;
@@ -125,7 +129,9 @@ export class SummaryService {
             timestamp: new Date(),
             provider: settings.provider,
             model: settings.model,
-            // NEW: Include classification if present
+            // NEW: Include Mistral agent labels if present
+            agentLabels: data.agentLabels,
+            // NEW: Include ML classification if present
             classification: data.classification ? {
               ok: true,
               label: data.classification.label,

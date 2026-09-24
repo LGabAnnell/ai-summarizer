@@ -192,6 +192,33 @@ export class MessagingService {
   // ============================================================================
 
   /**
+   * Classify text with Mistral agent
+   */
+  classifyWithMistralAgent(summary: string, agentId: string, agentVersion: string): Observable<{ labels?: string[]; error?: string }> {
+    return this.sendMessage<{ labels?: string[]; error?: string }>({
+      type: 'CLASSIFY_WITH_AGENT',
+      summary,
+      agentId,
+      agentVersion,
+    }).pipe(
+      map(response => {
+        const result = this.extractData<{ labels?: string[]; error?: string }>(response);
+        return {
+          labels: result.labels,
+          error: result.error,
+        };
+      }),
+      catchError((error) => {
+        console.error('MessagingService.classifyWithMistralAgent: Error:', error);
+        return of({
+          labels: undefined,
+          error: error instanceof Error ? error.message : 'Mistral agent classification failed',
+        });
+      })
+    );
+  }
+
+  /**
    * Classify text using ML
    */
   classifyText(text: string, modelId?: string, timeout?: number): Observable<ClassificationResult> {

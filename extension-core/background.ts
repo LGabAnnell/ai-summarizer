@@ -7,7 +7,7 @@
 import {createProvider} from './providers';
 import browser from 'webextension-polyfill';
 import {ArticleData} from '@shared/lib/models/article.model';
-import {CachedSummaryData, Message, SetThemeRequest, SummarizeResponse} from '@shared/lib/models/summary.model';
+import {Message, SetThemeRequest, SummarizeResponse, ClassifyWithAgentRequest} from '@shared/lib/models/summary.model';
 
 // Import ML services
 import {ClassificationResult, textClassifierService} from './ml/text-classifier.service';
@@ -60,6 +60,9 @@ export interface ExtensionSettings {
   mlEnabled?: boolean;
   mlModelHub?: 'mozilla' | 'huggingface';
   mlModelId?: string;
+  // Mistral Agent Classification Settings
+  mistralAgentId?: string;
+  mistralAgentVersion?: string;
 }
 
 // Default settings
@@ -78,10 +81,15 @@ const DEFAULT_SETTINGS: ExtensionSettings = {
   mlModelHub: 'mozilla',
   mlModelId: 'distilbert-base-uncased-finetuned-sst-2-english',
   mlTimeout: 720000,
+  // Mistral Agent Classification Settings (both start blank)
+  mistralAgentId: '',
+  mistralAgentVersion: '',
 };
 
 /**
  * Generate a cache key for a given article and settings
+ * Note: Agent ID and version are NOT included in the cache key to keep summary caching
+ * independent of classification settings. Classification will be re-run if agent settings change.
  */
 function generateCacheKey(article: ArticleData, settings: Partial<ExtensionSettings>): string {
   const keyParts = [
@@ -96,18 +104,40 @@ function generateCacheKey(article: ArticleData, settings: Partial<ExtensionSetti
 }
 
 /**
- * Get cached summary for an article
+ * Interface for cached summary data with agent classification
  */
-async function getCachedSummary(article: ArticleData, settings: Partial<ExtensionSettings>): Promise<string | null> {
+interface CachedSummaryWithAgent {
+  summary: string;
+  timestamp: number;
+  url: string;
+  provider: string;
+  model: string;
+  agentLabels?: string[];
+  agentId?: string;
+  agentVersion?: string;
+}
+
+/**
+ * Get cached summary for an article
+ * Returns cached data including agent labels if available
+ * Note: Agent labels are stored with the cache but the cache key is independent of agent settings
+ */
+async function getCachedSummary(
+  article: ArticleData,
+  settings: Partial<ExtensionSettings>,
+): Promise<{summary: string; agentLabels?: string[]} | null> {
   const cacheKey = generateCacheKey(article, settings);
-  const result = await browser.storage.local.get(cacheKey) as Record<string, CachedSummaryData>;
+  const result = await browser.storage.local.get(cacheKey) as Record<string, CachedSummaryWithAgent>;
 
   if (result[cacheKey]) {
     const cached = result[cacheKey];
 
     // Check if cache has expired
     if (cached.timestamp && Date.now() - cached.timestamp < (settings.cacheTTL ?? 7) * 24 * 60 * 60 * 1000) {
-      return cached.summary;
+      return {
+        summary: cached.summary,
+        agentLabels: cached.agentLabels,
+      };
     } else {
       // Cache expired, remove it
       await browser.storage.local.remove(cacheKey);
@@ -118,22 +148,32 @@ async function getCachedSummary(article: ArticleData, settings: Partial<Extensio
 }
 
 /**
- * Cache a summary
+ * Cache a summary with optional agent labels
  */
 async function cacheSummary(
   article: ArticleData,
   settings: Partial<ExtensionSettings>,
   summary: string,
+  agentLabels?: string[],
 ): Promise<void> {
   const cacheKey = generateCacheKey(article, settings);
+  const cacheData: CachedSummaryWithAgent = {
+    summary,
+    timestamp: Date.now(),
+    url: article.url,
+    provider: settings.provider ?? 'mistral',
+    model: settings.model ?? 'mistral-tiny',
+  };
+
+  // Only include agent classification if we have valid labels
+  if (agentLabels && agentLabels.length > 0) {
+    cacheData.agentLabels = agentLabels;
+    cacheData.agentId = settings.mistralAgentId;
+    cacheData.agentVersion = settings.mistralAgentVersion;
+  }
+
   await browser.storage.local.set({
-    [cacheKey]: {
-      summary,
-      timestamp: Date.now(),
-      url: article.url,
-      provider: settings.provider ?? 'mistral',
-      model: settings.model ?? 'mistral-tiny',
-    },
+    [cacheKey]: cacheData,
   });
 }
 
@@ -155,18 +195,6 @@ async function saveSettings(settings: Partial<ExtensionSettings>): Promise<void>
 }
 
 /**
- * Send message to a specific tab's content script
- */
-async function sendMessageToTab(tabId: number, message: Message): Promise<unknown> {
-  try {
-    return await browser.tabs.sendMessage(tabId, message);
-  } catch (error) {
-    console.error('Error sending message to tab:', error);
-    return null;
-  }
-}
-
-/**
  * Extract article from the active tab
  */
 async function extractArticleFromActiveTab(): Promise<ArticleData | null> {
@@ -178,25 +206,31 @@ async function extractArticleFromActiveTab(): Promise<ArticleData | null> {
 
   const tabId = tabs[0].id;
 
-  // Inject content script if not already injected
+  type ExtractResponse = {success: boolean; data?: ArticleData; error?: string};
+  let response: ExtractResponse;
+
+  // The manifest loads the content script at document_idle. On the first click it
+  // may not have registered its message listener yet, so inject it on demand.
   try {
-    await browser.scripting.executeScript({
-      target: {tabId},
-      files: ['content.js'],
-    });
-  } catch (error) {
-    console.log('Content script may already be injected:', error);
+    response = await browser.tabs.sendMessage(tabId, {type: 'EXTRACT_ARTICLE'}) as ExtractResponse;
+  } catch {
+    try {
+      await browser.scripting.executeScript({target: {tabId}, files: ['content.js']});
+    } catch (error) {
+      throw new Error(`Could not access this page: ${error instanceof Error ? error.message : String(error)}`, {cause: error});
+    }
+
+    // A newly injected script can take a moment to register its listener.
+    try {
+      response = await browser.tabs.sendMessage(tabId, {type: 'EXTRACT_ARTICLE'}) as ExtractResponse;
+    } catch {
+      await new Promise(resolve => setTimeout(resolve, 150));
+      response = await browser.tabs.sendMessage(tabId, {type: 'EXTRACT_ARTICLE'}) as ExtractResponse;
+    }
   }
 
-  // Send extraction request
-  const response = await sendMessageToTab(tabId, {type: 'EXTRACT_ARTICLE'}) as {
-    success: boolean;
-    data?: ArticleData;
-    error?: string;
-  };
-
   if (response?.success && response.data) {
-    return response.data as ArticleData;
+    return response.data;
   }
 
   throw new Error(response?.error ?? 'Failed to extract article');
@@ -228,9 +262,9 @@ async function handleSummarize(article: ArticleData, providerOverride?: Provider
 
         if (settings.mlEnabled) {
           try {
-            console.log('Background: Running classification on cached summary...');
+            console.log('Background: Running ML classification on cached summary...');
             const classification = await textClassifierService.classifyText(
-              cachedSummary,
+              cachedSummary.summary,
               {
                 timeout: settings.mlTimeout,
                 modelHub: settings.mlModelHub,
@@ -240,20 +274,22 @@ async function handleSummarize(article: ArticleData, providerOverride?: Provider
 
             if (classification.ok) {
               classificationResult = classification;
-              console.log('Background: Classification completed for cached summary:', classificationResult);
+              console.log('Background: ML classification completed for cached summary:', classificationResult);
             } else {
-              console.warn('Background: Classification failed for cached summary:', classification.error);
+              console.warn('Background: ML classification failed for cached summary:', classification.error);
             }
           } catch (classificationError) {
-            console.error('Background: Classification error for cached summary:', classificationError);
+            console.error('Background: ML classification error for cached summary:', classificationError);
           }
         }
 
         return {
           type: 'SUMMARIZE_RESPONSE',
-          summary: cachedSummary,
+          summary: cachedSummary.summary,
           success: true,
           cached: true,
+          // Include cached agent labels if present
+          agentLabels: cachedSummary.agentLabels,
           classification: classificationResult?.ok ? {
             label: classificationResult?.label,
             score: classificationResult?.score,
@@ -276,17 +312,17 @@ async function handleSummarize(article: ArticleData, providerOverride?: Provider
       };
     }
 
-    // Cache the result
+    // Cache the result (without agent labels initially)
     if (settings.cacheEnabled) {
       await cacheSummary(article, settings, result.summary ?? '');
     }
 
-    // Run classification if ML is enabled
+    // Run ML classification if ML is enabled
     let classificationResult: ClassificationResult | undefined = undefined;
 
     if (settings.mlEnabled) {
       try {
-        console.log('Background: Running classification on summary...');
+        console.log('Background: Running ML classification on summary...');
         // Use task-based classification (no modelId passed per user requirement)
         const classification = await textClassifierService.classifyText(
           result.summary || '',
@@ -299,14 +335,14 @@ async function handleSummarize(article: ArticleData, providerOverride?: Provider
 
         if (classification.ok) {
           classificationResult = classification;
-          console.log('Background: Classification completed:', classificationResult);
+          console.log('Background: ML classification completed:', classificationResult);
         } else {
           // Classification failed but we still return the summary
-          console.warn('Background: Classification failed:', classification.error);
+          console.warn('Background: ML classification failed:', classification.error);
           classificationResult = classification;
         }
       } catch (classificationError) {
-        console.error('Background: Classification error:', classificationError);
+        console.error('Background: ML classification error:', classificationError);
         classificationResult = {
           ok: false,
           error: classificationError instanceof Error ? classificationError.message : 'Classification failed',
@@ -403,6 +439,135 @@ async function callProviderAPI(
     return {
       summary: '',
       error: `Provider error: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
+/**
+ * Call Mistral agent for classification
+ * Uses the Conversations API with the configured agent
+ */
+async function callMistralAgentClassification(
+  summary: string,
+  agentId: string,
+  agentVersion: string,
+  apiKey: string,
+): Promise<{ labels?: string[]; error?: string }> {
+  try {
+    // Check that we have valid agent configuration
+    if (!agentId || !agentVersion) {
+      return { error: 'Agent ID and version are required for classification' };
+    }
+
+    if (!apiKey) {
+      return { error: 'API key is required for Mistral agent classification' };
+    }
+
+    // Build the request for Mistral Conversations API
+    // Send inputs as a user message with role and content
+    const requestBody = {
+      agent_id: agentId,
+      agent_version: agentVersion,
+      inputs: [
+        {
+          role: 'user',
+          content: summary,
+        },
+      ],
+      store: false,
+    };
+
+    // Call Mistral Conversations API
+    const response = await fetch('https://api.mistral.ai/v1/conversations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(requestBody),
+      // 30-second timeout as per requirements
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      try {
+        const errorJson = JSON.parse(errorText);
+        throw new Error(errorJson.error?.message ?? errorJson.message ?? `HTTP ${response.status}`);
+      } catch (parseError) {
+        throw new Error(`HTTP ${response.status}: ${errorText}`, { cause: parseError });
+      }
+    }
+
+    const responseData = await response.json();
+
+    // Parse the response to extract the final message output
+    // Mistral returns outputs through the `outputs` field
+    // Each output has a `content` field directly (not message.content)
+    if (responseData.outputs && Array.isArray(responseData.outputs) && responseData.outputs.length > 0) {
+      // Get the final output
+      const finalOutput = responseData.outputs[responseData.outputs.length - 1];
+      
+      // Check if it's a message output with content
+      if (finalOutput.content) {
+        try {
+          // The content should be the JSON array of labels or a string
+          let content = finalOutput.content;
+          
+          // Handle text chunks - content might be a string that needs parsing
+          if (typeof content === 'string') {
+            // Try to parse as JSON first
+            try {
+              content = JSON.parse(content);
+            } catch {
+              // Not JSON, use as-is
+            }
+          }
+          
+          // Now content should be the array of labels or still a string
+          let labels: unknown[];
+          if (Array.isArray(content)) {
+            labels = content;
+          } else if (typeof content === 'string') {
+            // Try to parse the string as JSON
+            try {
+              const parsed = JSON.parse(content);
+              labels = Array.isArray(parsed) ? parsed : [content];
+            } catch {
+              // Not JSON, treat as single label (but we need 5)
+              labels = [content];
+            }
+          } else {
+            return { error: 'Invalid content format in agent response' };
+          }
+          
+          // Validate that we have exactly 5 nonempty strings
+          if (labels.length === 5) {
+            const validLabels = labels.filter((label: unknown) => 
+              typeof label === 'string' && label.trim() !== '',
+            );
+            
+            if (validLabels.length === 5) {
+              return { labels: validLabels as string[] };
+            } else {
+              return { error: 'Invalid label format: expected 5 nonempty strings' };
+            }
+          } else {
+            return { error: `Invalid label format: expected array of 5 strings, got ${labels.length} items` };
+          }
+        } catch (parseError) {
+          console.error('Failed to parse agent response:', parseError);
+          return { error: 'Failed to parse agent response as JSON array' };
+        }
+      } else {
+        return { error: 'No content in final agent output' };
+      }
+    } else {
+      return { error: 'No outputs in agent response' };
+    }
+  } catch (error) {
+    return {
+      error: `Agent classification error: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }
@@ -883,6 +1048,57 @@ async function handleCheckMLAvailability(): Promise<{
 }
 
 /**
+ * Handle CLASSIFY_WITH_AGENT request
+ */
+async function handleClassifyWithAgent(request: ClassifyWithAgentRequest): Promise<{
+  type: string;
+  success: boolean;
+  labels?: string[];
+  error?: string;
+}> {
+  try {
+    const settings = await getSettings();
+    
+    // Only proceed if Mistral is the provider and agent is configured
+    if (settings.provider !== 'mistral' || !settings.mistralAgentId || !settings.mistralAgentVersion) {
+      return {
+        type: 'CLASSIFY_WITH_AGENT_RESPONSE',
+        success: false,
+        error: 'Mistral agent classification requires Mistral provider with valid agent ID and version',
+      };
+    }
+
+    const result = await callMistralAgentClassification(
+      request.summary,
+      request.agentId || settings.mistralAgentId,
+      request.agentVersion || settings.mistralAgentVersion,
+      settings.apiKey,
+    );
+
+    if (result.labels) {
+      return {
+        type: 'CLASSIFY_WITH_AGENT_RESPONSE',
+        success: true,
+        labels: result.labels,
+      };
+    } else {
+      return {
+        type: 'CLASSIFY_WITH_AGENT_RESPONSE',
+        success: false,
+        error: result.error ?? 'Agent classification failed',
+      };
+    }
+  } catch (error) {
+    console.error('Background: Error in handleClassifyWithAgent:', error);
+    return {
+      type: 'CLASSIFY_WITH_AGENT_RESPONSE',
+      success: false,
+      error: error instanceof Error ? error.message : 'Agent classification error',
+    };
+  }
+}
+
+/**
  * Main message handler
  */
 async function handleMessage(request: Message): Promise<unknown> {
@@ -961,6 +1177,9 @@ async function handleMessage(request: Message): Promise<unknown> {
 
     case 'CHECK_ML_AVAILABILITY':
       return handleCheckMLAvailability();
+
+    case 'CLASSIFY_WITH_AGENT':
+      return handleClassifyWithAgent(request as ClassifyWithAgentRequest);
 
     case 'SET_THEME': {
       const themeRequest = request as SetThemeRequest;

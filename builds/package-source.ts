@@ -41,19 +41,19 @@ async function packageSource() {
   fs.writeFileSync(fileListPath, fileList.join('\n'));
 
   try {
-    // Use tar to create a .tar.gz file from the file list
-    // Note: .tar.gz is widely accepted; if .zip is strictly required,
-    // install zip utility or use: npm install -g zip-cli
+    // Use zip with -@ to read the list of files to add from the file list.
+    // The list contains paths relative to the project root, which matches cwd.
     console.log('Creating source archive...');
-    console.log(`Including ${fileList.length} files and directories`);
-    
-    const command = `tar -czf ${outputFile} -T ${fileListPath}`;
+    console.log(`Including ${fileList.length} files`);
+
+    const command = `zip ${outputFile} -@ < ${fileListPath}`;
     console.log(`Running: ${command}`);
     
     execSync(command, { 
       cwd: __dirname,
       stdio: 'inherit',
-      shell: true
+      encoding: 'utf-8',
+      shell: '/bin/bash',
     });
 
     console.log(`\nSource code packaged successfully to: ${outputFile}`);
@@ -113,9 +113,7 @@ function getFilesToInclude(dir: string): string[] {
     }
 
     if (entry.isDirectory()) {
-      // Add the directory itself
-      result.push(relativePath + path.sep);
-      // Recursively add its contents
+      // Recursively add its contents (directories are created implicitly by zip)
       result.push(...getFilesToInclude(fullPath));
     } else if (entry.isFile()) {
       result.push(relativePath);
@@ -146,6 +144,7 @@ function shouldExclude(name: string): boolean {
     'ai-summarizer-source.zip',
     'ai-summarizer.zip',
     '.source-filelist.txt',
+    'docs',
   ];
 
   return excluded.includes(name);
