@@ -20,6 +20,7 @@
     "build:extension:debug": "npx tsx builds/build-extension.ts --debug && npx tsx builds/package-dist.ts",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:extension-core": "vitest run --config vitest.extension.config.ts",
     "lint": "ng lint",
     "lint:extension-core": "eslint extension-core",
     "lint:popup": "ng lint popup",
