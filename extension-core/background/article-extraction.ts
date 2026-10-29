@@ -7,6 +7,13 @@ interface ExtractResponse {
   error?: string;
 }
 
+export class TabExtractionError extends Error {
+  constructor(message: string, readonly tabId: number, readonly tabUrl?: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'TabExtractionError';
+  }
+}
+
 /**
  * Extract article from the active tab
  */
@@ -15,11 +22,19 @@ export async function extractArticleFromActiveTab(requestedTabId?: number): Prom
     ? await browser.tabs.query({active: true, currentWindow: true})
     : [{id: requestedTabId}];
 
-  if (tabs.length === 0 || !tabs[0].id) {
+  if (tabs.length === 0 || tabs[0].id === undefined) {
     throw new Error('No active tab found');
   }
 
   const tabId = tabs[0].id;
+  let tabUrl = 'url' in tabs[0] ? tabs[0].url : undefined;
+  if (!tabUrl) {
+    try {
+      tabUrl = (await browser.tabs.get(tabId)).url;
+    } catch {
+      // Tab metadata is only needed to distinguish restricted Firefox pages.
+    }
+  }
 
   let response: ExtractResponse;
 
@@ -31,7 +46,12 @@ export async function extractArticleFromActiveTab(requestedTabId?: number): Prom
     try {
       await browser.scripting.executeScript({target: {tabId}, files: ['content.js']});
     } catch (error) {
-      throw new Error(`Could not access this page: ${error instanceof Error ? error.message : String(error)}`, {cause: error});
+      throw new TabExtractionError(
+        `Could not access this page: ${error instanceof Error ? error.message : String(error)}`,
+        tabId,
+        tabUrl,
+        {cause: error},
+      );
     }
 
     // A newly injected script can take a moment to register its listener.

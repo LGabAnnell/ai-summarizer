@@ -1,7 +1,7 @@
 import browser from 'webextension-polyfill';
 import {Message, SetThemeRequest} from '@shared/lib/models/summary.model';
 import {ClassifyWithAgentRequest} from '@shared/lib/models/agent-classification.model';
-import {extractArticleFromActiveTab} from './article-extraction';
+import {extractArticleFromActiveTab, TabExtractionError} from './article-extraction';
 import {handleClearCache} from './summary-cache';
 import {handleGetSettings, handleSaveSettings} from './settings';
 import {testProviderConnection, handleRefreshModels} from './provider-client';
@@ -32,9 +32,21 @@ export async function handleMessage(request: Message): Promise<unknown> {
           articleUrl: article.url,
         };
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const extractionError = error instanceof TabExtractionError ? error : undefined;
+        const restricted = isRestrictedPage(extractionError?.tabUrl);
+        const hasHostPermissionError =
+          /missing host permission|host permission|cannot access contents of/i.test(message);
+        const needsHostPermission = !restricted && hasHostPermissionError;
         return {
           type: 'SUMMARIZE_RESPONSE',
-          error: `Extraction error: ${error instanceof Error ? error.message : String(error)}`,
+          error: restricted
+            ? 'Firefox does not allow extensions to read this page. Open a regular website and try again.'
+            : needsHostPermission
+              ? 'Firefox has not granted this extension access to the website. Choose “Grant website access” to allow access on all websites, then retry.'
+              : `Extraction error: ${message}`,
+          permissionRequired: needsHostPermission,
+          tabId: extractionError?.tabId,
           success: false,
         };
       }
@@ -94,5 +106,16 @@ export async function handleMessage(request: Message): Promise<unknown> {
         error: `Unknown message type: ${request.type}`,
         success: false,
       };
+  }
+}
+
+function isRestrictedPage(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return ['about:', 'chrome:', 'moz-extension:', 'resource:', 'view-source:'].includes(parsed.protocol)
+      || parsed.hostname === 'addons.mozilla.org';
+  } catch {
+    return false;
   }
 }
