@@ -1,5 +1,18 @@
-import type {ClassifyWithAgentRequest} from '@shared/lib/models/agent-classification.model';
+import type {ClassifyWithAgentRequest, ClassifyWithAgentResponse} from '@shared/lib/models/agent-classification.model';
 import {getSettings} from './settings';
+
+interface MistralAgentOutput {
+  content?: string | string[];
+}
+
+interface MistralAgentResponse {
+  outputs?: MistralAgentOutput[];
+}
+
+interface MistralAgentClassificationResult {
+  labels?: string[];
+  error?: string;
+}
 
 /**
  * Call Mistral agent for classification
@@ -10,7 +23,7 @@ async function callMistralAgentClassification(
   agentId: string,
   agentVersion: string,
   apiKey: string,
-): Promise<{ labels?: string[]; error?: string }> {
+): Promise<MistralAgentClassificationResult> {
   try {
     // Check that we have valid agent configuration
     if (!agentId || !agentVersion) {
@@ -57,7 +70,7 @@ async function callMistralAgentClassification(
       }
     }
 
-    const responseData = await response.json();
+    const responseData = await response.json() as MistralAgentResponse;
 
     // Parse the response to extract the final message output
     // Mistral returns outputs through the `outputs` field
@@ -83,7 +96,7 @@ async function callMistralAgentClassification(
           }
 
           // Now content should be the array of labels or still a string
-          let labels: unknown[];
+          let labels: string[];
           if (Array.isArray(content)) {
             labels = content;
           } else if (typeof content === 'string') {
@@ -101,12 +114,12 @@ async function callMistralAgentClassification(
 
           // Validate that we have exactly 5 nonempty strings
           if (labels.length === 5) {
-            const validLabels = labels.filter((label: unknown) =>
+            const validLabels = labels.filter((label): label is string =>
               typeof label === 'string' && label.trim() !== '',
             );
 
             if (validLabels.length === 5) {
-              return { labels: validLabels as string[] };
+              return { labels: validLabels };
             } else {
               return { error: 'Invalid label format: expected 5 nonempty strings' };
             }
@@ -133,12 +146,7 @@ async function callMistralAgentClassification(
 /**
  * Handle CLASSIFY_WITH_AGENT request
  */
-export async function handleClassifyWithAgent(request: ClassifyWithAgentRequest): Promise<{
-  type: string;
-  success: boolean;
-  labels?: string[];
-  error?: string;
-}> {
+export async function handleClassifyWithAgent(request: ClassifyWithAgentRequest): Promise<ClassifyWithAgentResponse> {
   try {
     const settings = await getSettings();
 

@@ -1,6 +1,12 @@
 import browser from 'webextension-polyfill';
 import {ArticleData} from '@shared/lib/models/article.model';
 
+interface ExtractResponse {
+  success: boolean;
+  data?: ArticleData;
+  error?: string;
+}
+
 /**
  * Extract article from the active tab
  */
@@ -15,7 +21,6 @@ export async function extractArticleFromActiveTab(requestedTabId?: number): Prom
 
   const tabId = tabs[0].id;
 
-  type ExtractResponse = {success: boolean; data?: ArticleData; error?: string};
   let response: ExtractResponse;
 
   // The manifest loads the content script at document_idle. On the first click it

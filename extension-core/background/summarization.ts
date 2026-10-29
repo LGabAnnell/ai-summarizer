@@ -11,12 +11,10 @@ type ClassificationProjection = Pick<ClassificationResult, 'label' | 'score' | '
 async function classifySummary(
   text: string,
   settings: ResolvedSettings,
-  context: 'cached' | 'fresh',
 ): Promise<ClassificationProjection | undefined> {
   if (!settings.mlEnabled) return undefined;
 
   try {
-    console.log(`Background: Running ML classification on ${context === 'cached' ? 'cached ' : ''}summary...`);
     const classification = await textClassifierService.classifyText(text, {
       timeout: settings.mlTimeout,
       modelHub: settings.mlModelHub,
@@ -24,11 +22,9 @@ async function classifySummary(
     });
 
     if (!classification.ok) {
-      console.warn(`Background: ML classification failed${context === 'cached' ? ' for cached summary' : ''}:`, classification.error);
       return undefined;
     }
 
-    console.log(`Background: ML classification completed${context === 'cached' ? ' for cached summary' : ''}:`, classification);
     return {
       label: classification.label,
       score: classification.score,
@@ -36,8 +32,7 @@ async function classifySummary(
       inferenceTime: classification.inferenceTime,
       ok: classification.ok,
     };
-  } catch (classificationError) {
-    console.error(`Background: ML classification error${context === 'cached' ? ' for cached summary' : ''}:`, classificationError);
+  } catch {
     return undefined;
   }
 }
@@ -66,7 +61,7 @@ export async function handleSummarize(
       });
 
       if (cachedSummary) {
-        const classification = await classifySummary(cachedSummary.summary, settings, 'cached');
+        const classification = await classifySummary(cachedSummary.summary, settings);
 
         return {
           type: 'SUMMARIZE_RESPONSE',
@@ -96,7 +91,7 @@ export async function handleSummarize(
       await cacheSummary(article, settings, result.summary ?? '');
     }
 
-    const classification = await classifySummary(result.summary || '', settings, 'fresh');
+    const classification = await classifySummary(result.summary || '', settings);
 
     return {
       type: 'SUMMARIZE_RESPONSE',

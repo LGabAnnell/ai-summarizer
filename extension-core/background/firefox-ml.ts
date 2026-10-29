@@ -4,6 +4,12 @@ import type {SummaryStyle} from '@shared/lib/models/summary-prompts.model';
 import type {ResolvedSettings} from './settings';
 import {MLEngineConfig, mlEngineManager} from '../ml/ml-engine-manager';
 
+interface FirefoxMLProviderResult {
+  summary: string;
+  tokenCount?: number;
+  error?: string;
+}
+
 /**
  * Call Firefox ML API for local summarization
  * Uses mlEngineManager abstraction instead of direct browser.trial.ml API calls
@@ -11,7 +17,7 @@ import {MLEngineConfig, mlEngineManager} from '../ml/ml-engine-manager';
 export async function callFirefoxMLProvider(
   article: ArticleData,
   settings: ResolvedSettings,
-): Promise<{ summary: string; tokenCount?: number; error?: string }> {
+): Promise<FirefoxMLProviderResult> {
   try {
     // Check if we have the trialML permission
     const hasPermission = await browser.permissions.contains({permissions: ['trialML']});
