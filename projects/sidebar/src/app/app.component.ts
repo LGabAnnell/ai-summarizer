@@ -81,7 +81,7 @@ type ViewMode = 'current' | 'history' | 'history-detail';
             <shared-error-state
                     [error]="summaryState().error || 'Failed to summarize article'"
                     [showRetry]="true"
-                    [retryText]="'Retry'"
+                    [retryText]="summaryState().permissionRequired ? 'Grant website access (all websites)' : 'Retry'"
                     (retry)="retry()">
             </shared-error-state>
           }
@@ -586,6 +586,8 @@ export class AppComponent implements OnInit, OnDestroy {
   private classificationService = inject(ClassificationService);
   // Track last added summary to prevent infinite loop
   private lastAddedSummaryId = signal<string | null>(null);
+  private lastSummarizeTabId?: number;
+  private requestingWebsiteAccess = false;
   // Track classification request in progress
   private classificationRequestInProgress = signal<boolean>(false);
   // Store message listener for cleanup
@@ -735,6 +737,7 @@ export class AppComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.lastSummarizeTabId = tabId;
     this.summaryService.extractAndSummarize(tabId).subscribe({
       error: (error) => {
         console.error('Summarization error:', error);
@@ -748,7 +751,30 @@ export class AppComponent implements OnInit, OnDestroy {
    * Retry summarization
    */
   retry(): void {
-    this.summarize();
+    const tabId = this.summaryState().tabId ?? this.lastSummarizeTabId;
+    if (!this.summaryState().permissionRequired) {
+      void this.summarize(tabId);
+      return;
+    }
+    if (this.requestingWebsiteAccess) return;
+
+    this.requestingWebsiteAccess = true;
+    // Call permissions.request before asynchronous work so Firefox sees this click as the user gesture.
+    void browser.permissions.request({origins: ['<all_urls>']}).then(granted => {
+      if (!granted) {
+        this.summaryService.setPermissionRequestError(
+          'Website access was not granted. Choose “Grant website access” to allow access on all websites, then retry.',
+        );
+        return;
+      }
+      void this.summarize(tabId);
+    }).catch(error => {
+      this.summaryService.setPermissionRequestError(
+        error instanceof Error ? error.message : 'Could not request website access.',
+      );
+    }).finally(() => {
+      this.requestingWebsiteAccess = false;
+    });
   }
 
   /**

@@ -23,6 +23,8 @@ export interface MessageResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
+  permissionRequired?: boolean;
+  tabId?: number;
 }
 
 /**
@@ -66,7 +68,7 @@ export class MessagingService {
           // If response has a data property, use it. Otherwise, the response itself is the data
           // (excluding standard message fields)
           const responseObj = response as Record<string, unknown>;
-          const standardFields = ['type', 'success', 'error', 'data'];
+          const standardFields = ['type', 'success', 'error', 'data', 'permissionRequired', 'tabId'];
           const hasExplicitData = responseObj['data'] !== undefined;
 
           // Collect all non-standard fields as the actual data
@@ -84,6 +86,8 @@ export class MessagingService {
             success: responseObj['success'] !== false, // Default to true if not specified
             data: data as T,
             error: responseObj['error'],
+            permissionRequired: responseObj['permissionRequired'] === true,
+            tabId: typeof responseObj['tabId'] === 'number' ? responseObj['tabId'] : undefined,
           } as MessageResponse<T>;
 
           return result;

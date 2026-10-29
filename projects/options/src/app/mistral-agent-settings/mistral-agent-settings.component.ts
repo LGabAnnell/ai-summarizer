@@ -47,8 +47,8 @@ export class MistralAgentSettingsComponent {
     return this.formDirective.control.get('mistralAgentVersion')?.errors;
   }
 
-  get isAgentConfigured() {
-    return this.agentId && this.agentVersion;
+  get isAgentConfigured(): boolean {
+    return Boolean(this.agentId && this.agentVersion);
   }
 
   onToggleAgentInfo(): void {

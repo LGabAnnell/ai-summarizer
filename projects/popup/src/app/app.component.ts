@@ -39,7 +39,7 @@ import {
           <shared-error-state
                   [error]="errorMessage()"
                   [showRetry]="true"
-                  [retryText]="'Retry'"
+                  [retryText]="permissionRequired() ? 'Grant website access (all websites)' : 'Retry'"
                   (retry)="retry()">
           </shared-error-state>
         }
@@ -100,6 +100,9 @@ export class AppComponent {
   title = signal<string>('');
   articleUrl = signal<string>('');
   errorMessage = signal<string>('');
+  permissionRequired = signal(false);
+  private lastTabId?: number;
+  private requestingWebsiteAccess = false;
   loadingMessage = signal<string>('Extracting article...');
   cached = signal<boolean>(false);
 
@@ -117,9 +120,11 @@ export class AppComponent {
   /**
    * Trigger article summarization
    */
-  async summarize(): Promise<void> {
+  async summarize(tabId?: number): Promise<void> {
     if (this.state() === 'loading') return;
 
+    this.lastTabId = tabId;
+    this.permissionRequired.set(false);
     this.state.set('loading');
     this.loadingMessage.set('Extracting article...');
     this.errorMessage.set('');
@@ -136,16 +141,21 @@ export class AppComponent {
 
       // Send message to background script to extract and summarize
       const response = await browser.runtime.sendMessage({
-        type: 'EXTRACT_AND_SUMMARIZE'
-      }) as SummaryResult & { success: boolean, error: string };
+        type: 'EXTRACT_AND_SUMMARIZE',
+        tabId,
+      }) as SummaryResult & { success: boolean, error: string; permissionRequired?: boolean; tabId?: number };
 
       if (response.success) {
+        this.permissionRequired.set(false);
+        this.lastTabId = undefined;
         this.state.set('success');
         this.summary.set(response.summary || '');
         this.title.set(response.title || 'Article Summary');
         this.articleUrl.set(response.articleUrl || '');
         this.cached.set(response.cached || false);
       } else {
+        this.permissionRequired.set(response.permissionRequired === true);
+        this.lastTabId = response.tabId;
         throw new Error(response.error || 'Failed to summarize article');
       }
     } catch (error) {
@@ -159,7 +169,27 @@ export class AppComponent {
    * Retry summarization
    */
   retry(): void {
-    this.summarize();
+    if (!this.permissionRequired()) {
+      void this.summarize(this.lastTabId);
+      return;
+    }
+    if (this.requestingWebsiteAccess) return;
+
+    const tabId = this.lastTabId;
+    this.requestingWebsiteAccess = true;
+    // Call permissions.request before asynchronous work so Firefox sees this click as the user gesture.
+    void browser.permissions.request({origins: ['<all_urls>']}).then(granted => {
+      if (!granted) {
+        this.errorMessage.set('Website access was not granted. Choose “Grant website access” to allow access on all websites, then retry.');
+        return;
+      }
+      this.permissionRequired.set(false);
+      void this.summarize(tabId);
+    }).catch(error => {
+      this.errorMessage.set(error instanceof Error ? error.message : 'Could not request website access.');
+    }).finally(() => {
+      this.requestingWebsiteAccess = false;
+    });
   }
 
   /**

@@ -1,7 +1,10 @@
 import {describe, expect, it, vi} from 'vitest';
+import {firstValueFrom} from 'rxjs';
+import * as browser from 'webextension-polyfill';
 import {MessagingService} from './messaging.service';
 
-vi.mock('webextension-polyfill', () => ({default: {runtime: {sendMessage: vi.fn()}}}));
+const browserMock = vi.hoisted(() => ({runtime: {sendMessage: vi.fn()}}));
+vi.mock('webextension-polyfill', () => ({default: browserMock, runtime: browserMock.runtime}));
 
 describe('MessagingService shortcut extraction', () => {
   it('forwards the captured tab ID with EXTRACT_AND_SUMMARIZE', () => {
@@ -20,5 +23,19 @@ describe('MessagingService shortcut extraction', () => {
     service.extractAndSummarize();
 
     expect(sendMessage).toHaveBeenCalledWith({type: 'EXTRACT_AND_SUMMARIZE', tabId: undefined});
+  });
+
+  it('preserves website permission recovery metadata from the background response', async () => {
+    vi.mocked(browser.runtime.sendMessage).mockResolvedValueOnce({
+      type: 'SUMMARIZE_RESPONSE',
+      success: false,
+      error: 'Grant website access.',
+      permissionRequired: true,
+      tabId: 42,
+    } as never);
+
+    const response = await firstValueFrom(new MessagingService().extractAndSummarize(42));
+
+    expect(response).toMatchObject({permissionRequired: true, tabId: 42, success: false});
   });
 });

@@ -56,7 +56,7 @@
 
   <div class="form-group">
     <label class="form-label" for="customPrompt">Custom System Prompt</label>
-    @if (isCustomStyle) {
+    @if (isCustomStyle()) {
       <textarea
               class="form-textarea"
               formControlName="customPrompt"
@@ -64,7 +64,7 @@
               placeholder="You are a helpful assistant that summarizes articles..."></textarea>
     } @else {
       <textarea
-              [value]="predefinedPrompt"
+              [value]="predefinedPrompt()"
               class="form-textarea"
               id="customPrompt"
               readonly></textarea>

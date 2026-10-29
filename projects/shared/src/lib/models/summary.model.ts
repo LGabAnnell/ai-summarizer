@@ -138,4 +138,6 @@ export interface SummaryState {
   summary?: SummaryResult;
   error?: string;
   loadingMessage?: string;
+  permissionRequired?: boolean;
+  tabId?: number;
 }

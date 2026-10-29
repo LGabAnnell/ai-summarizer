@@ -15,6 +15,15 @@ import {
   ProviderType
 } from '../models/settings.model';
 
+function readFiniteNumber(value: unknown, fallback: number): number {
+  const parsed = typeof value === 'number'
+    ? value
+    : typeof value === 'string' && value.trim() !== ''
+      ? Number(value)
+      : Number.NaN;
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -46,6 +55,10 @@ export class SettingsService {
           const loadedSettings: ExtensionSettings = {
             ...DEFAULT_SETTINGS,
             ...response.data,
+            // Older or damaged storage entries can contain null/string values.
+            // Keep the numeric settings controls usable when hydrating the form.
+            temperature: readFiniteNumber(response.data.temperature, DEFAULT_SETTINGS.temperature),
+            maxTokens: readFiniteNumber(response.data.maxTokens, DEFAULT_SETTINGS.maxTokens),
           };
           this._settings.set(loadedSettings);
           this._isLoading.set(false);

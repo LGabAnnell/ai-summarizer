@@ -20,7 +20,6 @@ import {debounceTime, filter, map} from "rxjs/operators";
 
 @Component({
   selector: 'options-root',
-  standalone: true,
   imports: [
     CommonModule,
     FormsModule,
@@ -142,6 +141,9 @@ export class AppComponent implements OnInit {
           mistralAgentId: settings.mistralAgentId || '',
           mistralAgentVersion: settings.mistralAgentVersion || '',
         }, {emitEvent: false});
+        // The prompt editor tracks style changes through valueChanges. Emit this
+        // one control after the silent form patch so the child updates in zoneless mode.
+        this.settingsForm.get('summaryStyle')?.setValue(settings.summaryStyle);
         this.isLoading.set(false);
       },
       error: (error) => {

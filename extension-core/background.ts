@@ -195,6 +195,12 @@ async function saveSettings(settings: Partial<ExtensionSettings>): Promise<void>
   });
 }
 
+class TabExtractionError extends Error {
+  constructor(message: string, readonly tabId: number, readonly tabUrl?: string, options?: ErrorOptions) {
+    super(message, options);
+  }
+}
+
 /**
  * Extract article from the active tab
  */
@@ -203,11 +209,20 @@ async function extractArticleFromActiveTab(requestedTabId?: number): Promise<Art
     ? await browser.tabs.query({active: true, currentWindow: true})
     : [{id: requestedTabId}];
 
-  if (tabs.length === 0 || !tabs[0].id) {
+  const targetTab = tabs[0];
+  if (targetTab?.id === undefined) {
     throw new Error('No active tab found');
   }
 
-  const tabId = tabs[0].id;
+  const tabId = targetTab.id;
+  let tabUrl = 'url' in targetTab ? targetTab.url : undefined;
+  if (!tabUrl) {
+    try {
+      tabUrl = (await browser.tabs.get(tabId)).url;
+    } catch {
+      // Tab metadata is only used to distinguish Firefox's restricted pages.
+    }
+  }
 
   type ExtractResponse = {success: boolean; data?: ArticleData; error?: string};
   let response: ExtractResponse;
@@ -220,7 +235,12 @@ async function extractArticleFromActiveTab(requestedTabId?: number): Promise<Art
     try {
       await browser.scripting.executeScript({target: {tabId}, files: ['content.js']});
     } catch (error) {
-      throw new Error(`Could not access this page: ${error instanceof Error ? error.message : String(error)}`, {cause: error});
+      throw new TabExtractionError(
+        `Could not access this page: ${error instanceof Error ? error.message : String(error)}`,
+        tabId,
+        tabUrl,
+        {cause: error},
+      );
     }
 
     // A newly injected script can take a moment to register its listener.
@@ -237,6 +257,17 @@ async function extractArticleFromActiveTab(requestedTabId?: number): Promise<Art
   }
 
   throw new Error(response?.error ?? 'Failed to extract article');
+}
+
+function isRestrictedPage(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return ['about:', 'chrome:', 'moz-extension:', 'resource:', 'view-source:'].includes(parsed.protocol)
+      || parsed.hostname === 'addons.mozilla.org';
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -1124,9 +1155,21 @@ async function handleMessage(request: Message): Promise<unknown> {
           articleUrl: article.url,
         };
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const extractionError = error instanceof TabExtractionError ? error : undefined;
+        const restricted = isRestrictedPage(extractionError?.tabUrl);
+        const hostPermissionError = /missing host permission|host permission|cannot access contents of/i;
+        const hasHostPermissionError = hostPermissionError.test(message);
+        const needsHostPermission = !restricted && hasHostPermissionError;
         return {
           type: 'SUMMARIZE_RESPONSE',
-          error: `Extraction error: ${error instanceof Error ? error.message : String(error)}`,
+          error: restricted
+            ? 'Firefox does not allow extensions to read this page. Open a regular website and try again.'
+            : needsHostPermission
+              ? 'Firefox has not granted this extension access to the website. Choose “Grant website access” to allow access on all websites, then retry.'
+              : `Extraction error: ${message}`,
+          permissionRequired: needsHostPermission,
+          tabId: extractionError?.tabId,
           success: false,
         };
       }

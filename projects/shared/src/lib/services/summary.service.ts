@@ -79,7 +79,12 @@ export class SummaryService {
         } else {
           const error = response.error || 'Failed to summarize article';
           console.error('SummaryService.extractAndSummarize: Response error:', error);
-          this._state.set({state: 'error', error});
+          this._state.set({
+            state: 'error',
+            error,
+            permissionRequired: response.permissionRequired,
+            tabId: response.tabId,
+          });
           return throwError(() => new Error(error));
         }
       }),
@@ -87,7 +92,9 @@ export class SummaryService {
         const errorMessage = error instanceof Error ? error.message : 'Failed to summarize article';
         console.error('SummaryService.extractAndSummarize: Caught error:', errorMessage);
         console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-        this._state.set({state: 'error', error: errorMessage});
+        this._state.update(current => current.state === 'error'
+          ? {...current, error: errorMessage}
+          : {state: 'error', error: errorMessage});
         return throwError(() => error);
       })
     );
@@ -166,6 +173,13 @@ export class SummaryService {
    */
   resetCopyState(): void {
     this._copyState.set({copying: false, copied: false});
+  }
+
+  /** Preserve permission-request feedback in the authoritative summary state. */
+  setPermissionRequestError(error: string): void {
+    this._state.update(current => current.state === 'error' && current.permissionRequired
+      ? {...current, error}
+      : current);
   }
 
   /**
