@@ -31,12 +31,12 @@ export class SummaryService {
   /**
    * Extract and summarize the current article
    */
-  extractAndSummarize(): Observable<SummaryResult> {
+  extractAndSummarize(tabId?: number): Observable<SummaryResult> {
     this._state.set({state: 'loading', loadingMessage: 'Extracting article...'});
     this._article.set(null);
     this.resetCopyState();
 
-    return this.messaging.extractAndSummarize().pipe(
+    return this.messaging.extractAndSummarize(tabId).pipe(
       switchMap((response) => {
         if (response.success) {
           // Extract data, handling both wrapped and unwrapped response formats

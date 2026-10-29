@@ -107,7 +107,7 @@ export class MessagingService {
   /**
    * Request article extraction and summarization
    */
-  extractAndSummarize(): Observable<MessageResponse<{
+  extractAndSummarize(tabId?: number): Observable<MessageResponse<{
     summary: string;
     title: string;
     articleUrl: string;
@@ -118,7 +118,7 @@ export class MessagingService {
       title: string;
       articleUrl: string;
       cached: boolean;
-    }>({type: 'EXTRACT_AND_SUMMARIZE'});
+    }>({type: 'EXTRACT_AND_SUMMARIZE', tabId});
   }
 
   /**

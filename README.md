@@ -84,6 +84,13 @@ A Firefox Manifest V3 extension that extracts article content using Mozilla's Re
 4. The summary will appear in the popup
 5. Click "Copy" to copy the summary to your clipboard
 
+### Keyboard Shortcuts
+
+- **Ctrl+Alt+S** (Mac: **Control+Shift+S**) opens the sidebar and summarizes the active page.
+- **Ctrl+Alt+F** (Mac: **Control+Shift+F**) toggles the sidebar.
+
+To change a shortcut, open `about:addons`, select the gear menu, then choose **Manage Extension Shortcuts**.
+
 ## Supported Providers
 
 ### Mistral

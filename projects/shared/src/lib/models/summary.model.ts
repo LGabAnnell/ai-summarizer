@@ -28,6 +28,7 @@ export interface SummarizeRequest {
 
 export interface ExtractAndSummarizeRequest {
   type: 'EXTRACT_AND_SUMMARIZE';
+  tabId?: number;
 }
 
 export interface ExtractArticleRequest {

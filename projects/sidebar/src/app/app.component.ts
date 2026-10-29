@@ -592,6 +592,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private messageListener: ((message: unknown) => void) | null = null;
   // Private variables for cleanup
   private classificationSubscription: { unsubscribe: () => void } | null = null;
+  private summarizePort: browser.Runtime.Port | null = null;
 
   constructor() {
     // Set up effect to watch summary state changes
@@ -636,9 +637,24 @@ export class AppComponent implements OnInit, OnDestroy {
     // Get current state from summary service
     const currentState = this.summaryService.state();
     this.summaryState.set(currentState);
+
+    this.summarizePort = browser.runtime.connect({name: 'summarizer-sidebar'});
+    this.summarizePort.onMessage.addListener((message: unknown) => {
+      if (!message || typeof message !== 'object') return;
+      const action = message as {type?: unknown; tabId?: unknown};
+      if (action.type !== 'SUMMARIZE_ACTIVE_TAB' || typeof action.tabId !== 'number') return;
+      this.setView('current');
+      if (this.summaryService.state().state === 'loading') return;
+      this.summarize(action.tabId);
+    });
+    void browser.windows.getCurrent().then(window => {
+      if (typeof window.id === 'number') this.summarizePort?.postMessage({type: 'SIDEBAR_READY', windowId: window.id});
+    }).catch(error => console.error('Could not register sidebar window:', error));
   }
 
   ngOnDestroy(): void {
+    this.summarizePort?.disconnect();
+    this.summarizePort = null;
     // Clean up message listener to prevent memory leaks
     if (this.messageListener && typeof browser !== 'undefined') {
       browser.runtime.onMessage.removeListener(this.messageListener);
@@ -712,14 +728,14 @@ export class AppComponent implements OnInit, OnDestroy {
   /**
    * Trigger article summarization
    */
-  async summarize(): Promise<void> {
-    const state = this.summaryState();
+  async summarize(tabId?: number): Promise<void> {
+    const state = this.summaryService.state();
 
     if (state.state === 'loading') {
       return;
     }
 
-    this.summaryService.extractAndSummarize().subscribe({
+    this.summaryService.extractAndSummarize(tabId).subscribe({
       error: (error) => {
         console.error('Summarization error:', error);
         console.error('Error details:', error instanceof Error ? error.message : JSON.stringify(error));

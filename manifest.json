@@ -30,6 +30,13 @@
         "mac": "MacCtrl+Shift+F"
       },
       "description": "Toggle the sidebar"
+    },
+    "open-sidebar-and-summarize": {
+      "suggested_key": {
+        "default": "Ctrl+Alt+S",
+        "mac": "MacCtrl+Shift+S"
+      },
+      "description": "Open sidebar and summarize article"
     }
   },
   "options_ui": {

@@ -6,6 +6,7 @@
 // Import provider factory
 import {createProvider} from './providers';
 import browser from 'webextension-polyfill';
+import {setupSidebarShortcut} from './sidebar-shortcut';
 import {ArticleData} from '@shared/lib/models/article.model';
 import {Message, SetThemeRequest, SummarizeResponse, ClassifyWithAgentRequest} from '@shared/lib/models/summary.model';
 
@@ -197,8 +198,10 @@ async function saveSettings(settings: Partial<ExtensionSettings>): Promise<void>
 /**
  * Extract article from the active tab
  */
-async function extractArticleFromActiveTab(): Promise<ArticleData | null> {
-  const tabs = await browser.tabs.query({active: true, currentWindow: true});
+async function extractArticleFromActiveTab(requestedTabId?: number): Promise<ArticleData | null> {
+  const tabs = requestedTabId === undefined
+    ? await browser.tabs.query({active: true, currentWindow: true})
+    : [{id: requestedTabId}];
 
   if (tabs.length === 0 || !tabs[0].id) {
     throw new Error('No active tab found');
@@ -1105,7 +1108,7 @@ async function handleMessage(request: Message): Promise<unknown> {
   switch (request.type) {
     case 'EXTRACT_AND_SUMMARIZE':
       try {
-        const article = await extractArticleFromActiveTab();
+        const article = await extractArticleFromActiveTab(request.tabId);
         if (!article) {
           return {
             type: 'SUMMARIZE_RESPONSE',
@@ -1261,11 +1264,6 @@ function setupMLProgressBroadcasting(): void {
 // Initialize ML progress broadcasting
 setupMLProgressBroadcasting();
 
-// Set up keyboard shortcut command listener for sidebar toggle
-browser.commands.onCommand.addListener((command) => {
-  if (command === 'toggle-sidebar') {
-    browser.sidebarAction.toggle();
-  }
-});
+setupSidebarShortcut(browser);
 
 console.log('Article Summarizer background service worker loaded');
