@@ -22,7 +22,6 @@ import {
   SummaryState,
   ThemeService
 } from '@shared/public-api';
-import {AgentClassificationState} from '@shared/lib/models/agent-classification.model';
 import browser from "webextension-polyfill";
 
 /**
@@ -125,11 +124,14 @@ type ViewMode = 'current' | 'history' | 'history-detail';
                     <span>🎯 Agent Classification</span>
                   </div>
                   <div class="agent-labels">
-                    @for (label of agentLabelsFromSummary(); track label) {
+                    @for (label of agentLabelsFromSummary(); track $index) {
                       <span class="agent-label-badge">{{ label }}</span>
                     }
                   </div>
                 </div>
+              }
+              @if (currentSummary()?.agentClassificationError) {
+                <div class="agent-classification-error" role="status">Agent classification failed: {{ currentSummary()?.agentClassificationError }}</div>
               }
             </div>
           }
@@ -157,6 +159,11 @@ type ViewMode = 'current' | 'history' | 'history-detail';
                   <div class="history-content">
                     <div class="history-title">{{ item.title }}</div>
                     <div class="history-preview">{{ item.preview }}</div>
+                    @if (item.agentLabels?.length) {
+                      <div class="agent-labels history-agent-labels" aria-label="Agent classification">
+                        @for (label of item.agentLabels; track $index) { <span class="agent-label-badge">{{ label }}</span> }
+                      </div>
+                    }
                     <div class="history-meta">
                       <span class="history-date">{{ formatDate(item.timestamp) }}</span>
                       @if (item.provider) {
@@ -193,6 +200,14 @@ type ViewMode = 'current' | 'history' | 'history-detail';
             </button>
           </shared-summary-header>
           <div class="summary-text markdown-content" [innerHTML]="selectedHistoryItem()?.summary | markdown"></div>
+          @if (selectedHistoryItem()?.agentLabels?.length) {
+            <div class="agent-labels-section">
+              <div class="agent-labels-header"><span>🎯 Agent Classification</span></div>
+              <div class="agent-labels">
+                @for (label of selectedHistoryItem()?.agentLabels; track $index) { <span class="agent-label-badge">{{ label }}</span> }
+              </div>
+            </div>
+          }
           <shared-summary-meta
                   [characterCount]="selectedHistoryItem()?.summary?.length || 0"
                   [cached]="selectedHistoryItem()?.cached || false"
@@ -511,6 +526,8 @@ type ViewMode = 'current' | 'history' | 'history-detail';
         font-size: 12px;
         font-weight: 500;
       }
+      .agent-classification-error { margin-top: 10px; color: var(--danger-color, #b42318); font-size: 12px; }
+      .history-agent-labels { margin-top: 6px; gap: 4px; }
     `
   ],
 })
@@ -525,10 +542,6 @@ export class AppComponent implements OnInit, OnDestroy {
   classificationResult = signal<ClassificationResult | undefined>(undefined);
   classificationProgress = signal<number>(0);
   mlSettings = signal<MLSettings | undefined>(undefined);
-  // Mistral Agent Classification state
-  agentClassificationState = signal<AgentClassificationState>({state: 'idle'});
-  agentLabels = signal<string[] | undefined>(undefined);
-  agentClassificationError = signal<string | undefined>(undefined);
   // Copy state for current summary
   copying = signal<boolean>(false);
   copySuccess = signal<boolean>(false);
@@ -588,8 +601,6 @@ export class AppComponent implements OnInit, OnDestroy {
   private lastAddedSummaryId = signal<string | null>(null);
   private lastSummarizeTabId?: number;
   private requestingWebsiteAccess = false;
-  // Track classification request in progress
-  private classificationRequestInProgress = signal<boolean>(false);
   // Store message listener for cleanup
   private messageListener: ((message: unknown) => void) | null = null;
   // Private variables for cleanup
@@ -618,8 +629,6 @@ export class AppComponent implements OnInit, OnDestroy {
           this.lastAddedSummaryId.set(summaryId);
         }
 
-        // Trigger Mistral agent classification if conditions are met
-        this.triggerMistralAgentClassification(state.summary);
       }
 
       if (state.state === 'error') {
@@ -1035,104 +1044,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.classificationState.set({state: 'idle'});
     this.classificationResult.set(undefined);
     this.classificationProgress.set(0);
-  }
-
-  // ============================================================================
-  // Mistral Agent Classification Methods
-  // ============================================================================
-
-  /**
-   * Check if Mistral agent classification is enabled and configured
-   */
-  isMistralAgentClassificationEnabled(): boolean {
-    const settings = this.settingsService.getSetting('provider');
-    const mistralAgentId = this.settingsService.getSetting('mistralAgentId');
-    const mistralAgentVersion = this.settingsService.getSetting('mistralAgentVersion');
-    return settings === 'mistral' && !!mistralAgentId && !!mistralAgentVersion;
-  }
-
-  /**
-   * Trigger Mistral agent classification for a summary
-   * Called after summary is displayed in the sidebar
-   */
-  triggerMistralAgentClassification(summary: SummaryResult): void {
-    // Don't trigger if already in progress or not for current view
-    if (this.classificationRequestInProgress() || this.currentView() !== 'current') {
-      return;
-    }
-
-    // Check if classification should run
-    const settings = this.settingsService.settings();
-    if (settings.provider !== 'mistral' || !settings.mistralAgentId || !settings.mistralAgentVersion) {
-      // Not configured, clear any existing labels
-      if (this.agentLabels()) {
-        this.agentLabels.set(undefined);
-      }
-      return;
-    }
-
-    // Check if we already have labels for this summary
-    if (summary.agentLabels && summary.agentLabels.length > 0) {
-      // Already have labels, display them
-      this.agentLabels.set(summary.agentLabels);
-      return;
-    }
-
-    // Get API key for Mistral
-    const apiKey = settings.apiKey;
-    if (!apiKey) {
-      console.warn('Sidebar: Mistral API key not configured for agent classification');
-      this.agentClassificationError.set('Mistral API key is required for agent classification');
-      return;
-    }
-
-    // Mark request as in progress
-    this.classificationRequestInProgress.set(true);
-    this.agentClassificationState.set({state: 'loading'});
-    this.agentClassificationError.set(undefined);
-
-    // Trigger classification
-    this.classificationService.classifyWithMistralAgent(
-      summary.summary,
-      settings.mistralAgentId!,
-      settings.mistralAgentVersion!
-    ).subscribe({
-      next: (result) => {
-        if (result.labels && result.labels.length > 0) {
-          // Success - update labels
-          this.agentLabels.set(result.labels);
-          this.agentClassificationState.set({state: 'success', labels: result.labels});
-          
-          // Update the current summary with labels
-          const currentState = this.summaryState();
-          if (currentState.state === 'success' && currentState.summary) {
-            this.summaryState.set({
-              ...currentState,
-              summary: {
-                ...currentState.summary,
-                agentLabels: result.labels,
-              },
-            });
-          }
-        } else {
-          // Error
-          this.agentClassificationState.set({state: 'error', error: result.error || 'Classification failed'});
-          this.agentClassificationError.set(result.error || 'Classification failed');
-        }
-        this.classificationRequestInProgress.set(false);
-      },
-      error: (error) => {
-        console.error('Sidebar: Mistral agent classification error:', error);
-        this.agentClassificationState.set({
-          state: 'error',
-          error: error instanceof Error ? error.message : 'Mistral agent classification failed'
-        });
-        this.agentClassificationError.set(
-          error instanceof Error ? error.message : 'Mistral agent classification failed'
-        );
-        this.classificationRequestInProgress.set(false);
-      },
-    });
   }
 
   /**

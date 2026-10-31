@@ -7,7 +7,7 @@ vi.mock('./settings', async importOriginal => ({
 }));
 vi.mock('webextension-polyfill', () => ({default: {}}));
 vi.stubGlobal('fetch', mocks.fetch);
-import {handleClassifyWithAgent} from './agent-classification';
+import {classifySummaryWithMistralAgent, handleClassifyWithAgent} from './agent-classification';
 import {DEFAULT_SETTINGS} from './settings';
 
 const labels = ['one', 'two', 'three', 'four', 'five'];
@@ -74,5 +74,13 @@ describe('Mistral agent classification', () => {
     await expect(handleClassifyWithAgent(request)).resolves.toMatchObject({success: false, error: 'API key is required for Mistral agent classification'});
     mocks.fetch.mockRejectedValueOnce(new Error('timeout'));
     await expect(handleClassifyWithAgent(request)).resolves.toMatchObject({success: false, error: 'Agent classification error: timeout'});
+  });
+
+  it('gates the summarize wrapper on agent config and API key, and returns agent failures', async () => {
+    const configured = {...DEFAULT_SETTINGS, provider: 'mistral' as const, apiKey: 'secret', mistralAgentId: 'id', mistralAgentVersion: 'v1'};
+    await expect(classifySummaryWithMistralAgent('Summary', {...configured, mistralAgentId: ''})).resolves.toEqual({});
+    await expect(classifySummaryWithMistralAgent('Summary', {...configured, apiKey: ''})).resolves.toEqual({error: 'Mistral API key is required for agent classification'});
+    mocks.fetch.mockRejectedValueOnce(new Error('timeout'));
+    await expect(classifySummaryWithMistralAgent('Summary', configured)).resolves.toEqual({error: 'Agent classification error: timeout'});
   });
 });

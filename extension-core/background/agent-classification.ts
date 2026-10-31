@@ -1,5 +1,5 @@
 import type {ClassifyWithAgentRequest, ClassifyWithAgentResponse} from '@shared/lib/models/agent-classification.model';
-import {getSettings} from './settings';
+import {getSettings, type ResolvedSettings} from './settings';
 
 interface MistralAgentOutput {
   content?: string | string[];
@@ -141,6 +141,23 @@ async function callMistralAgentClassification(
       error: `Agent classification error: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
+}
+
+/** Classify a summary with already-resolved settings for the summarize flow. */
+export async function classifySummaryWithMistralAgent(
+  summary: string,
+  settings: ResolvedSettings,
+): Promise<{labels?: string[]; error?: string}> {
+  if (settings.provider !== 'mistral' || !settings.mistralAgentId || !settings.mistralAgentVersion) {
+    return {};
+  }
+  if (!settings.apiKey) return {error: 'Mistral API key is required for agent classification'};
+  return callMistralAgentClassification(
+    summary,
+    settings.mistralAgentId,
+    settings.mistralAgentVersion,
+    settings.apiKey,
+  );
 }
 
 /**

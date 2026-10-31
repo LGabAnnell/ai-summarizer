@@ -1,4 +1,4 @@
-import {Component, signal} from '@angular/core';
+import {Component, inject, signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {MarkdownPipe} from '@shared/lib/pipes/markdown.pipe';
 import browser from 'webextension-polyfill';
@@ -8,6 +8,7 @@ import {
   ErrorStateComponent,
   FooterComponent,
   HeaderComponent,
+  HistoryService,
   LoadingStateComponent,
   SummarizeButtonComponent,
   SummaryHeaderComponent,
@@ -94,6 +95,7 @@ import {
   `],
 })
 export class AppComponent {
+  private readonly historyService = inject(HistoryService);
   // State management
   state = signal<'idle' | 'loading' | 'success' | 'error'>('idle');
   summary = signal<string>('');
@@ -153,6 +155,21 @@ export class AppComponent {
         this.title.set(response.title || 'Article Summary');
         this.articleUrl.set(response.articleUrl || '');
         this.cached.set(response.cached || false);
+        const summaryResult: SummaryResult = {
+          summary: response.summary || '',
+          title: response.title || 'Article Summary',
+          articleUrl: response.articleUrl || '',
+          timestamp: new Date(),
+          cached: response.cached === true,
+          tokenCount: response.tokenCount,
+          agentLabels: response.agentLabels,
+          agentClassificationError: response.agentClassificationError,
+        };
+        try {
+          await this.historyService.addSummary(summaryResult);
+        } catch (historyError) {
+          console.error('Failed to save popup summary to history:', historyError);
+        }
       } else {
         this.permissionRequired.set(response.permissionRequired === true);
         this.lastTabId = response.tabId;

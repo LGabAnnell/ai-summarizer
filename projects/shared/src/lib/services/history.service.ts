@@ -3,7 +3,7 @@
  * Stores and retrieves recent summaries for the sidebar
  */
 
-import {inject, Injectable, signal} from '@angular/core';
+import {DestroyRef, inject, Injectable, signal} from '@angular/core';
 import {SummaryResult} from '../models/summary.model';
 import {MessagingService} from './messaging.service';
 import browser from 'webextension-polyfill';
@@ -22,6 +22,7 @@ export interface HistoryItem {
   provider?: string;
   model?: string;
   tokenCount?: number;
+  agentLabels?: string[];
   // Preview text (first few lines of summary)
   preview: string;
 }
@@ -48,41 +49,55 @@ export class HistoryService {
   private _selectedItem = signal<HistoryItem | null>(null);
 
   private readonly messaging = inject(MessagingService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly historyReady: Promise<void>;
+  private mutationQueue: Promise<void> = Promise.resolve();
 
   constructor() {
-    this.loadHistory();
+    this.historyReady = this.loadHistory();
+    const storageChangedListener = (changes: Record<string, browser.Storage.StorageChange>, areaName: string) => {
+      if (areaName !== 'local' || !changes[HISTORY_STORAGE_KEY]) return;
+      const value = changes[HISTORY_STORAGE_KEY].newValue as HistoryItem[] | undefined;
+      this._history.set(this.sortHistory(value ?? []));
+      const selected = this._selectedItem();
+      this._selectedItem.set(selected ? this._history().find(item => item.id === selected.id) ?? null : null);
+    };
+    if (typeof browser !== 'undefined') browser.storage?.onChanged?.addListener(storageChangedListener);
+    this.destroyRef.onDestroy(() => {
+      if (typeof browser !== 'undefined') browser.storage?.onChanged?.removeListener(storageChangedListener);
+    });
   }
 
   /**
    * Add a new summary to history
    */
-  async addSummary(summaryResult: SummaryResult): Promise<void> {
-    const history = this._history();
+  addSummary(summaryResult: SummaryResult): Promise<void> {
+    return this.enqueueMutation(async () => {
+      await this.historyReady;
+      await this.refreshHistoryFromStorage();
+      const history = this._history();
 
-    // Create a new history item
-    const newItem: HistoryItem = {
-      id: this.generateId(),
-      summary: summaryResult.summary,
-      title: summaryResult.title || 'Untitled Article',
-      articleUrl: summaryResult.articleUrl || '',
-      cached: summaryResult.cached || false,
-      timestamp: summaryResult.timestamp || new Date(),
-      provider: summaryResult.provider,
-      model: summaryResult.model,
-      tokenCount: summaryResult.tokenCount,
-      preview: this.generatePreview(summaryResult.summary)
-    };
+      const newItem: HistoryItem = {
+        id: this.generateId(),
+        summary: summaryResult.summary,
+        title: summaryResult.title || 'Untitled Article',
+        articleUrl: summaryResult.articleUrl || '',
+        cached: summaryResult.cached || false,
+        timestamp: summaryResult.timestamp || new Date(),
+        provider: summaryResult.provider,
+        model: summaryResult.model,
+        tokenCount: summaryResult.tokenCount,
+        agentLabels: summaryResult.agentLabels,
+        preview: this.generatePreview(summaryResult.summary),
+      };
 
-    // Add to beginning of history
-    this._history.set([newItem, ...history]);
+      this._history.set([newItem, ...history]);
+      await this.saveHistory();
 
-    // Save to storage
-    await this.saveHistory();
-
-    // If this is the first item or most recent, select it
-    if (history.length === 0 || new Date(newItem.timestamp) >= new Date(history[0].timestamp)) {
-      this._selectedItem.set(newItem);
-    }
+      if (history.length === 0 || new Date(newItem.timestamp) >= new Date(history[0].timestamp)) {
+        this._selectedItem.set(newItem);
+      }
+    });
   }
 
   /**
@@ -95,34 +110,32 @@ export class HistoryService {
   /**
    * Delete a history item
    */
-  async deleteItem(id: string): Promise<void> {
-    const history = this._history();
-    const updatedHistory = history.filter(item => item.id !== id);
-    this._history.set(updatedHistory);
-
-    // If deleted item was selected, clear selection
-    if (this._selectedItem()?.id === id) {
-      this._selectedItem.set(null);
-    }
-
-    await this.saveHistory();
+  deleteItem(id: string): Promise<void> {
+    return this.enqueueMutation(async () => {
+      await this.historyReady;
+      await this.refreshHistoryFromStorage();
+      this._history.update(history => history.filter(item => item.id !== id));
+      if (this._selectedItem()?.id === id) this._selectedItem.set(null);
+      await this.saveHistory();
+    });
   }
 
   /**
    * Clear all history
    */
-  async clearAll(): Promise<void> {
-    this._history.set([]);
-    this._selectedItem.set(null);
-    await this.saveHistory();
+  clearAll(): Promise<void> {
+    return this.enqueueMutation(async () => {
+      await this.historyReady;
+      this._history.set([]);
+      this._selectedItem.set(null);
+      await this.saveHistory();
 
-    // Also clear the summary cache so cached summaries are not retained
-    // after the user clears their history.
-    try {
-      await firstValueFrom(this.messaging.clearCache());
-    } catch (error) {
-      console.error('Failed to clear summary cache while clearing history:', error);
-    }
+      try {
+        await firstValueFrom(this.messaging.clearCache());
+      } catch (error) {
+        console.error('Failed to clear summary cache while clearing history:', error);
+      }
+    });
   }
 
   /**
@@ -151,19 +164,26 @@ export class HistoryService {
    */
   private async loadHistory(): Promise<void> {
     try {
-      // Check if we're in a browser extension context
-      if (typeof browser !== 'undefined' && browser.storage) {
-        const result = await browser.storage.local.get([HISTORY_STORAGE_KEY]) as Record<string, HistoryItem[]>;
-        if (result[HISTORY_STORAGE_KEY]) {
-          const storedHistory: HistoryItem[] = result[HISTORY_STORAGE_KEY];
-          this._history.set(storedHistory.sort((a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-          ));
-        }
-      }
+      await this.refreshHistoryFromStorage();
     } catch (error) {
       console.error('Failed to load history:', error);
     }
+  }
+
+  private async refreshHistoryFromStorage(): Promise<void> {
+    if (typeof browser === 'undefined' || !browser.storage) return;
+    const result = await browser.storage.local.get([HISTORY_STORAGE_KEY]) as Record<string, HistoryItem[]>;
+    this._history.set(this.sortHistory(result[HISTORY_STORAGE_KEY] ?? []));
+  }
+
+  private sortHistory(history: HistoryItem[]): HistoryItem[] {
+    return [...history].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  private enqueueMutation(operation: () => Promise<void>): Promise<void> {
+    const pending = this.mutationQueue.then(operation, operation);
+    this.mutationQueue = pending.catch(() => undefined);
+    return pending;
   }
 
   /**

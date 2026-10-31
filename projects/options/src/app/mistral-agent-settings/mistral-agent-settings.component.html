@@ -6,7 +6,7 @@
     </div>
   </div>
   <div class="section-description">
-    Configure Mistral agent for classifying sidebar summaries (optional)
+    Configure a Mistral agent to classify summaries and save its labels with article history (optional)
   </div>
 
   <div class="agent-info-toggle">
@@ -25,8 +25,8 @@
   @if (showAgentInfo()) {
     <div class="agent-info-box">
       <p><strong>What is Mistral Agent Classification?</strong></p>
-      <p>After a sidebar summary appears, it will be sent to a configured Mistral agent for classification. 
-        The agent will return 5 labels that will be displayed beside the summary.</p>
+      <p>After an article is summarized, it will be sent to a configured Mistral agent for classification.
+        The agent will return 5 labels that are saved with the summary and shown in sidebar history.</p>
       <p><strong>Requirements:</strong></p>
       <ul>
         <li>Mistral must be selected as the provider</li>
@@ -34,8 +34,7 @@
         <li>Valid agent ID and version</li>
         <li>Agent must return a JSON array of exactly 5 nonempty strings</li>
       </ul>
-      <p><strong>Note:</strong> Popup summaries will NOT trigger classification. Classification failures 
-        will leave the summary visible and show a separate error in the sidebar.</p>
+      <p><strong>Note:</strong> Classification failures leave the summary visible and show a separate error in the sidebar.</p>
       <p><em>Example agent ID: <code>your-agent-id</code>, Version: <code>9</code></em></p>
     </div>
   }
@@ -77,7 +76,7 @@
   @if (isAgentConfigured) {
     <div class="agent-status">
       <span class="status-indicator">✓</span>
-      <span>Agent classification is configured and will run on sidebar summaries</span>
+      <span>Agent classification is configured and will run when articles are summarized</span>
     </div>
   }
 

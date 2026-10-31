@@ -19,17 +19,42 @@ function generateCacheKey(article: ArticleData, settings: Partial<ResolvedSettin
 export async function getCachedSummary(
   article: ArticleData,
   settings: Partial<ResolvedSettings>,
-): Promise<{summary: string; agentLabels?: string[]} | null> {
+): Promise<{summary: string; agentLabels?: string[]; agentId?: string; agentVersion?: string} | null> {
   const cacheKey = generateCacheKey(article, settings);
   const result = await browser.storage.local.get(cacheKey) as Record<string, CachedSummaryData>;
   if (result[cacheKey]) {
     const cached = result[cacheKey];
     if (cached.timestamp && Date.now() - cached.timestamp < (settings.cacheTTL ?? 7) * 24 * 60 * 60 * 1000) {
-      return {summary: cached.summary, agentLabels: cached.agentLabels};
+      return {
+        summary: cached.summary,
+        agentLabels: cached.agentLabels,
+        agentId: cached.agentId,
+        agentVersion: cached.agentVersion,
+      };
     }
     await browser.storage.local.remove(cacheKey);
   }
   return null;
+}
+
+/** Update classification metadata while preserving the cached summary's age. */
+export async function updateCachedAgentLabels(
+  article: ArticleData,
+  settings: Partial<ResolvedSettings>,
+  labels: string[],
+): Promise<void> {
+  const cacheKey = generateCacheKey(article, settings);
+  const result = await browser.storage.local.get(cacheKey) as Record<string, CachedSummaryData>;
+  const cached = result[cacheKey];
+  if (!cached) return;
+  await browser.storage.local.set({
+    [cacheKey]: {
+      ...cached,
+      agentLabels: labels,
+      agentId: settings.mistralAgentId,
+      agentVersion: settings.mistralAgentVersion,
+    },
+  });
 }
 
 export async function cacheSummary(
