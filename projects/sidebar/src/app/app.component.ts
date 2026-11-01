@@ -125,7 +125,7 @@ type ViewMode = 'current' | 'history' | 'history-detail';
                   </div>
                   <div class="agent-labels">
                     @for (label of agentLabelsFromSummary(); track $index) {
-                      <span class="agent-label-badge">{{ label }}</span>
+                      <span class="agent-label-badge">{{ formatAgentLabel(label) }}</span>
                     }
                   </div>
                 </div>
@@ -159,10 +159,19 @@ type ViewMode = 'current' | 'history' | 'history-detail';
                   <div class="history-content">
                     <div class="history-title">{{ item.title }}</div>
                     <div class="history-preview">{{ item.preview }}</div>
-                    @if (item.agentLabels?.length) {
-                      <div class="agent-labels history-agent-labels" aria-label="Agent classification">
-                        @for (label of item.agentLabels; track $index) { <span class="agent-label-badge">{{ label }}</span> }
-                      </div>
+                    @if (item.agentLabels; as labels) {
+                      @if (labels.length) {
+                        <div class="history-agent-labels" role="group"
+                             [attr.aria-label]="'Agent classification: ' + formatAgentLabels(labels)"
+                             [attr.title]="formatAgentLabels(labels)">
+                          @for (label of labels | slice:0:2; track $index) {
+                            <span class="history-agent-label">{{ formatAgentLabel(label) }}</span>
+                          }
+                          @if (labels.length > 2) {
+                            <span class="history-agent-label-count" aria-hidden="true">+{{ labels.length - 2 }}</span>
+                          }
+                        </div>
+                      }
                     }
                     <div class="history-meta">
                       <span class="history-date">{{ formatDate(item.timestamp) }}</span>
@@ -204,7 +213,7 @@ type ViewMode = 'current' | 'history' | 'history-detail';
             <div class="agent-labels-section">
               <div class="agent-labels-header"><span>🎯 Agent Classification</span></div>
               <div class="agent-labels">
-                @for (label of selectedHistoryItem()?.agentLabels; track $index) { <span class="agent-label-badge">{{ label }}</span> }
+                @for (label of selectedHistoryItem()?.agentLabels; track $index) { <span class="agent-label-badge">{{ formatAgentLabel(label) }}</span> }
               </div>
             </div>
           }
@@ -527,11 +536,54 @@ type ViewMode = 'current' | 'history' | 'history-detail';
         font-weight: 500;
       }
       .agent-classification-error { margin-top: 10px; color: var(--danger-color, #b42318); font-size: 12px; }
-      .history-agent-labels { margin-top: 6px; gap: 4px; }
+      .history-agent-labels {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 4px;
+        min-width: 0;
+        margin-top: 6px;
+      }
+
+      .history-agent-label {
+        min-width: 0;
+        overflow: hidden;
+        padding: 3px 7px;
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 6px;
+        background: var(--bg-tertiary, #f1f5f9);
+        color: var(--text-secondary, #1f1f23);
+        font-size: 11px;
+        line-height: 1.2;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .history-agent-label:first-child {
+        flex-shrink: 0;
+        max-width: 50%;
+      }
+
+      .history-agent-label-count {
+        flex: none;
+        color: var(--text-muted, #343840);
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
     `
   ],
 })
 export class AppComponent implements OnInit, OnDestroy {
+  formatAgentLabel(label: string): string {
+    const formatted = label.replace(/_/g, ' ');
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  }
+
+  formatAgentLabels(labels: string[]): string {
+    return labels.map(label => this.formatAgentLabel(label)).join(', ');
+  }
+
   public historyService = inject(HistoryService);
   public themeService = inject(ThemeService);
   // State signals

@@ -82,7 +82,7 @@ describe('Sidebar shortcut action', () => {
   });
 
   it('shows stored agent labels in the current summary, history row, and history detail without classifying on open', () => {
-    const labels = ['news', 'science', 'climate', 'analysis', 'policy'];
+    const labels = ['minecraft', 'virtual_reality', 'open_data', 'gaming_project', '3d_modeling'];
     const item: HistoryItem = {
       id: 'item-1', summary: 'Saved summary', title: 'Saved article', articleUrl: 'https://example.com',
       cached: false, timestamp: new Date(), preview: 'Saved preview', agentLabels: labels,
@@ -91,16 +91,21 @@ describe('Sidebar shortcut action', () => {
     summary.state.set({state: 'success', summary: summaryResult});
     fixture.componentInstance.summaryState.set({state: 'success', summary: summaryResult});
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.summary-view').textContent).toContain('climate');
+    expect(fixture.nativeElement.querySelector('.summary-view').textContent).toContain('Virtual reality');
 
     historyItems.set([item]);
     fixture.componentInstance.setView('history');
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.history-item').textContent).toContain('climate');
+    const row = fixture.nativeElement.querySelector('.history-item');
+    expect(Array.from(row.querySelectorAll('.history-agent-label'), (label: Element) => label.textContent?.trim())).toEqual(['Minecraft', 'Virtual reality']);
+    expect(row.querySelector('.history-agent-label-count').textContent).toContain('+3');
+    expect(row.querySelector('.history-agent-labels').getAttribute('aria-label')).toBe('Agent classification: Minecraft, Virtual reality, Open data, Gaming project, 3d modeling');
 
-    fixture.componentInstance.viewHistoryDetail(item);
+    row.click();
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.agent-labels-section').textContent).toContain('climate');
+    const detailLabels = fixture.nativeElement.querySelectorAll('.agent-labels-section .agent-label-badge');
+    expect(Array.from(detailLabels, (label: Element) => label.textContent?.trim())).toEqual(['Minecraft', 'Virtual reality', 'Open data', 'Gaming project', '3d modeling']);
+    expect(item.agentLabels).toEqual(labels);
     expect(summary.extractAndSummarize).not.toHaveBeenCalled();
     expect(classifyWithMistralAgent).not.toHaveBeenCalled();
   });
@@ -127,10 +132,22 @@ describe('Sidebar shortcut action', () => {
   it('opens an older history item without labels and does not classify it', () => {
     const legacy: HistoryItem = {id: 'legacy', summary: 'Old summary', title: 'Old', articleUrl: '', cached: false, timestamp: new Date(), preview: 'Old summary'};
     historyItems.set([legacy]);
+    fixture.componentInstance.setView('history');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.history-agent-labels')).toBeNull();
     fixture.componentInstance.viewHistoryDetail(legacy);
     fixture.detectChanges();
     expect(fixture.componentInstance.selectedHistoryItem()?.agentLabels).toBeUndefined();
     expect(classifyWithMistralAgent).not.toHaveBeenCalled();
+  });
+
+  it('does not show an overflow count when two labels fit', () => {
+    const item: HistoryItem = {id: 'two', summary: 'Summary', title: 'Article', articleUrl: '', cached: false, timestamp: new Date(), preview: 'Summary', agentLabels: ['one', 'two']};
+    historyItems.set([item]);
+    fixture.componentInstance.setView('history');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.history-agent-label').length).toBe(2);
+    expect(fixture.nativeElement.querySelector('.history-agent-label-count')).toBeNull();
   });
 
   it('requests website access in the retry click and retries the same captured tab', async () => {
