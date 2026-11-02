@@ -24,6 +24,47 @@ describe('SummaryService shortcut extraction', () => {
     expect(messaging.extractAndSummarize).toHaveBeenCalledWith(72);
   });
 
+  it('maps agent labels and classifier errors from an extracted summary response', () => {
+    const messaging = {extractAndSummarize: vi.fn(() => of({
+      success: true,
+      summary: 'Article summary',
+      title: 'Article title',
+      articleUrl: 'https://example.com/article',
+      agentLabels: ['one', 'two', 'three', 'four', 'five'],
+      agentClassificationError: 'Agent timed out',
+    }))};
+    TestBed.configureTestingModule({providers: [SummaryService, {provide: MessagingService, useValue: messaging}, {provide: SettingsService, useValue: {}}]});
+    const service = TestBed.inject(SummaryService);
+    service.extractAndSummarize().subscribe();
+    expect(service.state().summary).toMatchObject({
+      title: 'Article title', articleUrl: 'https://example.com/article',
+      agentLabels: ['one', 'two', 'three', 'four', 'five'],
+      agentClassificationError: 'Agent timed out',
+    });
+  });
+
+  it('maps agent labels and article metadata from a wrapped SUMMARIZE response', () => {
+    const article = {url: 'https://example.com/article', title: 'Article', textContent: 'Body', byline: '', length: 4};
+    const messaging = {summarizeArticle: vi.fn(() => of({success: true, data: {
+      summary: 'Article summary', cached: true, tokenCount: 12,
+      agentLabels: ['one', 'two', 'three', 'four', 'five'], agentClassificationError: undefined,
+    }}))};
+    TestBed.configureTestingModule({
+      providers: [
+        SummaryService,
+        {provide: MessagingService, useValue: messaging},
+        {provide: SettingsService, useValue: {settings: () => ({provider: 'mistral', model: 'mistral-small'})}},
+      ],
+    });
+    const service = TestBed.inject(SummaryService);
+    service.summarize(article).subscribe();
+    expect(messaging.summarizeArticle).toHaveBeenCalledWith(article, 'mistral');
+    expect(service.state().summary).toMatchObject({
+      summary: 'Article summary', title: 'Article', articleUrl: article.url, cached: true,
+      agentLabels: ['one', 'two', 'three', 'four', 'five'],
+    });
+  });
+
   it('preserves host permission recovery details in the error state', () => {
     const messaging = {
       extractAndSummarize: vi.fn(() => of({

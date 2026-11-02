@@ -1,17 +1,85 @@
 import type {ClassifyWithAgentRequest, ClassifyWithAgentResponse} from '@shared/lib/models/agent-classification.model';
-import {getSettings} from './settings';
+import {getSettings, type ResolvedSettings} from './settings';
 
 interface MistralAgentOutput {
-  content?: string | string[];
+  type?: string;
+  content?: unknown;
 }
 
 interface MistralAgentResponse {
-  outputs?: MistralAgentOutput[];
+  outputs?: unknown;
 }
 
 interface MistralAgentClassificationResult {
   labels?: string[];
   error?: string;
+}
+
+type MistralAgentRecord = Record<string, unknown> & {
+  labels?: unknown;
+  tags?: unknown;
+  text?: unknown;
+  type?: unknown;
+};
+
+function isRecord(value: unknown): value is MistralAgentRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function stripJsonFence(value: string): string {
+  const match = value.trim().match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  return match ? match[1] : value.trim();
+}
+
+function parseLabels(content: unknown): MistralAgentClassificationResult {
+  let parsed: unknown = content;
+
+  if (typeof parsed === 'string') {
+    const text = stripJsonFence(parsed);
+    try {
+      parsed = JSON.parse(text) as unknown;
+    } catch {
+      parsed = text;
+    }
+  }
+
+  if (isRecord(parsed)) {
+    if ('labels' in parsed) {
+      parsed = parsed.labels;
+    } else if ('tags' in parsed) {
+      parsed = parsed.tags;
+    }
+  }
+
+  if (typeof parsed === 'string') {
+    return {error: 'Invalid label format: expected array of 5 strings, got 1 items'};
+  }
+  if (!Array.isArray(parsed)) {
+    return {error: 'Invalid content format in agent response: expected a label array'};
+  }
+  if (parsed.length !== 5) {
+    return {error: `Invalid label format: expected array of 5 strings, got ${parsed.length} items`};
+  }
+  if (!parsed.every((label): label is string => typeof label === 'string' && label.trim() !== '')) {
+    return {error: 'Invalid label format: expected 5 nonempty strings'};
+  }
+  return {labels: parsed};
+}
+
+function normalizeContent(content: unknown): unknown {
+  if (!Array.isArray(content) || content.every(item => typeof item === 'string')) return content;
+
+  const textChunks: string[] = [];
+  for (const chunk of content) {
+    if (typeof chunk === 'string') {
+      textChunks.push(chunk);
+    } else if (isRecord(chunk) && typeof chunk.text === 'string') {
+      textChunks.push(chunk.text);
+    } else {
+      return content;
+    }
+  }
+  return textChunks.join('');
 }
 
 /**
@@ -75,72 +143,41 @@ async function callMistralAgentClassification(
     // Parse the response to extract the final message output
     // Mistral returns outputs through the `outputs` field
     // Each output has a `content` field directly (not message.content)
-    if (responseData.outputs && Array.isArray(responseData.outputs) && responseData.outputs.length > 0) {
-      // Get the final output
-      const finalOutput = responseData.outputs[responseData.outputs.length - 1];
-
-      // Check if it's a message output with content
-      if (finalOutput.content) {
-        try {
-          // The content should be the JSON array of labels or a string
-          let content = finalOutput.content;
-
-          // Handle text chunks - content might be a string that needs parsing
-          if (typeof content === 'string') {
-            // Try to parse as JSON first
-            try {
-              content = JSON.parse(content);
-            } catch {
-              // Not JSON, use as-is
-            }
-          }
-
-          // Now content should be the array of labels or still a string
-          let labels: string[];
-          if (Array.isArray(content)) {
-            labels = content;
-          } else if (typeof content === 'string') {
-            // Try to parse the string as JSON
-            try {
-              const parsed = JSON.parse(content);
-              labels = Array.isArray(parsed) ? parsed : [content];
-            } catch {
-              // Not JSON, treat as single label (but we need 5)
-              labels = [content];
-            }
-          } else {
-            return { error: 'Invalid content format in agent response' };
-          }
-
-          // Validate that we have exactly 5 nonempty strings
-          if (labels.length === 5) {
-            const validLabels = labels.filter((label): label is string =>
-              typeof label === 'string' && label.trim() !== '',
-            );
-
-            if (validLabels.length === 5) {
-              return { labels: validLabels };
-            } else {
-              return { error: 'Invalid label format: expected 5 nonempty strings' };
-            }
-          } else {
-            return { error: `Invalid label format: expected array of 5 strings, got ${labels.length} items` };
-          }
-        } catch (parseError) {
-          console.error('Failed to parse agent response:', parseError);
-          return { error: 'Failed to parse agent response as JSON array' };
-        }
-      } else {
-        return { error: 'No content in final agent output' };
-      }
-    } else {
-      return { error: 'No outputs in agent response' };
+    if (!Array.isArray(responseData.outputs) || responseData.outputs.length === 0) {
+      return {error: 'No outputs in agent response'};
     }
+
+    const messageOutputs = responseData.outputs.filter((output): output is MistralAgentOutput =>
+      isRecord(output) && (output.type === undefined || output.type === 'message.output'),
+    );
+    const finalOutput = messageOutputs[messageOutputs.length - 1];
+    if (!finalOutput) return {error: 'No message output in agent response'};
+    if (finalOutput.content === undefined || finalOutput.content === null) {
+      return {error: 'No content in final agent output'};
+    }
+    return parseLabels(normalizeContent(finalOutput.content));
   } catch (error) {
     return {
       error: `Agent classification error: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
+}
+
+/** Classify a summary with already-resolved settings for the summarize flow. */
+export async function classifySummaryWithMistralAgent(
+  summary: string,
+  settings: ResolvedSettings,
+): Promise<{labels?: string[]; error?: string}> {
+  if (settings.provider !== 'mistral' || !settings.mistralAgentId || !settings.mistralAgentVersion) {
+    return {};
+  }
+  if (!settings.apiKey) return {error: 'Mistral API key is required for agent classification'};
+  return callMistralAgentClassification(
+    summary,
+    settings.mistralAgentId,
+    settings.mistralAgentVersion,
+    settings.apiKey,
+  );
 }
 
 /**

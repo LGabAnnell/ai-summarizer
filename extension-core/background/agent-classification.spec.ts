@@ -7,10 +7,11 @@ vi.mock('./settings', async importOriginal => ({
 }));
 vi.mock('webextension-polyfill', () => ({default: {}}));
 vi.stubGlobal('fetch', mocks.fetch);
-import {handleClassifyWithAgent} from './agent-classification';
+import {classifySummaryWithMistralAgent, handleClassifyWithAgent} from './agent-classification';
 import {DEFAULT_SETTINGS} from './settings';
 
 const labels = ['one', 'two', 'three', 'four', 'five'];
+const tags = ['minecraft', 'switzerland', 'recreation', 'video_games', 'geodata'];
 const request = {type: 'CLASSIFY_WITH_AGENT' as const, summary: 'Summary', agentId: '', agentVersion: ''};
 function response(content: unknown, outputs: unknown[] = [{content}]) {
   return {ok: true, json: vi.fn().mockResolvedValue({outputs}), text: vi.fn()};
@@ -45,16 +46,35 @@ describe('Mistral agent classification', () => {
     }));
   });
 
-  it('accepts a direct array and validates count, blanks, types, and missing output content', async () => {
+  it('accepts tag objects returned by the Conversations API', async () => {
+    mocks.fetch.mockResolvedValueOnce(response(undefined, [{
+      type: 'message.output',
+      role: 'assistant',
+      content: JSON.stringify({tags}),
+    }]));
+    await expect(handleClassifyWithAgent(request)).resolves.toMatchObject({success: true, labels: tags});
+
+    mocks.fetch.mockResolvedValueOnce(response({tags}));
+    await expect(handleClassifyWithAgent(request)).resolves.toMatchObject({success: true, labels: tags});
+  });
+
+  it('accepts direct arrays and text chunks while validating count and content', async () => {
     mocks.fetch.mockResolvedValueOnce(response(labels));
     await expect(handleClassifyWithAgent(request)).resolves.toMatchObject({success: true, labels});
+    mocks.fetch.mockResolvedValueOnce(response([{text: '{"labels":['}, {text: '"one","two","three","four","five"]}'}]));
+    await expect(handleClassifyWithAgent(request)).resolves.toMatchObject({success: true, labels});
+    mocks.fetch.mockResolvedValueOnce(response('```json\n{"labels": ["one", "two", "three", "four", "five"]}\n```'));
+    await expect(handleClassifyWithAgent(request)).resolves.toMatchObject({success: true, labels});
+
     for (const bad of [
       {content: JSON.stringify(['one'])},
       {content: JSON.stringify(['one', 'two', 'three', 'four', ''])},
       {content: JSON.stringify(['one', 'two', 'three', 'four', 5])},
+      {content: JSON.stringify({tags: ['one', null, 'three', 'four', 'five']})},
+      {content: JSON.stringify({tags: ['one', 2, 'three', 'four', 'five']})},
       {outputs: []},
       {outputs: [{content: null}]},
-      {content: JSON.stringify({labels})},
+      {content: JSON.stringify({other: labels})},
     ]) {
       const body = 'outputs' in bad ? bad : {outputs: [bad]};
       mocks.fetch.mockResolvedValueOnce({ok: true, json: vi.fn().mockResolvedValue(body)});
@@ -65,6 +85,12 @@ describe('Mistral agent classification', () => {
   it('uses only the final output from the agent and surfaces HTTP errors', async () => {
     mocks.fetch.mockResolvedValueOnce(response(labels[0], [{content: 12}, {content: JSON.stringify(labels)}]));
     await expect(handleClassifyWithAgent(request)).resolves.toMatchObject({success: true, labels});
+    mocks.fetch.mockResolvedValueOnce(response(labels, [
+      {type: 'message.output', content: JSON.stringify(labels.slice(0, 2))},
+      {type: 'message.output', content: JSON.stringify(labels)},
+      {type: 'tool.execution', content: 'irrelevant'},
+    ]));
+    await expect(handleClassifyWithAgent(request)).resolves.toMatchObject({success: true, labels});
     mocks.fetch.mockResolvedValueOnce({ok: false, status: 403, text: vi.fn().mockResolvedValue('{"message":"denied"}')});
     await expect(handleClassifyWithAgent(request)).resolves.toMatchObject({success: false, error: 'Agent classification error: HTTP 403: {"message":"denied"}'});
   });
@@ -74,5 +100,13 @@ describe('Mistral agent classification', () => {
     await expect(handleClassifyWithAgent(request)).resolves.toMatchObject({success: false, error: 'API key is required for Mistral agent classification'});
     mocks.fetch.mockRejectedValueOnce(new Error('timeout'));
     await expect(handleClassifyWithAgent(request)).resolves.toMatchObject({success: false, error: 'Agent classification error: timeout'});
+  });
+
+  it('gates the summarize wrapper on agent config and API key, and returns agent failures', async () => {
+    const configured = {...DEFAULT_SETTINGS, provider: 'mistral' as const, apiKey: 'secret', mistralAgentId: 'id', mistralAgentVersion: 'v1'};
+    await expect(classifySummaryWithMistralAgent('Summary', {...configured, mistralAgentId: ''})).resolves.toEqual({});
+    await expect(classifySummaryWithMistralAgent('Summary', {...configured, apiKey: ''})).resolves.toEqual({error: 'Mistral API key is required for agent classification'});
+    mocks.fetch.mockRejectedValueOnce(new Error('timeout'));
+    await expect(classifySummaryWithMistralAgent('Summary', configured)).resolves.toEqual({error: 'Agent classification error: timeout'});
   });
 });
