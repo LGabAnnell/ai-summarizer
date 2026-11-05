@@ -1,6 +1,7 @@
 import browser from 'webextension-polyfill';
 import {Message, SetThemeRequest} from '@shared/lib/models/summary.model';
 import {ClassifyWithAgentRequest} from '@shared/lib/models/agent-classification.model';
+import {mutateHistory} from './history';
 import {extractArticleFromActiveTab, TabExtractionError} from './article-extraction';
 import {handleClearCache} from './summary-cache';
 import {handleGetSettings, handleSaveSettings} from './settings';
@@ -14,9 +15,13 @@ import {handleClassifyText, handleGetMLPermissionStatus, handleNotifyMLPermissio
  */
 export async function handleMessage(request: Message): Promise<unknown> {
   switch (request.type) {
+    case 'HISTORY_ADD':
+    case 'HISTORY_DELETE':
+    case 'HISTORY_CLEAR':
+      return {type: 'HISTORY_RESPONSE', success: true, data: await mutateHistory(request)};
     case 'EXTRACT_AND_SUMMARIZE':
       try {
-        const article = await extractArticleFromActiveTab(request.tabId);
+        const article = await extractArticleFromActiveTab(request.tabId, request.documentId, request.documentUrl);
         if (!article) {
           return {
             type: 'SUMMARIZE_RESPONSE',

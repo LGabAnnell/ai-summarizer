@@ -48,7 +48,10 @@
                 "output": "/assets"
               }
             ],
-            "styles": ["projects/shared/src/lib/styles/index.scss", "projects/popup/src/styles.scss"],
+            "styles": [
+              "projects/shared/src/lib/styles/index.scss",
+              "projects/popup/src/styles.scss"
+            ],
             "scripts": [],
             "optimization": {
               "scripts": true,
@@ -153,7 +156,10 @@
                 "output": "/assets"
               }
             ],
-            "styles": ["projects/shared/src/lib/styles/index.scss", "projects/options/src/styles.scss"],
+            "styles": [
+              "projects/shared/src/lib/styles/index.scss",
+              "projects/options/src/styles.scss"
+            ],
             "scripts": [],
             "optimization": {
               "scripts": true,
@@ -258,7 +264,10 @@
                 "output": "/assets"
               }
             ],
-            "styles": ["projects/shared/src/lib/styles/index.scss", "projects/sidebar/src/styles.scss"],
+            "styles": [
+              "projects/shared/src/lib/styles/index.scss",
+              "projects/sidebar/src/styles.scss"
+            ],
             "scripts": [],
             "optimization": {
               "scripts": true,
@@ -360,6 +369,97 @@
           "options": {
             "lintFilePatterns": [
               "projects/shared/src/**/*.ts"
+            ]
+          }
+        }
+      }
+    },
+    "panel": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss",
+          "standalone": true
+        },
+        "@schematics/angular:directive": {
+          "standalone": true
+        },
+        "@schematics/angular:pipe": {
+          "standalone": true
+        }
+      },
+      "root": "projects/panel",
+      "sourceRoot": "projects/panel/src",
+      "prefix": "panel",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/panel",
+            "index": "projects/panel/src/index.html",
+            "browser": "projects/panel/src/main.ts",
+            "tsConfig": "projects/panel/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [],
+            "styles": [
+              "projects/shared/src/lib/styles/index.scss",
+              "projects/panel/src/styles.scss"
+            ],
+            "scripts": [],
+            "optimization": {
+              "scripts": true,
+              "styles": {
+                "minify": true,
+                "inlineCritical": false
+              },
+              "fonts": true
+            },
+            "outputHashing": "none",
+            "sourceMap": false,
+            "namedChunks": false,
+            "extractLicenses": false
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                }
+              ],
+              "outputHashing": "none",
+              "allowedCommonJsDependencies": [
+                "webextension-polyfill"
+              ]
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            },
+            "debug": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "namedChunks": true,
+              "outputHashing": "none"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "runnerConfig": true
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/panel/src/**/*.ts",
+              "projects/panel/src/**/*.html"
             ]
           }
         }

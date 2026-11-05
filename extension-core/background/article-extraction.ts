@@ -17,7 +17,7 @@ export class TabExtractionError extends Error {
 /**
  * Extract article from the active tab
  */
-export async function extractArticleFromActiveTab(requestedTabId?: number): Promise<ArticleData | null> {
+export async function extractArticleFromActiveTab(requestedTabId?: number, documentId?: string, documentUrl?: string): Promise<ArticleData | null> {
   const tabs = requestedTabId === undefined
     ? await browser.tabs.query({active: true, currentWindow: true})
     : [{id: requestedTabId}];
@@ -41,7 +41,7 @@ export async function extractArticleFromActiveTab(requestedTabId?: number): Prom
   // The manifest loads the content script at document_idle. On the first click it
   // may not have registered its message listener yet, so inject it on demand.
   try {
-    response = await browser.tabs.sendMessage(tabId, {type: 'EXTRACT_ARTICLE'}) as ExtractResponse;
+    response = await browser.tabs.sendMessage(tabId, {type: 'EXTRACT_ARTICLE', documentId, documentUrl}) as ExtractResponse;
   } catch {
     try {
       await browser.scripting.executeScript({target: {tabId}, files: ['content.js']});
@@ -56,10 +56,10 @@ export async function extractArticleFromActiveTab(requestedTabId?: number): Prom
 
     // A newly injected script can take a moment to register its listener.
     try {
-      response = await browser.tabs.sendMessage(tabId, {type: 'EXTRACT_ARTICLE'}) as ExtractResponse;
+      response = await browser.tabs.sendMessage(tabId, {type: 'EXTRACT_ARTICLE', documentId, documentUrl}) as ExtractResponse;
     } catch {
       await new Promise(resolve => setTimeout(resolve, 150));
-      response = await browser.tabs.sendMessage(tabId, {type: 'EXTRACT_ARTICLE'}) as ExtractResponse;
+      response = await browser.tabs.sendMessage(tabId, {type: 'EXTRACT_ARTICLE', documentId, documentUrl}) as ExtractResponse;
     }
   }
 

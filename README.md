@@ -29,6 +29,8 @@ A Firefox Manifest V3 extension that extracts article content using Mozilla's Re
 3. **Build the extension**:
    ```bash
    npm run build
+   # Or include source maps for debugging:
+   npm run build:debug
    ```
 
 4. **Load in Firefox**:
@@ -78,16 +80,16 @@ A Firefox Manifest V3 extension that extracts article content using Mozilla's Re
 
 ## Usage
 
-1. Navigate to any article or webpage
-2. Click the extension icon in the Firefox toolbar
-3. Click "Summarize Article"
-4. The summary will appear in the popup
-5. Click "Copy" to copy the summary to your clipboard
+1. Open an article in Firefox and click the extension icon in the toolbar.
+2. The floating panel opens and starts summarizing immediately. Drag its header or use the resize handle to position it; use the arrow keys on either control for keyboard adjustment.
+3. Copy the summary or open Settings from the panel. Close it with the close button or Escape.
+
+Closing the panel does not cancel a summary in progress. The result is saved to history and restored when you reopen the panel on the same page. Navigating to another article closes the panel; open it again to summarize the new page. Firefox blocks extensions on some browser pages, its PDF viewer, and protected Mozilla websites; the extension opens an explanation if it cannot access a page.
 
 ### Keyboard Shortcuts
 
-- **Ctrl+Alt+S** (Mac: **Control+Shift+S**) opens the sidebar and summarizes the active page.
-- **Ctrl+Alt+F** (Mac: **Control+Shift+F**) toggles the sidebar.
+- **Ctrl+Alt+S** (Mac: **Control+Shift+S**) opens the floating panel and summarizes the active page.
+- **Ctrl+Alt+F** (Mac: **Control+Shift+F**) toggles the sidebar, where you can browse summary history.
 
 To change a shortcut, open `about:addons`, select the gear menu, then choose **Manage Extension Shortcuts**.
 
@@ -140,8 +142,10 @@ article-summarizer/
 │   └── vendor/              # Vendored libraries
 │       └── readability.js   # Mozilla Readability.js
 ├── projects/                # Angular workspace
-│   ├── popup/               # Popup UI application
+│   ├── panel/               # Floating summary UI application
+│   ├── popup/               # Existing popup UI application
 │   ├── options/             # Options page application
+│   ├── sidebar/             # Sidebar and history application
 │   └── shared/              # Shared library
 ├── builds/                  # Build scripts
 │   ├── build-extension.ts   # Extension build script

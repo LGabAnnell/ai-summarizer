@@ -19,7 +19,8 @@ const storage = vi.hoisted(() => ({
     }),
   },
 }));
-vi.mock('webextension-polyfill', () => ({default: {storage}}));
+const runtime = vi.hoisted(() => ({sendMessage: vi.fn()}));
+vi.mock('webextension-polyfill', () => ({default: {storage, runtime}}));
 
 const STORAGE_KEY = 'ai-summarizer-history';
 const labels = ['one', 'two', 'three', 'four', 'five'];
@@ -39,6 +40,18 @@ describe('HistoryService persistence and storage synchronization', () => {
       for (const listener of storageHarness.listeners) {
         listener({[STORAGE_KEY]: {oldValue, newValue: storageHarness.history}}, 'local');
       }
+    });
+    runtime.sendMessage.mockImplementation(async (request: {type: string; id?: string; summary?: HistoryItem}) => {
+      const items = [...storageHarness.history] as HistoryItem[];
+      if (request.type === 'HISTORY_ADD' && request.summary) {
+        const summary = request.summary;
+        items.unshift({...summary, id: crypto.randomUUID(), preview: summary.summary.slice(0, 100)});
+      } else if (request.type === 'HISTORY_DELETE') {
+        const index = items.findIndex(item => item.id === request.id);
+        if (index >= 0) items.splice(index, 1);
+      } else if (request.type === 'HISTORY_CLEAR') items.length = 0;
+      await storage.local.set({[STORAGE_KEY]: items});
+      return {success: true, data: items};
     });
     TestBed.configureTestingModule({providers: [HistoryService, {provide: MessagingService, useValue: {clearCache: () => of({success: true})}}]});
   });

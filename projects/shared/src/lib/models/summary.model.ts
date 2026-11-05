@@ -12,6 +12,7 @@ import {
   NotifyMLPermissionGrantedRequest
 } from "./classification.model";
 import {Theme} from "./theme.model";
+import type {HistoryMutation} from './panel.model';
 import type {ClassifyWithAgentRequest} from "./agent-classification.model";
 
 export interface ExtractArticleRequest {
@@ -29,6 +30,8 @@ export interface SummarizeRequest {
 export interface ExtractAndSummarizeRequest {
   type: 'EXTRACT_AND_SUMMARIZE';
   tabId?: number;
+  documentId?: string;
+  documentUrl?: string;
 }
 
 export interface ExtractArticleRequest {
@@ -101,6 +104,7 @@ export { ClassifyWithAgentRequest } from "./agent-classification.model";
 
 // Discriminated union type for all possible incoming message types
 export type Message =
+  | HistoryMutation
   | ExtractAndSummarizeRequest
   | SummarizeRequest
   | GetSettingsRequest

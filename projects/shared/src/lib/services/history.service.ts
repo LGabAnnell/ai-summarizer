@@ -4,6 +4,7 @@
  */
 
 import {DestroyRef, inject, Injectable, signal} from '@angular/core';
+import {HistoryMutation} from '../models/panel.model';
 import {SummaryResult} from '../models/summary.model';
 import {MessagingService} from './messaging.service';
 import browser from 'webextension-polyfill';
@@ -30,7 +31,7 @@ export interface HistoryItem {
 /**
  * Maximum number of history items to store
  */
-const MAX_HISTORY_ITEMS = 50;
+
 
 /**
  * Storage key for history
@@ -73,30 +74,9 @@ export class HistoryService {
    */
   addSummary(summaryResult: SummaryResult): Promise<void> {
     return this.enqueueMutation(async () => {
-      await this.historyReady;
-      await this.refreshHistoryFromStorage();
-      const history = this._history();
-
-      const newItem: HistoryItem = {
-        id: this.generateId(),
-        summary: summaryResult.summary,
-        title: summaryResult.title || 'Untitled Article',
-        articleUrl: summaryResult.articleUrl || '',
-        cached: summaryResult.cached || false,
-        timestamp: summaryResult.timestamp || new Date(),
-        provider: summaryResult.provider,
-        model: summaryResult.model,
-        tokenCount: summaryResult.tokenCount,
-        agentLabels: summaryResult.agentLabels,
-        preview: this.generatePreview(summaryResult.summary),
-      };
-
-      this._history.set([newItem, ...history]);
-      await this.saveHistory();
-
-      if (history.length === 0 || new Date(newItem.timestamp) >= new Date(history[0].timestamp)) {
-        this._selectedItem.set(newItem);
-      }
+      const items = await this.mutate({type: 'HISTORY_ADD', summary: summaryResult});
+      const selected = items.find(item => item.summary === summaryResult.summary && item.articleUrl === (summaryResult.articleUrl || ''));
+      if (selected) this._selectedItem.set(selected);
     });
   }
 
@@ -112,24 +92,15 @@ export class HistoryService {
    */
   deleteItem(id: string): Promise<void> {
     return this.enqueueMutation(async () => {
-      await this.historyReady;
-      await this.refreshHistoryFromStorage();
-      this._history.update(history => history.filter(item => item.id !== id));
+      await this.mutate({type: 'HISTORY_DELETE', id});
       if (this._selectedItem()?.id === id) this._selectedItem.set(null);
-      await this.saveHistory();
     });
   }
 
-  /**
-   * Clear all history
-   */
   clearAll(): Promise<void> {
     return this.enqueueMutation(async () => {
-      await this.historyReady;
-      this._history.set([]);
+      await this.mutate({type: 'HISTORY_CLEAR'});
       this._selectedItem.set(null);
-      await this.saveHistory();
-
       try {
         await firstValueFrom(this.messaging.clearCache());
       } catch (error) {
@@ -186,47 +157,12 @@ export class HistoryService {
     return pending;
   }
 
-  /**
-   * Save history to storage
-   */
-  private async saveHistory(): Promise<void> {
-    try {
-      // Check if we're in a browser extension context
-      if (typeof browser !== 'undefined' && browser.storage) {
-        const history = this._history();
-        // Limit history to maximum items
-        const limitedHistory = history.slice(0, MAX_HISTORY_ITEMS);
-        await browser.storage.local.set({[HISTORY_STORAGE_KEY]: limitedHistory});
-      }
-    } catch (error) {
-      console.error('Failed to save history:', error);
-    }
-  }
-
-  /**
-   * Generate a unique ID
-   */
-  private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2);
-  }
-
-  /**
-   * Generate a preview from summary text
-   */
-  private generatePreview(summary: string): string {
-    if (!summary) return '';
-
-    // Remove markdown formatting for preview
-    let preview = summary.replace(/[#*_~`\\]/g, '');
-
-    // Take first 100 characters
-    preview = preview.substring(0, 100);
-
-    // Add ellipsis if truncated
-    if (summary.length > 100) {
-      preview += '...';
-    }
-
-    return preview;
+  private async mutate(mutation: HistoryMutation): Promise<HistoryItem[]> {
+    await this.historyReady;
+    const response = await browser.runtime.sendMessage(mutation) as {success: boolean; data?: HistoryItem[]; error?: string};
+    if (!response.success || !response.data) throw new Error(response.error || 'Failed to save history');
+    const items = this.sortHistory(response.data);
+    this._history.set(items);
+    return items;
   }
 }

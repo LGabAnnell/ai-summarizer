@@ -14,6 +14,7 @@ const foldersToCopy = [
   { src: 'dist/popup', dest: 'dist/popup' },
   { src: 'dist/options', dest: 'dist/options' },
   { src: 'dist/sidebar', dest: 'dist/sidebar' },
+  { src: 'dist/panel', dest: 'dist/panel' },
 ];
 
 async function packageDist() {
@@ -84,7 +85,6 @@ async function packageDist() {
       
       // The popup, options, and sidebar should already be in the right place from Angular builds
       // But we need to make sure the paths are correct
-      manifest.action.default_popup = 'popup/index.html';
       manifest.options_ui.page = 'options/index.html';
       manifest.sidebar_action.default_panel = 'sidebar/index.html';
       

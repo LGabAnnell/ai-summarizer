@@ -3,7 +3,7 @@
  * Provides theme management with persistent storage
  */
 
-import {effect, inject, Injectable, signal} from '@angular/core';
+import {DestroyRef, effect, inject, Injectable, signal} from '@angular/core';
 import browser from "webextension-polyfill";
 import {MessagingService} from "./messaging.service";
 import {Theme} from "../models/theme.model";
@@ -19,6 +19,8 @@ const THEME_STORAGE_KEY = 'ai-summarizer-theme';
 export class ThemeService {
   private _theme = signal<Theme>('light');
   private messagingService = inject(MessagingService);
+  private destroyRef = inject(DestroyRef);
+  private themeRevision = 0;
 
   constructor() {
     // Read the theme already applied by the blocking script in index.html.
@@ -29,11 +31,26 @@ export class ThemeService {
     // Sync from storage for cross-context persistence (popup/options lack the blocking script)
     this.loadTheme();
 
+    // Embedded extension frames may not receive runtime broadcasts, but storage
+    // changes are delivered to every extension context, including frames.
+    const storageListener = (changes: Record<string, browser.Storage.StorageChange>, area: string) => {
+      const change = changes[THEME_STORAGE_KEY];
+      if (area !== 'local' || !change) return;
+      const next = change.newValue === 'dark' ? 'dark' : 'light';
+      this.themeRevision++;
+      this._theme.set(next);
+      localStorage.setItem(THEME_STORAGE_KEY, next);
+      this.applyThemeToDocument();
+    };
+    browser.storage?.onChanged?.addListener(storageListener);
+    this.destroyRef.onDestroy(() => browser.storage?.onChanged?.removeListener(storageListener));
+
     // Subscribe to theme-change broadcasts from other extension contexts.
     // The broadcast is fire-and-forget from the sender's perspective; we only
     // apply the incoming theme here without re-broadcasting (no loop).
     this.messagingService.onThemeChanged().subscribe((theme) => {
       if (theme !== this._theme()) {
+        this.themeRevision++;
         this._theme.set(theme);
         localStorage.setItem(THEME_STORAGE_KEY, theme);
         this.applyThemeToDocument();
@@ -47,6 +64,7 @@ export class ThemeService {
    * Set theme
    */
   async setTheme(theme: Theme): Promise<void> {
+    this.themeRevision++;
     this._theme.set(theme);
     await this.saveTheme();
     // Notify the background script so it can broadcast the change to all contexts.
@@ -101,11 +119,12 @@ export class ThemeService {
    * Load theme from storage
    */
   private async loadTheme(): Promise<void> {
+    const revision = this.themeRevision;
     try {
       // Check if we're in a browser extension context
       if (typeof browser !== 'undefined' && browser.storage) {
         const result = await browser.storage.local.get(THEME_STORAGE_KEY);
-        if (result[THEME_STORAGE_KEY] != null) {
+        if (revision === this.themeRevision && result[THEME_STORAGE_KEY] != null) {
           const stored = result[THEME_STORAGE_KEY] as Theme;
           // Sync localStorage so the blocking script in index.html can read it
           localStorage.setItem(THEME_STORAGE_KEY, stored);

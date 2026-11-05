@@ -78,7 +78,7 @@ describe('background message router', () => {
     await expect(handleMessage({type: 'EXTRACT_AND_SUMMARIZE', tabId: 27})).resolves.toEqual({
       ...summary, title: 'Story', articleUrl: article.url,
     });
-    expect(dependencies.extract).toHaveBeenCalledWith(27);
+    expect(dependencies.extract).toHaveBeenCalledWith(27, undefined, undefined);
     expect(dependencies.summarize).toHaveBeenCalledWith(article);
   });
 
