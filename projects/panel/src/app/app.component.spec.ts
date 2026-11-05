@@ -53,4 +53,20 @@ describe('floating summary view', () => {
     expect(port.postMessage).not.toHaveBeenCalledWith({type: 'PANEL_RETRY', sessionId: 'test-session'});
     fixture.destroy();
   });
+
+  it('requests settings through the authorized panel connection and displays failures', () => {
+    const port = makePort(); mock.connect.mockReturnValue(port);
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('Settings');
+    port.receive({type: 'PANEL_STATE', state: {state: 'loading', jobId: 'job', tabId: 1, documentUrl: 'https://example.test'}});
+    fixture.detectChanges();
+    const button = [...fixture.nativeElement.querySelectorAll('button')].find((element: Element) => element.textContent?.trim() === 'Settings') as HTMLButtonElement;
+    button.click();
+    expect(port.postMessage).toHaveBeenCalledWith({type: 'PANEL_OPEN_SETTINGS', sessionId: 'test-session'});
+    port.receive({type: 'PANEL_SETTINGS_ERROR', error: 'Could not open settings: Browser error'});
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Could not open settings: Browser error');
+    fixture.destroy();
+  });
 });

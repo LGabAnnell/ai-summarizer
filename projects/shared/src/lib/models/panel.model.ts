@@ -15,10 +15,12 @@ export interface PanelState {
 export type PanelClientMessage =
   | {type: 'PANEL_READY'; sessionId: string}
   | {type: 'PANEL_RETRY'; sessionId: string}
+  | {type: 'PANEL_OPEN_SETTINGS'; sessionId: string}
   | {type: 'PANEL_CLOSE'; sessionId: string};
 
 export type PanelServerMessage =
   | {type: 'PANEL_STATE'; state: PanelState}
+  | {type: 'PANEL_SETTINGS_ERROR'; error: string}
   | {type: 'PANEL_REJECTED'; error: string};
 
 export type HistoryMutation =

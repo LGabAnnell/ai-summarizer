@@ -219,6 +219,16 @@ export function setupPanelController(): void {
       } else if (attached?.id === message.sessionId && sessions.get(attached.tabId) === attached) {
         if (message.type === 'PANEL_RETRY' && !attached.running) void runJob(attached);
         if (message.type === 'PANEL_CLOSE') void browser.tabs.sendMessage(attached.tabId, {type: 'PANEL_HIDE', sessionId: attached.id}, {frameId: 0}).catch(() => undefined);
+        if (message.type === 'PANEL_OPEN_SETTINGS') {
+          void (async(): Promise<void> => {
+            try { await browser.runtime.openOptionsPage(); }
+            catch (error) {
+              const detail = error instanceof Error ? error.message : String(error);
+              try { port.postMessage({type: 'PANEL_SETTINGS_ERROR', error: `Could not open settings: ${detail}`} satisfies PanelServerMessage); }
+              catch { /* The panel may have been closed. */ }
+            }
+          })();
+        }
       }
     });
     port.onDisconnect.addListener(() => { disconnected = true; attached?.ports.delete(port); if (trustedFrames.get(key)?.port === port) trustedFrames.delete(key); });

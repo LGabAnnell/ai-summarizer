@@ -37,7 +37,10 @@ import type {PanelClientMessage, PanelServerMessage, PanelState} from '@shared/l
             @if (copyError()) { <p role="alert">{{ copyError() }}</p> }
           }
         </div>
-        @if (authorized()) { <footer><button type="button" (click)="openSettings()">Settings</button></footer> }
+        @if (authorized()) {
+          @if (settingsError()) { <p role="alert">{{ settingsError() }}</p> }
+          <footer><button type="button" (click)="openSettings()">Settings</button></footer>
+        }
       }
     </main>
   `,
@@ -58,6 +61,7 @@ export class AppComponent implements OnDestroy {
   readonly rejected = signal('');
   readonly copied = signal(false);
   readonly copyError = signal('');
+  readonly settingsError = signal('');
   readonly errorPageFeedback = signal('');
   readonly errorVerified = signal(false);
   readonly errorPage: string;
@@ -102,6 +106,8 @@ export class AppComponent implements OnDestroy {
         this.rejected.set(data.error); this.authorized.set(false); this.destroyed = true;
       } else if (data.type === 'PANEL_STATE') {
         this.authorized.set(true); this.rejected.set(''); this.state.set(data.state);
+      } else if (data.type === 'PANEL_SETTINGS_ERROR') {
+        this.settingsError.set(data.error);
       }
     });
     port.onDisconnect.addListener(() => {
@@ -134,7 +140,12 @@ export class AppComponent implements OnDestroy {
       setTimeout(() => this.copied.set(false), 2000);
     } catch (error) { this.copyError.set(`Could not copy summary: ${error instanceof Error ? error.message : String(error)}`); }
   }
-  openSettings(): void { if (this.authorized()) void browser.runtime.openOptionsPage(); }
+  openSettings(): void {
+    if (!this.authorized()) return;
+    this.settingsError.set('');
+    try { this.port?.postMessage({type: 'PANEL_OPEN_SETTINGS', sessionId: this.sessionId} satisfies PanelClientMessage); }
+    catch { this.settingsError.set('Could not open settings. Please try again.'); }
+  }
   grantAndReopen(): void {
     if (!this.errorToken || !this.errorVerified()) return;
     // Call permissions.request directly in the click handler to preserve the user gesture.

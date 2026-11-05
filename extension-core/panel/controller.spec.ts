@@ -12,10 +12,10 @@ const fixture = vi.hoisted(() => ({
   session: {} as Record<string, unknown>,
   action: undefined as unknown, command: undefined as unknown, connect: undefined as unknown,
   updated: undefined as unknown, removed: undefined as unknown,
-  sendMessage: vi.fn(), sessionGet: vi.fn(), summarize: vi.fn(), history: vi.fn(),
+  sendMessage: vi.fn(), sessionGet: vi.fn(), summarize: vi.fn(), history: vi.fn(), openOptions: vi.fn(),
 }));
 vi.mock('webextension-polyfill', () => ({default: {
-  runtime: {id: 'extension-id', getURL: (path: string) => `moz-extension://extension/${path}`, onConnect: {addListener: (fn: unknown) => { fixture.connect = fn; }}},
+  runtime: {id: 'extension-id', getURL: (path: string) => `moz-extension://extension/${path}`, openOptionsPage: fixture.openOptions, onConnect: {addListener: (fn: unknown) => { fixture.connect = fn; }}},
   action: {onClicked: {addListener: (fn: unknown) => { fixture.action = fn; }}},
   commands: {onCommand: {addListener: (fn: unknown) => { fixture.command = fn; }}},
   tabs: {
@@ -67,9 +67,30 @@ beforeEach(() => {
     return {success: true};
   });
   fixture.history.mockResolvedValue([]);
+  fixture.openOptions.mockResolvedValue(undefined);
 });
 
 describe('floating panel coordinator', () => {
+  it('opens settings only for an authenticated panel and reports failures', async () => {
+    fixture.summarize.mockResolvedValue({success: true, summary: 'Summary'});
+    const controller = await import('./controller'); controller.setupPanelController();
+    await controller.openPanel(1);
+    const shown = fixture.sendMessage.mock.calls.find(call => call[1].type === 'PANEL_SHOW')![1];
+    const port = makePort(1, shown.sessionId);
+    (fixture.connect as (port: Port) => void)(port);
+    port.onMessage.fire({type: 'PANEL_OPEN_SETTINGS', sessionId: shown.sessionId});
+    expect(fixture.openOptions).not.toHaveBeenCalled();
+    port.onMessage.fire({type: 'PANEL_READY', sessionId: shown.sessionId});
+    await vi.waitFor(() => expect(port.postMessage).toHaveBeenCalled());
+    port.onMessage.fire({type: 'PANEL_OPEN_SETTINGS', sessionId: 'wrong'});
+    expect(fixture.openOptions).not.toHaveBeenCalled();
+    port.onMessage.fire({type: 'PANEL_OPEN_SETTINGS', sessionId: shown.sessionId});
+    expect(fixture.openOptions).toHaveBeenCalledOnce();
+    fixture.openOptions.mockRejectedValueOnce(new Error('Browser error'));
+    port.onMessage.fire({type: 'PANEL_OPEN_SETTINGS', sessionId: shown.sessionId});
+    await vi.waitFor(() => expect(port.postMessage).toHaveBeenCalledWith({type: 'PANEL_SETTINGS_ERROR', error: 'Could not open settings: Browser error'}));
+  });
+
   it('starts once only after authentication and restores the result after hiding', async () => {
     let finish!: (value: unknown) => void;
     fixture.summarize.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
