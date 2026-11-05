@@ -1,7 +1,8 @@
-import {Component, inject, input, output, signal} from '@angular/core';
+import {Component, DestroyRef, inject, input, OnInit, output, signal} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {ControlContainer, FormGroupDirective, ReactiveFormsModule} from '@angular/forms';
 import {ProviderType, SettingsService} from '@shared/public-api';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 
 /**
  * Mistral agent configuration section component
@@ -14,7 +15,7 @@ import {ProviderType, SettingsService} from '@shared/public-api';
   styleUrl: 'mistral-agent-settings.component.scss',
   viewProviders: [{provide: ControlContainer, useExisting: FormGroupDirective}],
 })
-export class MistralAgentSettingsComponent {
+export class MistralAgentSettingsComponent implements OnInit {
   // Inputs
   currentProvider = input<string>('mistral');
 
@@ -26,17 +27,25 @@ export class MistralAgentSettingsComponent {
 
   private settingsService = inject(SettingsService);
   private formDirective = inject(FormGroupDirective);
+  private destroyRef = inject(DestroyRef);
+  private formValue = signal<{mistralAgentEnabled?: boolean; mistralAgentId?: string; mistralAgentVersion?: string}>({});
+
+  ngOnInit(): void {
+    this.formValue.set(this.formDirective.control.value);
+    this.formDirective.control.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(value => this.formValue.set(value));
+  }
 
   get isMistralProvider() {
     return this.currentProvider() === 'mistral';
   }
 
   get agentId() {
-    return this.formDirective.control.get('mistralAgentId')?.value || '';
+    return this.formValue().mistralAgentId || '';
   }
 
   get agentVersion() {
-    return this.formDirective.control.get('mistralAgentVersion')?.value || '';
+    return this.formValue().mistralAgentVersion || '';
   }
 
   get agentIdErrors() {
@@ -45,6 +54,10 @@ export class MistralAgentSettingsComponent {
 
   get agentVersionErrors() {
     return this.formDirective.control.get('mistralAgentVersion')?.errors;
+  }
+
+  get isAgentEnabled(): boolean {
+    return this.formValue().mistralAgentEnabled === true;
   }
 
   get isAgentConfigured(): boolean {

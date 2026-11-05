@@ -16,7 +16,7 @@ async function classifyAgentSummary(
   settings: ResolvedSettings,
   cached?: {agentLabels?: string[]; agentId?: string; agentVersion?: string},
 ): Promise<AgentClassificationProjection> {
-  if (provider !== 'mistral' || settings.provider !== 'mistral' || !settings.mistralAgentId || !settings.mistralAgentVersion) {
+  if (!settings.mistralAgentEnabled || provider !== 'mistral' || settings.provider !== 'mistral' || !settings.mistralAgentId || !settings.mistralAgentVersion) {
     return {};
   }
   const sameAgent = cached?.agentId === settings.mistralAgentId

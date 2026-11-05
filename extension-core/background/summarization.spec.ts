@@ -41,6 +41,7 @@ const settings: ResolvedSettings = {
   mlEnabled: true,
   mlModelHub: 'mozilla',
   mlTimeout: 1234,
+  mistralAgentEnabled: true,
   mistralAgentId: 'agent-id',
   mistralAgentVersion: 'v2',
 };
@@ -69,6 +70,19 @@ describe('handleSummarize', () => {
     mocks.callProviderAPI.mockResolvedValue({summary: 'Fresh summary', tokenCount: 9});
     mocks.classifyText.mockResolvedValue(classification);
     mocks.classifyAgent.mockResolvedValue({labels: ['one', 'two', 'three', 'four', 'five']});
+  });
+
+  it.each([false, undefined])('skips agent classification when enabled is %s for fresh and cached summaries', async enabled => {
+    mocks.getSettings.mockResolvedValue({...settings, mistralAgentEnabled: enabled});
+    const fresh = await handleSummarize(article);
+    expect(fresh.success).toBe(true);
+    expect(fresh.agentLabels).toBeUndefined();
+    mocks.getCachedSummary.mockResolvedValue({summary: 'Cached', agentLabels: ['one', 'two', 'three', 'four', 'five'], agentId: 'agent-id', agentVersion: 'v2'});
+    const cached = await handleSummarize(article);
+    expect(cached.success).toBe(true);
+    expect(cached.agentLabels).toBeUndefined();
+    expect(mocks.classifyAgent).not.toHaveBeenCalled();
+    expect(mocks.updateCachedAgentLabels).not.toHaveBeenCalled();
   });
 
   it('projects successful classification fields on fresh summaries and caches first', async () => {

@@ -36,6 +36,8 @@ export interface ExtensionSettings {
   mlModelId?: string;
 
   // Mistral Agent Classification Settings
+  /** Enable automatic Mistral agent classification */
+  mistralAgentEnabled?: boolean;
   /** Mistral agent ID for classification */
   mistralAgentId?: string;
   /** Mistral agent version for classification */
@@ -72,6 +74,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   mlModelHub: 'mozilla',
   mlModelId: 'distilbert-base-uncased-finetuned-sst-2-english',
   // Mistral Agent Classification Settings (both start blank)
+  mistralAgentEnabled: false,
   mistralAgentId: '',
   mistralAgentVersion: '',
 };

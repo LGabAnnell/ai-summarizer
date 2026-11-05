@@ -88,6 +88,7 @@ export class AppComponent implements OnInit {
       cacheEnabled: [true],
       cacheTTL: [7, [Validators.required, Validators.min(1), Validators.max(30)]],
       // Mistral Agent Classification Settings
+      mistralAgentEnabled: [false],
       mistralAgentId: [''],
       mistralAgentVersion: [''],
     });
@@ -138,6 +139,7 @@ export class AppComponent implements OnInit {
           cacheEnabled: settings.cacheEnabled,
           cacheTTL: settings.cacheTTL,
           // Mistral Agent Classification Settings
+          mistralAgentEnabled: settings.mistralAgentEnabled ?? false,
           mistralAgentId: settings.mistralAgentId || '',
           mistralAgentVersion: settings.mistralAgentVersion || '',
         }, {emitEvent: false});
@@ -268,6 +270,7 @@ export class AppComponent implements OnInit {
       cacheEnabled: formValue.cacheEnabled,
       cacheTTL: formValue.cacheTTL,
       // Mistral Agent Classification Settings
+      mistralAgentEnabled: formValue.mistralAgentEnabled,
       mistralAgentId: formValue.mistralAgentId || undefined,
       mistralAgentVersion: formValue.mistralAgentVersion || undefined,
     };
@@ -304,6 +307,7 @@ export class AppComponent implements OnInit {
             cacheEnabled: defaultSettings.cacheEnabled,
             cacheTTL: defaultSettings.cacheTTL,
             // Mistral Agent Classification Settings
+            mistralAgentEnabled: defaultSettings.mistralAgentEnabled ?? false,
             mistralAgentId: defaultSettings.mistralAgentId || '',
             mistralAgentVersion: defaultSettings.mistralAgentVersion || '',
           });
