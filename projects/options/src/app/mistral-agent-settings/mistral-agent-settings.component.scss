@@ -205,3 +205,20 @@
     }
   }
 }
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  input { position: absolute; opacity: 0; }
+  .slider {
+    width: 40px; height: 20px; border-radius: 20px; position: relative;
+    background: var(--border-color, #e0e0e0);
+    &::before { content: ''; position: absolute; width: 16px; height: 16px;
+      border-radius: 50%; background: white; top: 2px; left: 2px; transition: transform 0.3s; }
+  }
+  input:checked + .slider { background: var(--primary-color, #007bff); }
+  input:checked + .slider::before { transform: translateX(20px); }
+  input:focus-visible + .slider { outline: 2px solid var(--primary-color, #007bff); outline-offset: 3px; }
+}

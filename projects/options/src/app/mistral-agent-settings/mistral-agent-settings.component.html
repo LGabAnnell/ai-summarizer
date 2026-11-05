@@ -9,6 +9,14 @@
     Configure a Mistral agent to classify summaries and save its labels with article history (optional)
   </div>
 
+  <div class="form-group">
+    <label class="switch" for="mistralAgentEnabled">
+      <input id="mistralAgentEnabled" type="checkbox" formControlName="mistralAgentEnabled">
+      <span class="slider" aria-hidden="true"></span>
+      <span>Enable Mistral Agent Classification</span>
+    </label>
+  </div>
+
   <div class="agent-info-toggle">
     <button
             (click)="onToggleAgentInfo()"
@@ -73,7 +81,11 @@
     }
   </div>
 
-  @if (isAgentConfigured) {
+  @if (!isAgentEnabled) {
+    <div class="agent-status">Agent classification is disabled</div>
+  } @else if (!isAgentConfigured) {
+    <div class="agent-status">Enter an agent ID and version to enable classification</div>
+  } @else {
     <div class="agent-status">
       <span class="status-indicator">✓</span>
       <span>Agent classification is configured and will run when articles are summarized</span>
