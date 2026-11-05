@@ -25,6 +25,20 @@ afterEach(() => {
 });
 
 describe('in-page panel shell', () => {
+  it('does not overwrite a newer theme change with a stale initial read', async () => {
+    let resolveRead!: (value: Record<string, string>) => void;
+    mock.get.mockReturnValueOnce(new Promise(resolve => { resolveRead = resolve; }));
+    const handle = installPanelShell();
+    handle({type: 'PANEL_SHOW', sessionId: 'session'});
+    const host = document.querySelector<HTMLElement>('[data-ai-summarizer-panel]')!;
+    const listener = mock.onChanged.mock.calls.at(-1)![0];
+    listener({'ai-summarizer-theme': {newValue: 'dark'}}, 'local');
+    expect(host.getAttribute('data-theme')).toBe('dark');
+    resolveRead({'ai-summarizer-theme': 'light'});
+    await Promise.resolve();
+    expect(host.getAttribute('data-theme')).toBe('dark');
+  });
+
   it('positions, moves, resizes, and reopens one panel while restoring focus', () => {
     const article = document.querySelector<HTMLButtonElement>('#article-button')!;
     article.focus();

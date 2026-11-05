@@ -19,12 +19,16 @@ export function installPanelShell(): (message: PanelMessage) => boolean {
   let initialized = false;
   let currentUrl = location.href.split('#')[0];
   let theme = 'light';
+  let themeRevision = 0;
+  const initialRevision = themeRevision;
   void browser.storage.local.get('ai-summarizer-theme').then(data => {
+    if (themeRevision !== initialRevision) return;
     theme = data['ai-summarizer-theme'] === 'dark' ? 'dark' : 'light';
     host?.setAttribute('data-theme', theme);
   }).catch(() => undefined);
   browser.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes['ai-summarizer-theme']) {
+      themeRevision += 1;
       theme = changes['ai-summarizer-theme'].newValue === 'dark' ? 'dark' : 'light';
       host?.setAttribute('data-theme', theme);
     }

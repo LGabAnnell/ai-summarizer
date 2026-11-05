@@ -1,11 +1,12 @@
 import {Component, inject, OnDestroy, signal} from '@angular/core';
+import {DecimalPipe} from '@angular/common';
 import browser from 'webextension-polyfill';
 import {ErrorStateComponent, LoadingStateComponent, MarkdownPipe, SummaryHeaderComponent, SummaryMetaComponent, ThemeService} from '@shared/public-api';
 import type {PanelClientMessage, PanelServerMessage, PanelState} from '@shared/lib/models/panel.model';
 
 @Component({
   selector: 'panel-root',
-  imports: [ErrorStateComponent, LoadingStateComponent, MarkdownPipe, SummaryHeaderComponent, SummaryMetaComponent],
+  imports: [DecimalPipe, ErrorStateComponent, LoadingStateComponent, MarkdownPipe, SummaryHeaderComponent, SummaryMetaComponent],
   host: {'(document:keydown.escape)': 'close()'},
   template: `
     <main>
@@ -13,9 +14,9 @@ import type {PanelClientMessage, PanelServerMessage, PanelState} from '@shared/l
         <h1>Unable to open the summary panel</h1>
         <p role="alert">{{ errorPage }}</p>
         @if (errorPageFeedback()) { <p role="alert">{{ errorPageFeedback() }}</p> }
-        @if (errorVerified() && errorPagePermission) {
+        @if (errorVerified() && errorPageRetryable() && errorPagePermission()) {
           <button type="button" (click)="grantAndReopen()">Grant website access and retry</button>
-        } @else if (errorVerified()) {
+        } @else if (errorVerified() && errorPageRetryable()) {
           <button type="button" (click)="reopen()">Try again</button>
         }
       } @else if (rejected()) {
@@ -33,6 +34,22 @@ import type {PanelClientMessage, PanelServerMessage, PanelState} from '@shared/l
             <shared-summary-header [title]="summary.title || 'Article summary'" [copied]="copied()" (copyClick)="copy()"></shared-summary-header>
             <div class="markdown-content" [innerHTML]="summary.summary | markdown"></div>
             <shared-summary-meta [characterCount]="summary.summary.length" [cached]="summary.cached" [provider]="summary.provider || ''" [model]="summary.model || ''"></shared-summary-meta>
+            @if (summary.classification; as classification) {
+              @if (classification.error) {
+                <p class="classification-error" role="status">Classification failed: {{ classification.error }}</p>
+              } @else {
+                <div class="summary-classification"><span class="classification-badge">{{ classification.label }} · {{ (classification.score || 0) * 100 | number:'1.0-0' }}%</span></div>
+              }
+            }
+            @if (summary.agentLabels?.length) {
+              <section class="agent-labels-section" aria-label="Agent classification">
+                <div class="agent-labels-header">🎯 Agent Classification</div>
+                <div class="agent-labels">
+                  @for (label of summary.agentLabels; track $index) { <span class="agent-label-badge">{{ formatAgentLabel(label) }}</span> }
+                </div>
+              </section>
+            }
+            @if (summary.agentClassificationError) { <p class="classification-error" role="status">Agent classification failed: {{ summary.agentClassificationError }}</p> }
             @if (state()?.historyError) { <p role="alert">{{ state()?.historyError }}</p> }
             @if (copyError()) { <p role="alert">{{ copyError() }}</p> }
           }
@@ -53,6 +70,11 @@ import type {PanelClientMessage, PanelServerMessage, PanelState} from '@shared/l
     button:focus-visible { outline:3px solid #386de0; }
     [role=alert] { color:var(--error-color, #b42318); }
     h1 { font-size:1.2rem; }
+    .summary-classification, .agent-labels-section { margin-top:12px; }
+    .classification-badge, .agent-label-badge { display:inline-block; border-radius:12px; background:var(--bg-secondary, #eceef3); padding:4px 9px; font-size:12px; }
+    .agent-labels-header { font-weight:600; margin-bottom:6px; }
+    .agent-labels { display:flex; flex-wrap:wrap; gap:6px; }
+    .classification-error { color:var(--error-color, #b42318); font-size:12px; }
   `]
 })
 export class AppComponent implements OnDestroy {
@@ -65,7 +87,8 @@ export class AppComponent implements OnDestroy {
   readonly errorPageFeedback = signal('');
   readonly errorVerified = signal(false);
   readonly errorPage: string;
-  readonly errorPagePermission: boolean;
+  readonly errorPagePermission = signal(false);
+  readonly errorPageRetryable = signal(false);
   private readonly sessionId: string;
   private readonly errorToken: string;
   private port?: browser.Runtime.Port;
@@ -75,7 +98,6 @@ export class AppComponent implements OnDestroy {
   constructor() {
     const query = new URLSearchParams(location.search);
     this.errorPage = query.get('error') || '';
-    this.errorPagePermission = query.get('permission') === '1';
     this.errorToken = query.get('token') || '';
     this.sessionId = query.get('session') || '';
     if (this.errorPage) {
@@ -84,8 +106,12 @@ export class AppComponent implements OnDestroy {
         return;
       }
       void browser.runtime.sendMessage({type: 'PANEL_ERROR_VERIFY', token: this.errorToken}).then(response => {
-        const result = response as {success: boolean; error?: string};
-        if (result.success) this.errorVerified.set(true);
+        const result = response as {success: boolean; error?: string; retryable?: boolean; permissionRequired?: boolean};
+        if (result.success) {
+          this.errorPageRetryable.set(result.retryable === true);
+          this.errorPagePermission.set(result.permissionRequired === true);
+          this.errorVerified.set(true);
+        }
         else this.errorPageFeedback.set(result.error || 'This retry has expired. Use the extension button again.');
       }).catch(() => this.errorPageFeedback.set('This retry has expired. Use the extension button again.'));
       return;
@@ -93,6 +119,11 @@ export class AppComponent implements OnDestroy {
     if (!this.sessionId) { this.rejected.set('This panel must be opened using the extension button.'); return; }
     inject(ThemeService);
     this.connect();
+  }
+
+  formatAgentLabel(label: string): string {
+    const formatted = label.replace(/_/g, ' ');
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
   }
 
   private connect(): void {
@@ -147,7 +178,7 @@ export class AppComponent implements OnDestroy {
     catch { this.settingsError.set('Could not open settings. Please try again.'); }
   }
   grantAndReopen(): void {
-    if (!this.errorToken || !this.errorVerified()) return;
+    if (!this.errorToken || !this.errorVerified() || !this.errorPageRetryable() || !this.errorPagePermission()) return;
     // Call permissions.request directly in the click handler to preserve the user gesture.
     void browser.permissions.request({origins: ['<all_urls>']}).then(async granted => {
       if (!granted) { this.errorPageFeedback.set('Website access was not granted.'); return; }
@@ -155,10 +186,15 @@ export class AppComponent implements OnDestroy {
     }).catch(error => this.errorPageFeedback.set(error instanceof Error ? error.message : String(error)));
   }
   async reopen(): Promise<void> {
-    if (!this.errorToken || !this.errorVerified()) return;
+    if (!this.errorToken || !this.errorVerified() || !this.errorPageRetryable()) return;
     try {
-      const response = await browser.runtime.sendMessage({type: 'PANEL_REOPEN', token: this.errorToken}) as {success: boolean; error?: string};
-      if (!response.success) { this.errorPageFeedback.set(response.error || 'Could not reopen the panel.'); return; }
+      const response = await browser.runtime.sendMessage({type: 'PANEL_REOPEN', token: this.errorToken}) as {success: boolean; error?: string; retryable?: boolean; permissionRequired?: boolean};
+      if (!response.success) {
+        this.errorPageFeedback.set(response.error || 'Could not reopen the panel.');
+        if (response.retryable !== undefined) this.errorPageRetryable.set(response.retryable);
+        if (response.permissionRequired !== undefined) this.errorPagePermission.set(response.permissionRequired);
+        return;
+      }
       window.close();
     } catch (error) { this.errorPageFeedback.set(error instanceof Error ? error.message : String(error)); }
   }

@@ -12,7 +12,7 @@ const fixture = vi.hoisted(() => ({
   session: {} as Record<string, unknown>,
   action: undefined as unknown, command: undefined as unknown, connect: undefined as unknown,
   updated: undefined as unknown, removed: undefined as unknown,
-  sendMessage: vi.fn(), sessionGet: vi.fn(), summarize: vi.fn(), history: vi.fn(), openOptions: vi.fn(),
+  sendMessage: vi.fn(), sessionGet: vi.fn(), summarize: vi.fn(), history: vi.fn(), openOptions: vi.fn(), create: vi.fn(),
 }));
 vi.mock('webextension-polyfill', () => ({default: {
   runtime: {id: 'extension-id', getURL: (path: string) => `moz-extension://extension/${path}`, openOptionsPage: fixture.openOptions, onConnect: {addListener: (fn: unknown) => { fixture.connect = fn; }}},
@@ -21,7 +21,7 @@ vi.mock('webextension-polyfill', () => ({default: {
   tabs: {
     get: vi.fn(async (id: number) => fixture.tabs.get(id)),
     query: vi.fn(async () => [...fixture.tabs.values()].slice(0, 1)),
-    create: vi.fn(async () => ({})),
+    create: fixture.create,
     sendMessage: fixture.sendMessage,
     onUpdated: {addListener: (fn: unknown) => { fixture.updated = fn; }},
     onRemoved: {addListener: (fn: unknown) => { fixture.removed = fn; }},
@@ -68,9 +68,56 @@ beforeEach(() => {
   });
   fixture.history.mockResolvedValue([]);
   fixture.openOptions.mockResolvedValue(undefined);
+  fixture.create.mockResolvedValue({});
 });
 
 describe('floating panel coordinator', () => {
+  it('opens a non-retryable error page for restricted URLs before injection', async () => {
+    fixture.tabs.set(1, {id: 1, url: 'about:config', documentId: 'doc-a'});
+    const controller = await import('./controller'); controller.setupPanelController();
+    (fixture.action as (tab: {id: number}) => void)({id: 1});
+    await vi.waitFor(() => expect(fixture.create).toHaveBeenCalledOnce());
+    const errorUrl = fixture.create.mock.calls[0][0].url as string;
+    const token = new URL(errorUrl).searchParams.get('token')!;
+    const sender = {url: errorUrl, frameId: 0};
+    expect(await controller.handlePanelControl({type: 'PANEL_ERROR_VERIFY', token}, sender)).toEqual({success: true, retryable: false, permissionRequired: false});
+    expect(await controller.handlePanelControl({type: 'PANEL_REOPEN', token}, sender)).toEqual(expect.objectContaining({success: false, retryable: false}));
+    expect(fixture.sendMessage).not.toHaveBeenCalled();
+    expect(fixture.create).toHaveBeenCalledOnce();
+  });
+
+  it('reports reopen failures in the existing page and retains retry until success', async () => {
+    fixture.sendMessage.mockRejectedValue(new Error('Missing host permission'));
+    const controller = await import('./controller'); controller.setupPanelController();
+    (fixture.action as (tab: {id: number}) => void)({id: 1});
+    await vi.waitFor(() => expect(fixture.create).toHaveBeenCalledOnce());
+    const errorUrl = fixture.create.mock.calls[0][0].url as string;
+    const token = new URL(errorUrl).searchParams.get('token')!;
+    const sender = {url: errorUrl, frameId: 0};
+    expect(await controller.handlePanelControl({type: 'PANEL_ERROR_VERIFY', token}, sender)).toEqual({success: true, retryable: true, permissionRequired: true});
+    const failure = await controller.handlePanelControl({type: 'PANEL_REOPEN', token}, sender);
+    expect(failure).toEqual(expect.objectContaining({success: false, error: expect.stringContaining('Missing host permission'), retryable: true, permissionRequired: true}));
+    expect(fixture.create).toHaveBeenCalledOnce();
+    fixture.sendMessage.mockImplementation(async (tabId: number, message: {type: string}) => message.type === 'PANEL_IDENTITY'
+      ? {success: true, documentId: fixture.tabs.get(tabId)?.documentId, url: fixture.tabs.get(tabId)?.url} : {success: true});
+    expect(await controller.handlePanelControl({type: 'PANEL_REOPEN', token}, sender)).toEqual({success: true});
+    expect(await controller.handlePanelControl({type: 'PANEL_ERROR_VERIFY', token}, sender)).toEqual(expect.objectContaining({success: false}));
+  });
+
+  it('marks a retry non-retryable if the source tab navigates to a restricted URL', async () => {
+    fixture.sendMessage.mockRejectedValue(new Error('Temporary error'));
+    const controller = await import('./controller'); controller.setupPanelController();
+    (fixture.action as (tab: {id: number}) => void)({id: 1});
+    await vi.waitFor(() => expect(fixture.create).toHaveBeenCalledOnce());
+    const errorUrl = fixture.create.mock.calls[0][0].url as string;
+    const token = new URL(errorUrl).searchParams.get('token')!;
+    const sender = {url: errorUrl, frameId: 0};
+    fixture.tabs.set(1, {id: 1, url: 'https://addons.mozilla.org/', documentId: 'doc-b'});
+    expect(await controller.handlePanelControl({type: 'PANEL_REOPEN', token}, sender)).toEqual(expect.objectContaining({success: false, retryable: false}));
+    expect(await controller.handlePanelControl({type: 'PANEL_ERROR_VERIFY', token}, sender)).toEqual({success: true, retryable: false, permissionRequired: false});
+    expect(fixture.create).toHaveBeenCalledOnce();
+  });
+
   it('opens settings only for an authenticated panel and reports failures', async () => {
     fixture.summarize.mockResolvedValue({success: true, summary: 'Summary'});
     const controller = await import('./controller'); controller.setupPanelController();

@@ -14,9 +14,12 @@ interface Session {
   running: boolean;
 }
 interface Snapshot {id: string; tabId: number; url: string; documentId: string; state?: PanelState}
+type OpenResult = {success: true} | {success: false; error: string; retryable: boolean; permissionRequired: boolean};
+interface ErrorToken {tabId: number; retryable: boolean; permissionRequired: boolean}
 const sessions = new Map<number, Session>();
-const opening = new Map<number, Promise<void>>();
-const errorTokens = new Map<string, number>();
+const opening = new Map<number, Promise<OpenResult>>();
+const reporting = new Map<number, Promise<void>>();
+const errorTokens = new Map<string, ErrorToken>();
 const trustedFrames = new Map<string, {sessionId: string; port: browser.Runtime.Port}>();
 const SNAPSHOT_PREFIX = 'panel-session-';
 const panelUrl = browser.runtime.getURL('panel/index.html');
@@ -59,11 +62,12 @@ async function persist(session: Session): Promise<void> {
   try { await browser.storage.session.set({[SNAPSHOT_PREFIX + session.tabId]: snapshot}); }
   catch (error) { console.error('Could not save panel state:', error); }
 }
-async function errorTab(tabId: number, reason: string, permission = false): Promise<void> {
+async function errorTab(tabId: number, reason: string, permissionRequired = false, retryable = true): Promise<void> {
   const token = crypto.randomUUID();
-  errorTokens.set(token, tabId);
-  const query = new URLSearchParams({error: reason, token, permission: permission ? '1' : '0'});
-  await browser.tabs.create({url: `${panelUrl}?${query}`});
+  errorTokens.set(token, {tabId, retryable, permissionRequired});
+  const query = new URLSearchParams({error: reason, token});
+  try { await browser.tabs.create({url: `${panelUrl}?${query}`}); }
+  catch (error) { errorTokens.delete(token); throw error; }
 }
 async function createOrRestore(tabId: number, url: string, documentId: string): Promise<Session> {
   const previous = sessions.get(tabId);
@@ -79,12 +83,23 @@ async function createOrRestore(tabId: number, url: string, documentId: string): 
   return session;
 }
 
-async function launch(tabId: number): Promise<void> {
+function isRestrictedUrl(sourceUrl: string): boolean {
+  try {
+    const url = new URL(sourceUrl);
+    const protectedHosts = ['addons.mozilla.org', 'support.mozilla.org', 'accounts.firefox.com', 'accounts-static.cdn.mozilla.net',
+      'addons.cdn.mozilla.net', 'api.accounts.firefox.com', 'content.cdn.mozilla.net', 'discovery.addons.mozilla.org',
+      'install.mozilla.org', 'oauth.accounts.firefox.com', 'profile.accounts.firefox.com', 'sync.services.mozilla.com'];
+    return !['https:', 'http:'].includes(url.protocol) || protectedHosts.includes(url.hostname) || url.pathname.toLowerCase().endsWith('.pdf');
+  } catch { return true; }
+}
+
+async function launch(tabId: number): Promise<OpenResult> {
   let sourceUrl = '';
   try {
     const tab = await browser.tabs.get(tabId);
     sourceUrl = tab.url ?? '';
     if (!tab.url) throw new Error('Firefox could not access this page. Open a regular website and try again.');
+    if (isRestrictedUrl(sourceUrl)) throw new Error('This page is restricted.');
     let identity: {success: boolean; documentId: string; url: string};
     try {
       identity = await browser.tabs.sendMessage(tabId, {type: 'PANEL_IDENTITY'}, {frameId: 0}) as typeof identity;
@@ -96,27 +111,32 @@ async function launch(tabId: number): Promise<void> {
     const session = await createOrRestore(tabId, canonical(identity.url), identity.documentId);
     const result = await browser.tabs.sendMessage(tabId, {type: 'PANEL_SHOW', sessionId: session.id, documentId: identity.documentId}, {frameId: 0}) as {success: boolean; error?: string};
     if (!result?.success) throw new Error(result?.error ?? 'Could not open the panel.');
+    return {success: true};
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    let restricted = true;
-    try {
-      const url = new URL(sourceUrl);
-      const protectedHosts = ['addons.mozilla.org', 'support.mozilla.org', 'accounts.firefox.com', 'accounts-static.cdn.mozilla.net',
-        'addons.cdn.mozilla.net', 'api.accounts.firefox.com', 'content.cdn.mozilla.net', 'discovery.addons.mozilla.org',
-        'install.mozilla.org', 'oauth.accounts.firefox.com', 'profile.accounts.firefox.com', 'sync.services.mozilla.com'];
-      restricted = !['https:', 'http:'].includes(url.protocol) || protectedHosts.includes(url.hostname) || url.pathname.toLowerCase().endsWith('.pdf');
-    } catch { /* A missing or invalid URL cannot host the panel. */ }
+    const restricted = isRestrictedUrl(sourceUrl);
     const needsPermission = !restricted && /missing host permission|host permission|cannot access contents|permission/i.test(detail);
-    await errorTab(tabId, restricted
+    return {success: false, error: restricted
       ? 'Firefox does not allow the panel on this page. Open a regular website and try again.'
-      : `Could not open the summary panel: ${detail}`, needsPermission);
+      : `Could not open the summary panel: ${detail}`, retryable: !restricted, permissionRequired: needsPermission};
   }
 }
-export function openPanel(tabId: number): Promise<void> {
+export function openPanel(tabId: number): Promise<OpenResult> {
   const pending = opening.get(tabId);
   if (pending) return pending;
   const operation = launch(tabId).finally(() => opening.delete(tabId));
   opening.set(tabId, operation);
+  return operation;
+}
+
+function openPanelWithErrorTab(tabId: number): Promise<void> {
+  const pending = reporting.get(tabId);
+  if (pending) return pending;
+  const operation = (async() => {
+    const result = await openPanel(tabId);
+    if (!result.success) await errorTab(tabId, result.error, result.permissionRequired, result.retryable);
+  })().finally(() => reporting.delete(tabId));
+  reporting.set(tabId, operation);
   return operation;
 }
 
@@ -157,12 +177,14 @@ export async function handlePanelControl(request: unknown, sender: browser.Runti
   const message = request as {type?: string; token?: string; sessionId?: string};
   if (message.type === 'PANEL_ERROR_VERIFY' || message.type === 'PANEL_REOPEN') {
     if (!sender.url?.startsWith(`${panelUrl}?error=`) || sender.frameId !== 0 || !message.token) return {success: false};
-    const tabId = errorTokens.get(message.token);
-    if (tabId === undefined) return {success: false, error: 'This retry has expired. Use the extension button again.'};
-    if (message.type === 'PANEL_ERROR_VERIFY') return {success: true};
-    errorTokens.delete(message.token);
-    await openPanel(tabId);
-    return {success: true};
+    const token = errorTokens.get(message.token);
+    if (!token) return {success: false, error: 'This retry has expired. Use the extension button again.'};
+    if (message.type === 'PANEL_ERROR_VERIFY') return {success: true, retryable: token.retryable, permissionRequired: token.permissionRequired};
+    if (!token.retryable) return {success: false, error: 'Firefox does not allow the panel on this page. Open a regular website and try again.', retryable: false, permissionRequired: false};
+    const result = await openPanel(token.tabId);
+    if (result.success) errorTokens.delete(message.token);
+    else { token.retryable = result.retryable; token.permissionRequired = result.permissionRequired; }
+    return result;
   }
   if (message.type === 'PANEL_ERROR_TAB') {
     const tabId = sender.tab?.id;
@@ -175,11 +197,11 @@ export async function handlePanelControl(request: unknown, sender: browser.Runti
 }
 
 export function setupPanelController(): void {
-  browser.action.onClicked.addListener(tab => { if (tab.id !== undefined) void openPanel(tab.id); });
+  browser.action.onClicked.addListener(tab => { if (tab.id !== undefined) void openPanelWithErrorTab(tab.id); });
   browser.commands.onCommand.addListener((command, tab) => {
     if (command !== 'open-sidebar-and-summarize') return;
-    if (tab?.id !== undefined) void openPanel(tab.id);
-    else void browser.tabs.query({active: true, currentWindow: true}).then(tabs => { if (tabs[0]?.id !== undefined) void openPanel(tabs[0].id); });
+    if (tab?.id !== undefined) void openPanelWithErrorTab(tab.id);
+    else void browser.tabs.query({active: true, currentWindow: true}).then(tabs => { if (tabs[0]?.id !== undefined) void openPanelWithErrorTab(tabs[0].id); });
   });
   browser.runtime.onConnect.addListener(port => {
     if (port.name !== 'summarizer-panel') return;
