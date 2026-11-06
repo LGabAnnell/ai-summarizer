@@ -400,7 +400,13 @@
             "browser": "projects/panel/src/main.ts",
             "tsConfig": "projects/panel/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
-            "assets": [],
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "projects/shared/src/assets",
+                "output": "/assets"
+              }
+            ],
             "styles": [
               "projects/shared/src/lib/styles/index.scss",
               "projects/panel/src/styles.scss"

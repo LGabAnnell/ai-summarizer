@@ -58,7 +58,9 @@ function broadcast(session: Session): void {
 }
 async function persist(session: Session): Promise<void> {
   if (sessions.get(session.tabId) !== session) return;
-  const snapshot: Snapshot = {id: session.id, tabId: session.tabId, url: session.url, documentId: session.documentId, state: session.state};
+  const snapshot: Snapshot = {
+    id: session.id, tabId: session.tabId, url: session.url, documentId: session.documentId, state: session.state,
+  };
   try { await browser.storage.session.set({[SNAPSHOT_PREFIX + session.tabId]: snapshot}); }
   catch (error) { console.error('Could not save panel state:', error); }
 }
@@ -77,7 +79,10 @@ async function createOrRestore(tabId: number, url: string, documentId: string): 
   const snapshot = stored[key];
   let state = snapshot?.url === url && snapshot.documentId === documentId ? snapshot.state : undefined;
   if (state?.state === 'loading') state = {...state, state: 'error', error: 'The summary was interrupted. Try again.'};
-  const session: Session = {id: snapshot?.url === url && snapshot.documentId === documentId ? snapshot.id : crypto.randomUUID(), tabId, url, documentId, state, ports: new Set(), running: false};
+  const session: Session = {
+    id: snapshot?.url === url && snapshot.documentId === documentId ? snapshot.id : crypto.randomUUID(),
+    tabId, url, documentId, state, ports: new Set(), running: false,
+  };
   sessions.set(tabId, session);
   await persist(session);
   return session;
@@ -86,10 +91,12 @@ async function createOrRestore(tabId: number, url: string, documentId: string): 
 function isRestrictedUrl(sourceUrl: string): boolean {
   try {
     const url = new URL(sourceUrl);
-    const protectedHosts = ['addons.mozilla.org', 'support.mozilla.org', 'accounts.firefox.com', 'accounts-static.cdn.mozilla.net',
+    const protectedHosts = [
+      'addons.mozilla.org', 'support.mozilla.org', 'accounts.firefox.com', 'accounts-static.cdn.mozilla.net',
       'addons.cdn.mozilla.net', 'api.accounts.firefox.com', 'content.cdn.mozilla.net', 'discovery.addons.mozilla.org',
       'install.mozilla.org', 'oauth.accounts.firefox.com', 'profile.accounts.firefox.com', 'sync.services.mozilla.com'];
-    return !['https:', 'http:'].includes(url.protocol) || protectedHosts.includes(url.hostname) || url.pathname.toLowerCase().endsWith('.pdf');
+    return !['https:', 'http:'].includes(url.protocol) || protectedHosts.includes(url.hostname) ||
+      url.pathname.toLowerCase().endsWith('.pdf');
   } catch { return true; }
 }
 
@@ -107,18 +114,25 @@ async function launch(tabId: number): Promise<OpenResult> {
       await browser.scripting.executeScript({target: {tabId, frameIds: [0]}, files: ['content.js']});
       identity = await browser.tabs.sendMessage(tabId, {type: 'PANEL_IDENTITY'}, {frameId: 0}) as typeof identity;
     }
-    if (!identity?.success || !identity.documentId || canonical(identity.url) !== canonical(tab.url)) throw new Error('The page changed. Try again.');
+    if (!identity?.success || !identity.documentId || canonical(identity.url) !== canonical(tab.url)) {
+      throw new Error('The page changed. Try again.');
+    }
     const session = await createOrRestore(tabId, canonical(identity.url), identity.documentId);
-    const result = await browser.tabs.sendMessage(tabId, {type: 'PANEL_SHOW', sessionId: session.id, documentId: identity.documentId}, {frameId: 0}) as {success: boolean; error?: string};
+    const result = await browser.tabs.sendMessage(
+      tabId, {type: 'PANEL_SHOW', sessionId: session.id, documentId: identity.documentId}, {frameId: 0},
+    ) as {success: boolean; error?: string};
     if (!result?.success) throw new Error(result?.error ?? 'Could not open the panel.');
     return {success: true};
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     const restricted = isRestrictedUrl(sourceUrl);
-    const needsPermission = !restricted && /missing host permission|host permission|cannot access contents|permission/i.test(detail);
-    return {success: false, error: restricted
-      ? 'Firefox does not allow the panel on this page. Open a regular website and try again.'
-      : `Could not open the summary panel: ${detail}`, retryable: !restricted, permissionRequired: needsPermission};
+    const needsPermission = !restricted &&
+      /missing host permission|host permission|cannot access contents|permission/i.test(detail);
+    return {
+      success: false, error: restricted
+        ? 'Firefox does not allow the panel on this page. Open a regular website and try again.'
+        : `Could not open the summary panel: ${detail}`, retryable: !restricted, permissionRequired: needsPermission,
+    };
   }
 }
 export function openPanel(tabId: number): Promise<OpenResult> {
@@ -144,24 +158,36 @@ async function runJob(session: Session): Promise<void> {
   if (session.running) return;
   session.running = true;
   const jobId = crypto.randomUUID();
-  session.state = {jobId, tabId: session.tabId, documentUrl: session.url, documentId: session.documentId, state: 'loading'};
+  session.state = {
+    jobId, tabId: session.tabId, documentUrl: session.url, documentId: session.documentId, state: 'loading',
+  };
   broadcast(session);
   await persist(session);
   try {
-    const response = await handleMessage({type: 'EXTRACT_AND_SUMMARIZE', tabId: session.tabId, documentId: session.documentId, documentUrl: session.url}) as {
+    const response = await handleMessage({
+      type: 'EXTRACT_AND_SUMMARIZE', tabId: session.tabId, documentId: session.documentId, documentUrl: session.url,
+    }) as {
       success: boolean; summary?: string; title?: string; articleUrl?: string; cached?: boolean; tokenCount?: number;
       agentLabels?: string[]; agentClassificationError?: string; classification?: SummaryResult['classification'];
       error?: string; permissionRequired?: boolean;
     };
     if (!response.success) {
-      session.state = {...session.state, state: 'error', error: response.error ?? 'Failed to summarize article', permissionRequired: response.permissionRequired};
+      session.state = {
+        ...session.state, state: 'error', error: response.error ?? 'Failed to summarize article',
+        permissionRequired: response.permissionRequired,
+      };
     } else {
-      const summary: SummaryResult = {summary: response.summary ?? '', title: response.title, articleUrl: response.articleUrl,
-        cached: response.cached === true, timestamp: new Date(), tokenCount: response.tokenCount, agentLabels: response.agentLabels,
-        agentClassificationError: response.agentClassificationError, classification: response.classification};
+      const summary: SummaryResult = {
+        summary: response.summary ?? '', title: response.title, articleUrl: response.articleUrl,
+        cached: response.cached === true, timestamp: new Date(), tokenCount: response.tokenCount,
+        agentLabels: response.agentLabels, agentClassificationError: response.agentClassificationError,
+        classification: response.classification,
+      };
       let historyError: string | undefined;
       try { await mutateHistory({type: 'HISTORY_ADD', summary, id: jobId}); }
-      catch (error) { historyError = `Could not save to history: ${error instanceof Error ? error.message : String(error)}`; }
+      catch (error) {
+        historyError = `Could not save to history: ${error instanceof Error ? error.message : String(error)}`;
+      }
       session.state = {...session.state, state: 'success', summary, historyError};
     }
   } catch (error) {
@@ -176,11 +202,18 @@ export async function handlePanelControl(request: unknown, sender: browser.Runti
   if (!request || typeof request !== 'object') return undefined;
   const message = request as {type?: string; token?: string; sessionId?: string};
   if (message.type === 'PANEL_ERROR_VERIFY' || message.type === 'PANEL_REOPEN') {
-    if (!sender.url?.startsWith(`${panelUrl}?error=`) || sender.frameId !== 0 || !message.token) return {success: false};
+    if (!sender.url?.startsWith(`${panelUrl}?error=`) || sender.frameId !== 0 || !message.token) {
+      return {success: false};
+    }
     const token = errorTokens.get(message.token);
     if (!token) return {success: false, error: 'This retry has expired. Use the extension button again.'};
-    if (message.type === 'PANEL_ERROR_VERIFY') return {success: true, retryable: token.retryable, permissionRequired: token.permissionRequired};
-    if (!token.retryable) return {success: false, error: 'Firefox does not allow the panel on this page. Open a regular website and try again.', retryable: false, permissionRequired: false};
+    if (message.type === 'PANEL_ERROR_VERIFY') {
+      return {success: true, retryable: token.retryable, permissionRequired: token.permissionRequired};
+    }
+    if (!token.retryable) return {
+      success: false, error: 'Firefox does not allow the panel on this page. Open a regular website and try again.',
+      retryable: false, permissionRequired: false,
+    };
     const result = await openPanel(token.tabId);
     if (result.success) errorTokens.delete(message.token);
     else { token.retryable = result.retryable; token.permissionRequired = result.permissionRequired; }
@@ -211,8 +244,11 @@ async function attachPanel(connection: PanelConnection, sessionId: string): Prom
   if (!session) {
     const stored = await browser.storage.session.get(SNAPSHOT_PREFIX + tabId) as Record<string, Snapshot | undefined>;
     const snapshot = stored[SNAPSHOT_PREFIX + tabId];
-    const identity = await browser.tabs.sendMessage(tabId, {type: 'PANEL_IDENTITY'}, {frameId: 0}) as {success: boolean; documentId: string; url: string};
-    if (snapshot?.id === sessionId && identity.success && snapshot.documentId === identity.documentId && snapshot.url === canonical(identity.url)) {
+    const identity = await browser.tabs.sendMessage(tabId, {type: 'PANEL_IDENTITY'}, {frameId: 0}) as {
+      success: boolean; documentId: string; url: string
+    };
+    if (snapshot?.id === sessionId && identity.success && snapshot.documentId === identity.documentId &&
+        snapshot.url === canonical(identity.url)) {
       session = await createOrRestore(tabId, snapshot.url, snapshot.documentId);
     }
   }
@@ -224,7 +260,8 @@ async function attachPanel(connection: PanelConnection, sessionId: string): Prom
   connection.attached = session;
   session.ports.add(port);
   trustedFrames.set(key, {sessionId: session.id, port});
-  void browser.tabs.sendMessage(session.tabId, {type: 'PANEL_FRAME_READY', sessionId: session.id}, {frameId: 0}).catch(() => undefined);
+  void browser.tabs.sendMessage(session.tabId, {type: 'PANEL_FRAME_READY', sessionId: session.id}, {frameId: 0})
+    .catch(() => undefined);
   if (session.state) broadcast(session); else void runJob(session);
 }
 
@@ -232,7 +269,11 @@ async function openPanelSettings(port: browser.Runtime.Port): Promise<void> {
   try { await browser.runtime.openOptionsPage(); }
   catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    try { port.postMessage({type: 'PANEL_SETTINGS_ERROR', error: `Could not open settings: ${detail}`} satisfies PanelServerMessage); }
+    try {
+      port.postMessage({
+        type: 'PANEL_SETTINGS_ERROR', error: `Could not open settings: ${detail}`,
+      } satisfies PanelServerMessage);
+    }
     catch { /* The panel may have been closed. */ }
   }
 }
@@ -249,14 +290,18 @@ function handlePanelMessage(connection: PanelConnection, incoming: unknown): voi
   const attached = connection.attached;
   if (attached?.id !== message.sessionId || sessions.get(attached.tabId) !== attached) return;
   if (message.type === 'PANEL_RETRY' && !attached.running) void runJob(attached);
-  if (message.type === 'PANEL_CLOSE') void browser.tabs.sendMessage(attached.tabId, {type: 'PANEL_HIDE', sessionId: attached.id}, {frameId: 0}).catch(() => undefined);
+  if (message.type === 'PANEL_CLOSE') {
+    void browser.tabs.sendMessage(attached.tabId, {type: 'PANEL_HIDE', sessionId: attached.id}, {frameId: 0})
+      .catch(() => undefined);
+  }
   if (message.type === 'PANEL_OPEN_SETTINGS') void openPanelSettings(connection.port);
 }
 
 function handlePanelConnection(port: browser.Runtime.Port): void {
   if (port.name !== 'summarizer-panel') return;
   const sender = port.sender;
-  if (!sender?.url?.startsWith(`${panelUrl}?session=`) || sender.id !== browser.runtime.id || sender.tab?.id === undefined || !sender.frameId) {
+  if (!sender?.url?.startsWith(`${panelUrl}?session=`) || sender.id !== browser.runtime.id ||
+      sender.tab?.id === undefined || !sender.frameId) {
     port.disconnect(); return;
   }
   const connection: PanelConnection = {port, sender, key: frameKey(sender), disconnected: false};
@@ -275,7 +320,9 @@ function handleAction(tab: browser.Tabs.Tab): void {
 function handleCommand(command: string, tab: browser.Tabs.Tab | undefined): void {
   if (command !== 'open-sidebar-and-summarize') return;
   if (tab?.id !== undefined) void openPanelWithErrorTab(tab.id);
-  else void browser.tabs.query({active: true, currentWindow: true}).then(tabs => { if (tabs[0]?.id !== undefined) void openPanelWithErrorTab(tabs[0].id); });
+  else void browser.tabs.query({active: true, currentWindow: true}).then(tabs => {
+    if (tabs[0]?.id !== undefined) void openPanelWithErrorTab(tabs[0].id);
+  });
 }
 
 function handleTabUpdated(tabId: number, change: browser.Tabs.OnUpdatedChangeInfoType): void {
@@ -284,7 +331,9 @@ function handleTabUpdated(tabId: number, change: browser.Tabs.OnUpdatedChangeInf
     if (change.status === 'loading') void browser.storage.session.remove(SNAPSHOT_PREFIX + tabId);
     else if (change.url) void browser.storage.session.get(SNAPSHOT_PREFIX + tabId).then(data => {
       const snapshot = data[SNAPSHOT_PREFIX + tabId] as Snapshot | undefined;
-      if (snapshot && canonical(change.url!) !== snapshot.url) return browser.storage.session.remove(SNAPSHOT_PREFIX + tabId);
+      if (snapshot && canonical(change.url!) !== snapshot.url) {
+        return browser.storage.session.remove(SNAPSHOT_PREFIX + tabId);
+      }
       return undefined;
     });
     return;

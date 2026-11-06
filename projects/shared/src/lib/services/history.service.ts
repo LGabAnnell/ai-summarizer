@@ -29,11 +29,6 @@ export interface HistoryItem {
 }
 
 /**
- * Maximum number of history items to store
- */
-
-
-/**
  * Storage key for history
  */
 const HISTORY_STORAGE_KEY = 'ai-summarizer-history';
@@ -97,6 +92,9 @@ export class HistoryService {
     });
   }
 
+  /**
+   * Clear all history
+   */
   clearAll(): Promise<void> {
     return this.enqueueMutation(async () => {
       await this.mutate({type: 'HISTORY_CLEAR'});
