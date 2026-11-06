@@ -62,6 +62,7 @@ export interface SummarizeResponse {
   // NEW: Mistral agent classification labels (optional)
   agentLabels?: string[];
   agentClassificationError?: string;
+  historyGeneration?: string;
 }
 
 export interface GetSettingsRequest {
@@ -137,6 +138,7 @@ export interface SummaryResult {
   // NEW: Mistral agent classification labels (optional)
   agentLabels?: string[];
   agentClassificationError?: string;
+  historyGeneration?: string;
 }
 
 export interface SummaryState {

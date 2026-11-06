@@ -17,12 +17,19 @@ interface HistoryEntry {
   preview: string;
 }
 let queue: Promise<unknown> = Promise.resolve();
+let generation = crypto.randomUUID();
+
+export function getHistoryGeneration(): string {
+  return generation;
+}
 
 export function mutateHistory(mutation: HistoryMutation): Promise<HistoryEntry[]> {
+  if (mutation.type === 'HISTORY_CLEAR') generation = crypto.randomUUID();
   const operation = queue.then(async() => {
     const data = await browser.storage.local.get(KEY) as Record<string, HistoryEntry[] | undefined>;
     let items = data[KEY] ?? [];
     if (mutation.type === 'HISTORY_ADD') {
+      if (mutation.generation !== undefined && mutation.generation !== generation) return items;
       const summary: SummaryResult = mutation.summary;
       const id = mutation.id ?? crypto.randomUUID();
       if (!items.some(item => item.id === id)) {

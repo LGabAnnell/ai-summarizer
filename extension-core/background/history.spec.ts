@@ -2,7 +2,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 const storage = vi.hoisted(() => ({items: [] as {id: string; summary: string}[], get: vi.fn(), set: vi.fn()}));
 vi.mock('webextension-polyfill', () => ({default: {storage: {local: {get: storage.get, set: storage.set}}}}));
-import {mutateHistory} from './history';
+import {getHistoryGeneration, mutateHistory} from './history';
 
 beforeEach(() => {
   storage.items = [];
@@ -26,5 +26,22 @@ describe('background history queue', () => {
     expect(storage.items.map(item => item.id)).toEqual(['two']);
     await mutateHistory({type: 'HISTORY_CLEAR'});
     expect(storage.items).toEqual([]);
+  });
+
+  it('discards old jobs after a clear while preserving jobs started during the clear', async () => {
+    const summary = (text: string) => ({summary: text, cached: false, timestamp: new Date()});
+    const oldGeneration = getHistoryGeneration();
+    let finishClear!: () => void;
+    storage.set.mockImplementationOnce((value: Record<string, unknown>) => new Promise<void>(resolve => {
+      finishClear = () => { storage.items = value['ai-summarizer-history'] as typeof storage.items; resolve(); };
+    }));
+    const clear = mutateHistory({type: 'HISTORY_CLEAR'});
+    const newGeneration = getHistoryGeneration();
+    const oldJob = mutateHistory({type: 'HISTORY_ADD', id: 'old', summary: summary('old'), generation: oldGeneration});
+    const newJob = mutateHistory({type: 'HISTORY_ADD', id: 'new', summary: summary('new'), generation: newGeneration});
+    await vi.waitFor(() => expect(storage.set).toHaveBeenCalled());
+    finishClear();
+    await Promise.all([clear, oldJob, newJob]);
+    expect(storage.items.map(item => item.id)).toEqual(['new']);
   });
 });

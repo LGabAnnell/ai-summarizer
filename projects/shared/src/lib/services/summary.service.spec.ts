@@ -32,6 +32,7 @@ describe('SummaryService shortcut extraction', () => {
       articleUrl: 'https://example.com/article',
       agentLabels: ['one', 'two', 'three', 'four', 'five'],
       agentClassificationError: 'Agent timed out',
+      historyGeneration: 'extract-generation',
     }))};
     TestBed.configureTestingModule({providers: [SummaryService, {provide: MessagingService, useValue: messaging}, {provide: SettingsService, useValue: {}}]});
     const service = TestBed.inject(SummaryService);
@@ -40,6 +41,7 @@ describe('SummaryService shortcut extraction', () => {
       title: 'Article title', articleUrl: 'https://example.com/article',
       agentLabels: ['one', 'two', 'three', 'four', 'five'],
       agentClassificationError: 'Agent timed out',
+      historyGeneration: 'extract-generation',
     });
   });
 
@@ -48,6 +50,7 @@ describe('SummaryService shortcut extraction', () => {
     const messaging = {summarizeArticle: vi.fn(() => of({success: true, data: {
       summary: 'Article summary', cached: true, tokenCount: 12,
       agentLabels: ['one', 'two', 'three', 'four', 'five'], agentClassificationError: undefined,
+      historyGeneration: 'summary-generation',
     }}))};
     TestBed.configureTestingModule({
       providers: [
@@ -62,6 +65,7 @@ describe('SummaryService shortcut extraction', () => {
     expect(service.state().summary).toMatchObject({
       summary: 'Article summary', title: 'Article', articleUrl: article.url, cached: true,
       agentLabels: ['one', 'two', 'three', 'four', 'five'],
+      historyGeneration: 'summary-generation',
     });
   });
 

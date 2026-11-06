@@ -48,11 +48,13 @@ export class HistoryService {
   private readonly destroyRef = inject(DestroyRef);
   private readonly historyReady: Promise<void>;
   private mutationQueue: Promise<void> = Promise.resolve();
+  private historyRevision = 0;
 
   constructor() {
     this.historyReady = this.loadHistory();
     const storageChangedListener = (changes: Record<string, browser.Storage.StorageChange>, areaName: string) => {
       if (areaName !== 'local' || !changes[HISTORY_STORAGE_KEY]) return;
+      this.historyRevision++;
       const value = changes[HISTORY_STORAGE_KEY].newValue as HistoryItem[] | undefined;
       this._history.set(this.sortHistory(value ?? []));
       const selected = this._selectedItem();
@@ -69,7 +71,8 @@ export class HistoryService {
    */
   addSummary(summaryResult: SummaryResult): Promise<void> {
     return this.enqueueMutation(async () => {
-      const items = await this.mutate({type: 'HISTORY_ADD', summary: summaryResult});
+      const items = await this.mutate({type: 'HISTORY_ADD', summary: summaryResult,
+        ...(summaryResult.historyGeneration === undefined ? {} : {generation: summaryResult.historyGeneration})});
       const selected = items.find(item => item.summary === summaryResult.summary && item.articleUrl === (summaryResult.articleUrl || ''));
       if (selected) this._selectedItem.set(selected);
     });
@@ -141,8 +144,9 @@ export class HistoryService {
 
   private async refreshHistoryFromStorage(): Promise<void> {
     if (typeof browser === 'undefined' || !browser.storage) return;
+    const revision = this.historyRevision;
     const result = await browser.storage.local.get([HISTORY_STORAGE_KEY]) as Record<string, HistoryItem[]>;
-    this._history.set(this.sortHistory(result[HISTORY_STORAGE_KEY] ?? []));
+    if (revision === this.historyRevision) this._history.set(this.sortHistory(result[HISTORY_STORAGE_KEY] ?? []));
   }
 
   private sortHistory(history: HistoryItem[]): HistoryItem[] {

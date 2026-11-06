@@ -47,6 +47,7 @@ export class SummaryService {
             cached: boolean;
             agentLabels?: string[];
             agentClassificationError?: string;
+            historyGeneration?: string;
             classification?: {
               label?: string;
               score?: number;
@@ -65,6 +66,7 @@ export class SummaryService {
             // NEW: Include Mistral agent labels if present
             agentLabels: data.agentLabels,
             agentClassificationError: data.agentClassificationError,
+            historyGeneration: data.historyGeneration,
             // NEW: Include ML classification if present
             classification: data.classification ? {
               ok: true,
@@ -123,6 +125,7 @@ export class SummaryService {
             tokenCount?: number;
             agentLabels?: string[];
             agentClassificationError?: string;
+            historyGeneration?: string;
             classification?: {
               label?: string;
               score?: number;
@@ -144,6 +147,7 @@ export class SummaryService {
             // NEW: Include Mistral agent labels if present
             agentLabels: data.agentLabels,
             agentClassificationError: data.agentClassificationError,
+            historyGeneration: data.historyGeneration,
             // NEW: Include ML classification if present
             classification: data.classification ? {
               ok: true,

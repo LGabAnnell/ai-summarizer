@@ -12,7 +12,7 @@ const fixture = vi.hoisted(() => ({
   session: {} as Record<string, unknown>,
   action: undefined as unknown, command: undefined as unknown, connect: undefined as unknown,
   updated: undefined as unknown, removed: undefined as unknown,
-  sendMessage: vi.fn(), sessionGet: vi.fn(), summarize: vi.fn(), history: vi.fn(), openOptions: vi.fn(), create: vi.fn(),
+  sendMessage: vi.fn(), sessionGet: vi.fn(), sessionSet: vi.fn(), sessionRemove: vi.fn(), summarize: vi.fn(), history: vi.fn(), historyGeneration: vi.fn(), openOptions: vi.fn(), create: vi.fn(),
 }));
 vi.mock('webextension-polyfill', () => ({default: {
   runtime: {id: 'extension-id', getURL: (path: string) => `moz-extension://extension/${path}`, openOptionsPage: fixture.openOptions, onConnect: {addListener: (fn: unknown) => { fixture.connect = fn; }}},
@@ -29,12 +29,12 @@ vi.mock('webextension-polyfill', () => ({default: {
   scripting: {executeScript: vi.fn()},
   storage: {session: {
     get: fixture.sessionGet,
-    set: vi.fn(async (items: Record<string, unknown>) => Object.assign(fixture.session, structuredClone(items))),
-    remove: vi.fn(async (key: string) => { delete fixture.session[key]; }),
+    set: fixture.sessionSet,
+    remove: fixture.sessionRemove,
   }},
 }}));
 vi.mock('../background/message-router', () => ({handleMessage: fixture.summarize}));
-vi.mock('../background/history', () => ({mutateHistory: fixture.history}));
+vi.mock('../background/history', () => ({mutateHistory: fixture.history, getHistoryGeneration: fixture.historyGeneration}));
 
 interface Port {
   name: string;
@@ -60,6 +60,8 @@ beforeEach(() => {
   vi.resetModules(); vi.clearAllMocks(); fixture.session = {};
   fixture.tabs = new Map([[1, {id: 1, url: 'https://example.test/article', documentId: 'doc-a'}]]);
   fixture.sessionGet.mockImplementation(async (key: string) => ({[key]: fixture.session[key]}));
+  fixture.sessionSet.mockImplementation(async (items: Record<string, unknown>) => { Object.assign(fixture.session, structuredClone(items)); });
+  fixture.sessionRemove.mockImplementation(async (key: string) => { delete fixture.session[key]; });
   fixture.sendMessage.mockImplementation(async (tabId: number, message: {type: string; documentId?: string}) => {
     const tab = fixture.tabs.get(tabId);
     if (message.type === 'PANEL_IDENTITY') return {success: true, documentId: tab?.documentId, url: tab?.url};
@@ -67,6 +69,7 @@ beforeEach(() => {
     return {success: true};
   });
   fixture.history.mockResolvedValue([]);
+  fixture.historyGeneration.mockReturnValue('generation');
   fixture.openOptions.mockResolvedValue(undefined);
   fixture.create.mockResolvedValue({});
 });
@@ -160,6 +163,35 @@ describe('floating panel coordinator', () => {
     expect(fixture.session['panel-session-1']).not.toHaveProperty('articleText');
   });
 
+  it('captures the history generation before persisting a job and uses a fresh generation on retry', async () => {
+    let finishWrite!: () => void;
+    fixture.sessionSet.mockImplementationOnce(async (items: Record<string, unknown>) => {
+      Object.assign(fixture.session, structuredClone(items));
+    }).mockImplementationOnce((items: Record<string, unknown>) => new Promise<void>(resolve => {
+      finishWrite = () => { Object.assign(fixture.session, structuredClone(items)); resolve(); };
+    }));
+    fixture.summarize.mockResolvedValue({success: true, summary: 'Summary'});
+    fixture.historyGeneration.mockReturnValue('before-clear');
+    const controller = await import('./controller'); controller.setupPanelController();
+    await controller.openPanel(1);
+    const shown = fixture.sendMessage.mock.calls.find(call => call[1].type === 'PANEL_SHOW')![1];
+    const port = makePort(1, shown.sessionId);
+    await connect(port, shown.sessionId);
+    await vi.waitFor(() => expect(fixture.sessionSet).toHaveBeenCalledTimes(2));
+    fixture.historyGeneration.mockReturnValue('after-clear');
+    finishWrite();
+    await vi.waitFor(() => expect(fixture.history).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'HISTORY_ADD', generation: 'before-clear',
+    })));
+    await vi.waitFor(() => expect(port.postMessage).toHaveBeenCalledWith(expect.objectContaining({
+      state: expect.objectContaining({state: 'success'}),
+    })));
+    port.onMessage.fire({type: 'PANEL_RETRY', sessionId: shown.sessionId});
+    await vi.waitFor(() => expect(fixture.history).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'HISTORY_ADD', generation: 'after-clear',
+    })));
+  });
+
   it('keeps concurrent tab jobs and results isolated', async () => {
     fixture.tabs.set(2, {id: 2, url: 'https://example.test/second', documentId: 'doc-b'});
     fixture.summarize.mockImplementation(async (request: {tabId: number}) => ({
@@ -224,6 +256,22 @@ describe('floating panel coordinator', () => {
     expect(port.disconnect).toHaveBeenCalled();
   });
 
+  it('removes a snapshot after a pending write completes on navigation', async () => {
+    let finishWrite!: () => void;
+    fixture.sessionSet.mockImplementationOnce((items: Record<string, unknown>) => new Promise<void>(resolve => {
+      finishWrite = () => { Object.assign(fixture.session, structuredClone(items)); resolve(); };
+    }));
+    const controller = await import('./controller'); controller.setupPanelController();
+    const opening = controller.openPanel(1);
+    await vi.waitFor(() => expect(fixture.sessionSet).toHaveBeenCalledOnce());
+    (fixture.updated as (tabId: number, change: object) => void)(1, {status: 'loading'});
+    expect(fixture.sessionRemove).not.toHaveBeenCalled();
+    finishWrite();
+    await opening;
+    await vi.waitFor(() => expect(fixture.sessionRemove).toHaveBeenCalledOnce());
+    expect(fixture.session['panel-session-1']).toBeUndefined();
+  });
+
   it('never authorizes a frame that disconnects during session recovery', async () => {
     const snapshot = {id: 'saved-session', tabId: 1, url: 'https://example.test/article', documentId: 'doc-a'};
     let finish!: (value: Record<string, unknown>) => void;
@@ -233,11 +281,73 @@ describe('floating panel coordinator', () => {
     (fixture.connect as (port: Port) => void)(port);
     port.onMessage.fire({type: 'PANEL_READY', sessionId: 'saved-session'});
     port.onDisconnect.fire();
+    await vi.waitFor(() => expect(fixture.sessionGet).toHaveBeenCalledOnce());
     finish({'panel-session-1': snapshot});
     await new Promise(resolve => setTimeout(resolve, 10));
     expect(port.postMessage).not.toHaveBeenCalled();
     expect(controller.isAuthorizedPanelSender(port.sender)).toBe(false);
     expect(fixture.summarize).not.toHaveBeenCalled();
+  });
+
+  it('does not restore a snapshot whose recovery read finishes after navigation', async () => {
+    const snapshot = {id: 'saved-session', tabId: 1, url: 'https://example.test/article', documentId: 'doc-a'};
+    let finishRead!: (value: Record<string, unknown>) => void;
+    fixture.session['panel-session-1'] = snapshot;
+    fixture.sessionGet.mockImplementationOnce(() => new Promise(resolve => { finishRead = resolve; }));
+    const controller = await import('./controller'); controller.setupPanelController();
+    const port = makePort(1, 'saved-session');
+    (fixture.connect as (port: Port) => void)(port);
+    port.onMessage.fire({type: 'PANEL_READY', sessionId: 'saved-session'});
+    await vi.waitFor(() => expect(fixture.sessionGet).toHaveBeenCalledOnce());
+    (fixture.updated as (tabId: number, change: object) => void)(1, {status: 'loading'});
+    await vi.waitFor(() => expect(fixture.sessionRemove).toHaveBeenCalledOnce());
+    finishRead({'panel-session-1': snapshot});
+    await vi.waitFor(() => expect(port.disconnect).toHaveBeenCalledOnce());
+    expect(controller.isAuthorizedPanelSender(port.sender)).toBe(false);
+    expect(fixture.session['panel-session-1']).toBeUndefined();
+    expect(fixture.sessionSet).not.toHaveBeenCalled();
+    expect(fixture.summarize).not.toHaveBeenCalled();
+  });
+
+  it('does not show a panel when the identity response arrives after navigation', async () => {
+    let finishIdentity!: (value: unknown) => void;
+    fixture.sendMessage.mockImplementationOnce(() => new Promise(resolve => { finishIdentity = resolve; }));
+    const controller = await import('./controller'); controller.setupPanelController();
+    const opening = controller.openPanel(1);
+    await vi.waitFor(() => expect(fixture.sendMessage).toHaveBeenCalledOnce());
+    (fixture.updated as (tabId: number, change: object) => void)(1, {status: 'loading'});
+    finishIdentity({success: true, documentId: 'doc-a', url: 'https://example.test/article'});
+    expect(await opening).toEqual(expect.objectContaining({success: false}));
+    expect(fixture.sendMessage).not.toHaveBeenCalledWith(1, expect.objectContaining({type: 'PANEL_SHOW'}), expect.anything());
+    expect(fixture.sessionSet).not.toHaveBeenCalled();
+  });
+
+  it('waits for navigation removal before reading a snapshot for a new panel', async () => {
+    let finishRemove!: () => void;
+    fixture.session['panel-session-1'] = {id: 'old-session', tabId: 1, url: 'https://example.test/article', documentId: 'doc-a'};
+    fixture.sessionRemove.mockImplementationOnce((key: string) => new Promise<void>(resolve => {
+      finishRemove = () => { delete fixture.session[key]; resolve(); };
+    }));
+    const controller = await import('./controller'); controller.setupPanelController();
+    (fixture.updated as (tabId: number, change: object) => void)(1, {status: 'loading'});
+    await vi.waitFor(() => expect(fixture.sessionRemove).toHaveBeenCalledOnce());
+    const opening = controller.openPanel(1);
+    await vi.waitFor(() => expect(fixture.sendMessage).toHaveBeenCalledWith(1, {type: 'PANEL_IDENTITY'}, {frameId: 0}));
+    expect(fixture.sessionGet).not.toHaveBeenCalled();
+    finishRemove();
+    expect(await opening).toEqual({success: true});
+    expect(fixture.session['panel-session-1']).toEqual(expect.not.objectContaining({id: 'old-session'}));
+  });
+
+  it('keeps a pending launch valid across a fragment-only URL update', async () => {
+    let finishRead!: (value: Record<string, unknown>) => void;
+    fixture.sessionGet.mockImplementationOnce(() => new Promise(resolve => { finishRead = resolve; }));
+    const controller = await import('./controller'); controller.setupPanelController();
+    const opening = controller.openPanel(1);
+    await vi.waitFor(() => expect(fixture.sessionGet).toHaveBeenCalledOnce());
+    (fixture.updated as (tabId: number, change: object) => void)(1, {url: 'https://example.test/article#section'});
+    finishRead({});
+    expect(await opening).toEqual({success: true});
   });
 
   it('restores an interrupted loading snapshot as a retryable error after restart', async () => {

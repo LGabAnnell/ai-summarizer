@@ -8,12 +8,14 @@ const dependencies = vi.hoisted(() => ({
   classifyText: vi.fn(), permissionStatus: vi.fn(), notifyPermission: vi.fn(), clearMLCache: vi.fn(),
   checkAvailability: vi.fn(), sendMessage: vi.fn(),
   tabsQuery: vi.fn(), tabsGet: vi.fn(), tabsSendMessage: vi.fn(), executeScript: vi.fn(),
+  historyGet: vi.fn(), historySet: vi.fn(),
 }));
 
 vi.mock('webextension-polyfill', () => ({default: {
   runtime: {sendMessage: dependencies.sendMessage},
   tabs: {query: dependencies.tabsQuery, get: dependencies.tabsGet, sendMessage: dependencies.tabsSendMessage},
   scripting: {executeScript: dependencies.executeScript},
+  storage: {local: {get: dependencies.historyGet, set: dependencies.historySet}},
 }}));
 vi.mock('./article-extraction', async importOriginal => ({
   ...await importOriginal<typeof import('./article-extraction')>(),
@@ -65,7 +67,11 @@ describe('background message router', () => {
       checkAvailability: dependencies.checkAvailability, classifyWithAgent: dependencies.classifyWithAgent,
     };
     handlers[handler].mockResolvedValue(result);
-    await expect(handleMessage(request)).resolves.toBe(result);
+    if (request.type === 'SUMMARIZE') {
+      await expect(handleMessage(request)).resolves.toEqual({...result, historyGeneration: expect.any(String)});
+    } else {
+      await expect(handleMessage(request)).resolves.toBe(result);
+    }
     expect(handlers[handler]).toHaveBeenCalledWith(...args);
   });
 
@@ -76,10 +82,35 @@ describe('background message router', () => {
     dependencies.summarize.mockResolvedValue(summary);
 
     await expect(handleMessage({type: 'EXTRACT_AND_SUMMARIZE', tabId: 27})).resolves.toEqual({
-      ...summary, title: 'Story', articleUrl: article.url,
+      ...summary, title: 'Story', articleUrl: article.url, historyGeneration: expect.any(String),
     });
     expect(dependencies.extract).toHaveBeenCalledWith(27, undefined, undefined);
     expect(dependencies.summarize).toHaveBeenCalledWith(article);
+  });
+
+  it('does not save an unfinished summary after history is cleared', async () => {
+    let finishSummary!: (value: unknown) => void;
+    let history: unknown[] = [];
+    dependencies.historyGet.mockImplementation(async () => ({'ai-summarizer-history': history}));
+    dependencies.historySet.mockImplementation(async (value: Record<string, unknown>) => {
+      history = value['ai-summarizer-history'] as unknown[];
+    });
+    dependencies.extract.mockResolvedValue({url: 'https://example.test', title: 'Article', textContent: 'body'});
+    dependencies.summarize.mockImplementationOnce(() => new Promise(resolve => { finishSummary = resolve; }));
+    const pending = handleMessage({type: 'EXTRACT_AND_SUMMARIZE'});
+    await vi.waitFor(() => expect(dependencies.summarize).toHaveBeenCalledOnce());
+    await handleMessage({type: 'HISTORY_CLEAR'});
+    finishSummary({success: true, summary: 'Old'});
+    const response = await pending as {summary: string; historyGeneration: string};
+    await handleMessage({type: 'HISTORY_ADD', generation: response.historyGeneration,
+      summary: {summary: response.summary, cached: false, timestamp: new Date()}});
+    expect(history).toEqual([]);
+
+    dependencies.summarize.mockResolvedValue({success: true, summary: 'New'});
+    const fresh = await handleMessage({type: 'EXTRACT_AND_SUMMARIZE'}) as {summary: string; historyGeneration: string};
+    await handleMessage({type: 'HISTORY_ADD', generation: fresh.historyGeneration,
+      summary: {summary: fresh.summary, cached: false, timestamp: new Date()}});
+    expect(history).toEqual([expect.objectContaining({summary: 'New'})]);
   });
 
   it('returns an extraction failure when no article is available or extraction throws', async () => {

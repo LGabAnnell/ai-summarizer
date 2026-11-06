@@ -100,6 +100,18 @@ describe('HistoryService persistence and storage synchronization', () => {
     expect(storageHarness.history).toHaveLength(3);
   });
 
+  it('keeps a newer storage update when the initial read finishes later', async () => {
+    let finishInitialLoad!: (value: Record<string, unknown>) => void;
+    storage.local.get.mockImplementationOnce(() => new Promise(resolve => { finishInitialLoad = resolve; }));
+    const service = TestBed.inject(HistoryService);
+    const item: HistoryItem = {id: 'new', summary: 'New', title: 'New', articleUrl: '', cached: false,
+      timestamp: new Date(), preview: 'New'};
+    for (const listener of storageHarness.listeners) listener({[STORAGE_KEY]: {newValue: [item]}}, 'local');
+    finishInitialLoad({[STORAGE_KEY]: []});
+    await vi.waitFor(() => expect(storage.local.get).toHaveResolved());
+    expect(service.getItems()).toEqual([item]);
+  });
+
   it('applies only local history storage changes and updates or clears the selected item', async () => {
     const service = TestBed.inject(HistoryService);
     await new Promise(resolve => setTimeout(resolve, 0));

@@ -88,7 +88,7 @@ describe('Popup website access recovery', () => {
     });
     browserMock.runtime.sendMessage.mockResolvedValueOnce({
       success: true, summary: 'Popup summary', title: 'Popup article', articleUrl: 'https://example.com/article',
-      cached: false, tokenCount: 42, agentLabels: ['one', 'two', 'three', 'four', 'five'],
+      cached: false, tokenCount: 42, agentLabels: ['one', 'two', 'three', 'four', 'five'], historyGeneration: 'generation',
     });
 
     browserMock.runtime.sendMessage.mockResolvedValueOnce({success: true, data: [existing]});
@@ -96,7 +96,7 @@ describe('Popup website access recovery', () => {
     await component.summarize();
 
     expect(browserMock.runtime.sendMessage).toHaveBeenLastCalledWith({
-      type: 'HISTORY_ADD', summary: expect.objectContaining({
+      type: 'HISTORY_ADD', generation: 'generation', summary: expect.objectContaining({
         summary: 'Popup summary', title: 'Popup article', articleUrl: 'https://example.com/article',
         cached: false, tokenCount: 42, agentLabels: ['one', 'two', 'three', 'four', 'five'],
         timestamp: expect.any(Date),

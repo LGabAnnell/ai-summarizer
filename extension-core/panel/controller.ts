@@ -2,7 +2,7 @@ import browser from 'webextension-polyfill';
 import type {PanelClientMessage, PanelServerMessage, PanelState} from '@shared/lib/models/panel.model';
 import type {SummaryResult} from '@shared/lib/models/summary.model';
 import {handleMessage} from '../background/message-router';
-import {mutateHistory} from '../background/history';
+import {getHistoryGeneration, mutateHistory} from '../background/history';
 
 interface Session {
   id: string;
@@ -21,6 +21,9 @@ const opening = new Map<number, Promise<OpenResult>>();
 const reporting = new Map<number, Promise<void>>();
 const errorTokens = new Map<string, ErrorToken>();
 const trustedFrames = new Map<string, {sessionId: string; port: browser.Runtime.Port}>();
+const snapshotQueues = new Map<number, Promise<void>>();
+interface TabLifecycle {url?: string}
+const tabLifecycles = new Map<number, TabLifecycle>();
 const SNAPSHOT_PREFIX = 'panel-session-';
 const panelUrl = browser.runtime.getURL('panel/index.html');
 
@@ -56,13 +59,38 @@ function broadcast(session: Session): void {
     try { port.postMessage(message); } catch { session.ports.delete(port); }
   }
 }
-async function persist(session: Session): Promise<void> {
-  if (sessions.get(session.tabId) !== session) return;
+function queueSnapshot(tabId: number, action: () => Promise<void>): Promise<void> {
+  const operation = (snapshotQueues.get(tabId) ?? Promise.resolve()).then(action);
+  const settled = operation.catch(error => { console.error('Could not update panel state:', error); });
+  snapshotQueues.set(tabId, settled);
+  void settled.then(() => { if (snapshotQueues.get(tabId) === settled) snapshotQueues.delete(tabId); });
+  return settled;
+}
+function lifecycleFor(tabId: number): TabLifecycle {
+  let lifecycle = tabLifecycles.get(tabId);
+  if (!lifecycle) { lifecycle = {}; tabLifecycles.set(tabId, lifecycle); }
+  return lifecycle;
+}
+function assertCurrentLifecycle(tabId: number, lifecycle: object): void {
+  if (tabLifecycles.get(tabId) !== lifecycle) throw new Error('The page changed. Try again.');
+}
+async function readSnapshot(tabId: number, lifecycle: object): Promise<Snapshot | undefined> {
+  await snapshotQueues.get(tabId);
+  assertCurrentLifecycle(tabId, lifecycle);
+  const key = SNAPSHOT_PREFIX + tabId;
+  const stored = await browser.storage.session.get(key) as Record<string, Snapshot | undefined>;
+  assertCurrentLifecycle(tabId, lifecycle);
+  return stored[key];
+}
+function persist(session: Session): Promise<void> {
   const snapshot: Snapshot = {
     id: session.id, tabId: session.tabId, url: session.url, documentId: session.documentId, state: session.state,
   };
-  try { await browser.storage.session.set({[SNAPSHOT_PREFIX + session.tabId]: snapshot}); }
-  catch (error) { console.error('Could not save panel state:', error); }
+  return queueSnapshot(session.tabId, async() => {
+    if (sessions.get(session.tabId) === session) {
+      await browser.storage.session.set({[SNAPSHOT_PREFIX + session.tabId]: snapshot});
+    }
+  });
 }
 async function errorTab(tabId: number, reason: string, permissionRequired = false, retryable = true): Promise<void> {
   const token = crypto.randomUUID();
@@ -71,12 +99,11 @@ async function errorTab(tabId: number, reason: string, permissionRequired = fals
   try { await browser.tabs.create({url: `${panelUrl}?${query}`}); }
   catch (error) { errorTokens.delete(token); throw error; }
 }
-async function createOrRestore(tabId: number, url: string, documentId: string): Promise<Session> {
+async function createOrRestore(tabId: number, url: string, documentId: string, lifecycle: object): Promise<Session> {
+  assertCurrentLifecycle(tabId, lifecycle);
   const previous = sessions.get(tabId);
   if (previous?.url === url && previous.documentId === documentId) return previous;
-  const key = SNAPSHOT_PREFIX + tabId;
-  const stored = await browser.storage.session.get(key) as Record<string, Snapshot | undefined>;
-  const snapshot = stored[key];
+  const snapshot = await readSnapshot(tabId, lifecycle);
   let state = snapshot?.url === url && snapshot.documentId === documentId ? snapshot.state : undefined;
   if (state?.state === 'loading') state = {...state, state: 'error', error: 'The summary was interrupted. Try again.'};
   const session: Session = {
@@ -85,6 +112,7 @@ async function createOrRestore(tabId: number, url: string, documentId: string): 
   };
   sessions.set(tabId, session);
   await persist(session);
+  assertCurrentLifecycle(tabId, lifecycle);
   return session;
 }
 
@@ -102,22 +130,29 @@ function isRestrictedUrl(sourceUrl: string): boolean {
 
 async function launch(tabId: number): Promise<OpenResult> {
   let sourceUrl = '';
+  const lifecycle = lifecycleFor(tabId);
   try {
     const tab = await browser.tabs.get(tabId);
+    assertCurrentLifecycle(tabId, lifecycle);
     sourceUrl = tab.url ?? '';
     if (!tab.url) throw new Error('Firefox could not access this page. Open a regular website and try again.');
+    lifecycle.url = canonical(tab.url);
     if (isRestrictedUrl(sourceUrl)) throw new Error('This page is restricted.');
     let identity: {success: boolean; documentId: string; url: string};
     try {
       identity = await browser.tabs.sendMessage(tabId, {type: 'PANEL_IDENTITY'}, {frameId: 0}) as typeof identity;
     } catch {
+      assertCurrentLifecycle(tabId, lifecycle);
       await browser.scripting.executeScript({target: {tabId, frameIds: [0]}, files: ['content.js']});
+      assertCurrentLifecycle(tabId, lifecycle);
       identity = await browser.tabs.sendMessage(tabId, {type: 'PANEL_IDENTITY'}, {frameId: 0}) as typeof identity;
     }
+    assertCurrentLifecycle(tabId, lifecycle);
     if (!identity?.success || !identity.documentId || canonical(identity.url) !== canonical(tab.url)) {
       throw new Error('The page changed. Try again.');
     }
-    const session = await createOrRestore(tabId, canonical(identity.url), identity.documentId);
+    const session = await createOrRestore(tabId, canonical(identity.url), identity.documentId, lifecycle);
+    assertCurrentLifecycle(tabId, lifecycle);
     const result = await browser.tabs.sendMessage(
       tabId, {type: 'PANEL_SHOW', sessionId: session.id, documentId: identity.documentId}, {frameId: 0},
     ) as {success: boolean; error?: string};
@@ -138,7 +173,7 @@ async function launch(tabId: number): Promise<OpenResult> {
 export function openPanel(tabId: number): Promise<OpenResult> {
   const pending = opening.get(tabId);
   if (pending) return pending;
-  const operation = launch(tabId).finally(() => opening.delete(tabId));
+  const operation = launch(tabId).finally(() => { if (opening.get(tabId) === operation) opening.delete(tabId); });
   opening.set(tabId, operation);
   return operation;
 }
@@ -157,6 +192,7 @@ function openPanelWithErrorTab(tabId: number): Promise<void> {
 async function runJob(session: Session): Promise<void> {
   if (session.running) return;
   session.running = true;
+  const historyGeneration = getHistoryGeneration();
   const jobId = crypto.randomUUID();
   session.state = {
     jobId, tabId: session.tabId, documentUrl: session.url, documentId: session.documentId, state: 'loading',
@@ -184,7 +220,7 @@ async function runJob(session: Session): Promise<void> {
         classification: response.classification,
       };
       let historyError: string | undefined;
-      try { await mutateHistory({type: 'HISTORY_ADD', summary, id: jobId}); }
+      try { await mutateHistory({type: 'HISTORY_ADD', summary, id: jobId, generation: historyGeneration}); }
       catch (error) {
         historyError = `Could not save to history: ${error instanceof Error ? error.message : String(error)}`;
       }
@@ -240,19 +276,22 @@ interface PanelConnection {
 async function attachPanel(connection: PanelConnection, sessionId: string): Promise<void> {
   const {port, sender, key} = connection;
   const tabId = sender.tab!.id!;
+  const lifecycle = lifecycleFor(tabId);
   let session = sessions.get(tabId);
   if (!session) {
-    const stored = await browser.storage.session.get(SNAPSHOT_PREFIX + tabId) as Record<string, Snapshot | undefined>;
-    const snapshot = stored[SNAPSHOT_PREFIX + tabId];
+    const snapshot = await readSnapshot(tabId, lifecycle);
+    if (snapshot) lifecycle.url = snapshot.url;
     const identity = await browser.tabs.sendMessage(tabId, {type: 'PANEL_IDENTITY'}, {frameId: 0}) as {
       success: boolean; documentId: string; url: string
     };
+    assertCurrentLifecycle(tabId, lifecycle);
     if (snapshot?.id === sessionId && identity.success && snapshot.documentId === identity.documentId &&
         snapshot.url === canonical(identity.url)) {
-      session = await createOrRestore(tabId, snapshot.url, snapshot.documentId);
+      session = await createOrRestore(tabId, snapshot.url, snapshot.documentId, lifecycle);
     }
   }
   if (connection.disconnected) return;
+  assertCurrentLifecycle(tabId, lifecycle);
   if (session?.id !== sessionId || new URL(sender.url!).searchParams.get('session') !== session.id) {
     const rejected: PanelServerMessage = {type: 'PANEL_REJECTED', error: 'This panel session is no longer available.'};
     port.postMessage(rejected); port.disconnect(); return;
@@ -328,27 +367,35 @@ function handleCommand(command: string, tab: browser.Tabs.Tab | undefined): void
 function handleTabUpdated(tabId: number, change: browser.Tabs.OnUpdatedChangeInfoType): void {
   const session = sessions.get(tabId);
   if (!session) {
-    if (change.status === 'loading') void browser.storage.session.remove(SNAPSHOT_PREFIX + tabId);
-    else if (change.url) void browser.storage.session.get(SNAPSHOT_PREFIX + tabId).then(data => {
+    const lifecycle = tabLifecycles.get(tabId);
+    if (change.status === 'loading' || (change.url && (!lifecycle?.url || canonical(change.url) !== lifecycle.url))) {
+      tabLifecycles.delete(tabId); opening.delete(tabId);
+    }
+    if (change.status === 'loading') void queueSnapshot(tabId, () => browser.storage.session.remove(SNAPSHOT_PREFIX + tabId));
+    else if (change.url) void queueSnapshot(tabId, async() => {
+      const data = await browser.storage.session.get(SNAPSHOT_PREFIX + tabId);
       const snapshot = data[SNAPSHOT_PREFIX + tabId] as Snapshot | undefined;
       if (snapshot && canonical(change.url!) !== snapshot.url) {
-        return browser.storage.session.remove(SNAPSHOT_PREFIX + tabId);
+        await browser.storage.session.remove(SNAPSHOT_PREFIX + tabId);
       }
-      return undefined;
     });
     return;
   }
   if (change.status === 'loading' || (change.url && canonical(change.url) !== session.url)) {
+    tabLifecycles.delete(tabId);
+    opening.delete(tabId);
     sessions.delete(tabId);
     for (const port of session.ports) { try { port.disconnect(); } catch { /* already disconnected */ } }
     void browser.tabs.sendMessage(tabId, {type: 'PANEL_DISMISS'}, {frameId: 0}).catch(() => undefined);
-    void browser.storage.session.remove(SNAPSHOT_PREFIX + tabId);
+    void queueSnapshot(tabId, () => browser.storage.session.remove(SNAPSHOT_PREFIX + tabId));
   }
 }
 
 function handleTabRemoved(tabId: number): void {
+  tabLifecycles.delete(tabId);
+  opening.delete(tabId);
   sessions.delete(tabId);
-  void browser.storage.session.remove(SNAPSHOT_PREFIX + tabId);
+  void queueSnapshot(tabId, () => browser.storage.session.remove(SNAPSHOT_PREFIX + tabId));
 }
 
 export function setupPanelController(): void {

@@ -24,6 +24,6 @@ export type PanelServerMessage =
   | {type: 'PANEL_REJECTED'; error: string};
 
 export type HistoryMutation =
-  | {type: 'HISTORY_ADD'; summary: SummaryResult; id?: string}
+  | {type: 'HISTORY_ADD'; summary: SummaryResult; id?: string; generation?: string}
   | {type: 'HISTORY_DELETE'; id: string}
   | {type: 'HISTORY_CLEAR'};
