@@ -8,59 +8,7 @@ import type {PanelClientMessage, PanelServerMessage, PanelState} from '@shared/l
   selector: 'panel-root',
   imports: [DecimalPipe, ErrorStateComponent, LoadingStateComponent, MarkdownPipe, SummaryHeaderComponent, SummaryMetaComponent],
   host: {'(document:keydown.escape)': 'close()'},
-  template: `
-    <main>
-      @if (errorPage) {
-        <h1>Unable to open the summary panel</h1>
-        <p role="alert">{{ errorPage }}</p>
-        @if (errorPageFeedback()) { <p role="alert">{{ errorPageFeedback() }}</p> }
-        @if (errorVerified() && errorPageRetryable() && errorPagePermission()) {
-          <button type="button" (click)="grantAndReopen()">Grant website access and retry</button>
-        } @else if (errorVerified() && errorPageRetryable()) {
-          <button type="button" (click)="reopen()">Try again</button>
-        }
-      } @else if (rejected()) {
-        <p role="alert">{{ rejected() }}</p>
-      } @else {
-        <div class="body" aria-live="polite">
-          @if (!state() || state()?.state === 'loading') {
-            <shared-loading-state message="Extracting and summarizing the article…"></shared-loading-state>
-          }
-          @if (state()?.state === 'error') {
-            @if (copyError()) { <p role="alert">{{ copyError() }}</p> }
-            <shared-error-state [error]="state()?.error || 'Failed to summarize article'" [retryText]="state()?.permissionRequired ? 'Grant website access and retry' : 'Retry'" (retry)="retry()"></shared-error-state>
-          }
-          @if (state()?.state === 'success' && state()?.summary; as summary) {
-            <shared-summary-header [title]="summary.title || 'Article summary'" [copied]="copied()" (copyClick)="copy()"></shared-summary-header>
-            <div class="markdown-content" [innerHTML]="summary.summary | markdown"></div>
-            <shared-summary-meta [characterCount]="summary.summary.length" [cached]="summary.cached" [provider]="summary.provider || ''" [model]="summary.model || ''"></shared-summary-meta>
-            @if (summary.classification; as classification) {
-              @if (classification.error) {
-                <p class="classification-error" role="status">Classification failed: {{ classification.error }}</p>
-              } @else {
-                <div class="summary-classification"><span class="classification-badge">{{ classification.label }} · {{ (classification.score || 0) * 100 | number:'1.0-0' }}%</span></div>
-              }
-            }
-            @if (summary.agentLabels?.length) {
-              <section class="agent-labels-section" aria-label="Agent classification">
-                <div class="agent-labels-header">🎯 Agent Classification</div>
-                <div class="agent-labels">
-                  @for (label of summary.agentLabels; track $index) { <span class="agent-label-badge">{{ formatAgentLabel(label) }}</span> }
-                </div>
-              </section>
-            }
-            @if (summary.agentClassificationError) { <p class="classification-error" role="status">Agent classification failed: {{ summary.agentClassificationError }}</p> }
-            @if (state()?.historyError) { <p role="alert">{{ state()?.historyError }}</p> }
-            @if (copyError()) { <p role="alert">{{ copyError() }}</p> }
-          }
-        </div>
-        @if (authorized()) {
-          @if (settingsError()) { <p role="alert">{{ settingsError() }}</p> }
-          <footer><button type="button" (click)="openSettings()">Settings</button></footer>
-        }
-      }
-    </main>
-  `,
+  templateUrl: './app.component.html',
   styles: [`
     :host { display:block; height:100%; }
     main { box-sizing:border-box; min-height:100%; padding:16px; display:flex; flex-direction:column; }

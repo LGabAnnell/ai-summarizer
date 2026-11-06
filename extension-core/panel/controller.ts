@@ -196,82 +196,116 @@ export async function handlePanelControl(request: unknown, sender: browser.Runti
   return undefined;
 }
 
-export function setupPanelController(): void {
-  browser.action.onClicked.addListener(tab => { if (tab.id !== undefined) void openPanelWithErrorTab(tab.id); });
-  browser.commands.onCommand.addListener((command, tab) => {
-    if (command !== 'open-sidebar-and-summarize') return;
-    if (tab?.id !== undefined) void openPanelWithErrorTab(tab.id);
-    else void browser.tabs.query({active: true, currentWindow: true}).then(tabs => { if (tabs[0]?.id !== undefined) void openPanelWithErrorTab(tabs[0].id); });
-  });
-  browser.runtime.onConnect.addListener(port => {
-    if (port.name !== 'summarizer-panel') return;
-    const sender = port.sender;
-    if (!sender?.url?.startsWith(`${panelUrl}?session=`) || sender.id !== browser.runtime.id || sender.tab?.id === undefined || !sender.frameId) {
-      port.disconnect(); return;
+interface PanelConnection {
+  port: browser.Runtime.Port;
+  sender: browser.Runtime.MessageSender;
+  key: string;
+  attached?: Session;
+  disconnected: boolean;
+}
+
+async function attachPanel(connection: PanelConnection, sessionId: string): Promise<void> {
+  const {port, sender, key} = connection;
+  const tabId = sender.tab!.id!;
+  let session = sessions.get(tabId);
+  if (!session) {
+    const stored = await browser.storage.session.get(SNAPSHOT_PREFIX + tabId) as Record<string, Snapshot | undefined>;
+    const snapshot = stored[SNAPSHOT_PREFIX + tabId];
+    const identity = await browser.tabs.sendMessage(tabId, {type: 'PANEL_IDENTITY'}, {frameId: 0}) as {success: boolean; documentId: string; url: string};
+    if (snapshot?.id === sessionId && identity.success && snapshot.documentId === identity.documentId && snapshot.url === canonical(identity.url)) {
+      session = await createOrRestore(tabId, snapshot.url, snapshot.documentId);
     }
-    let attached: Session | undefined;
-    let disconnected = false;
-    const key = frameKey(sender);
-    port.onMessage.addListener((incoming: unknown) => {
-      if (!incoming || typeof incoming !== 'object') return;
-      const message = incoming as PanelClientMessage;
-      if (message.type === 'PANEL_READY') {
-        void (async() => {
-          const tabId = sender.tab!.id!;
-          let session = sessions.get(tabId);
-          if (!session) {
-            const stored = await browser.storage.session.get(SNAPSHOT_PREFIX + tabId) as Record<string, Snapshot | undefined>;
-            const snapshot = stored[SNAPSHOT_PREFIX + tabId];
-            const identity = await browser.tabs.sendMessage(tabId, {type: 'PANEL_IDENTITY'}, {frameId: 0}) as {success: boolean; documentId: string; url: string};
-            if (snapshot?.id === message.sessionId && identity.success && snapshot.documentId === identity.documentId && snapshot.url === canonical(identity.url)) {
-              session = await createOrRestore(tabId, snapshot.url, snapshot.documentId);
-            }
-          }
-          if (disconnected) return;
-          if (session?.id !== message.sessionId || new URL(sender.url!).searchParams.get('session') !== session.id) {
-            const rejected: PanelServerMessage = {type: 'PANEL_REJECTED', error: 'This panel session is no longer available.'};
-            port.postMessage(rejected); port.disconnect(); return;
-          }
-          attached = session;
-          session.ports.add(port);
-          trustedFrames.set(key, {sessionId: session.id, port});
-          void browser.tabs.sendMessage(session.tabId, {type: 'PANEL_FRAME_READY', sessionId: session.id}, {frameId: 0}).catch(() => undefined);
-          if (session.state) broadcast(session); else void runJob(session);
-        })().catch(() => { try { port.disconnect(); } catch { /* disconnected */ } });
-      } else if (attached?.id === message.sessionId && sessions.get(attached.tabId) === attached) {
-        if (message.type === 'PANEL_RETRY' && !attached.running) void runJob(attached);
-        if (message.type === 'PANEL_CLOSE') void browser.tabs.sendMessage(attached.tabId, {type: 'PANEL_HIDE', sessionId: attached.id}, {frameId: 0}).catch(() => undefined);
-        if (message.type === 'PANEL_OPEN_SETTINGS') {
-          void (async(): Promise<void> => {
-            try { await browser.runtime.openOptionsPage(); }
-            catch (error) {
-              const detail = error instanceof Error ? error.message : String(error);
-              try { port.postMessage({type: 'PANEL_SETTINGS_ERROR', error: `Could not open settings: ${detail}`} satisfies PanelServerMessage); }
-              catch { /* The panel may have been closed. */ }
-            }
-          })();
-        }
-      }
+  }
+  if (connection.disconnected) return;
+  if (session?.id !== sessionId || new URL(sender.url!).searchParams.get('session') !== session.id) {
+    const rejected: PanelServerMessage = {type: 'PANEL_REJECTED', error: 'This panel session is no longer available.'};
+    port.postMessage(rejected); port.disconnect(); return;
+  }
+  connection.attached = session;
+  session.ports.add(port);
+  trustedFrames.set(key, {sessionId: session.id, port});
+  void browser.tabs.sendMessage(session.tabId, {type: 'PANEL_FRAME_READY', sessionId: session.id}, {frameId: 0}).catch(() => undefined);
+  if (session.state) broadcast(session); else void runJob(session);
+}
+
+async function openPanelSettings(port: browser.Runtime.Port): Promise<void> {
+  try { await browser.runtime.openOptionsPage(); }
+  catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    try { port.postMessage({type: 'PANEL_SETTINGS_ERROR', error: `Could not open settings: ${detail}`} satisfies PanelServerMessage); }
+    catch { /* The panel may have been closed. */ }
+  }
+}
+
+function handlePanelMessage(connection: PanelConnection, incoming: unknown): void {
+  if (!incoming || typeof incoming !== 'object') return;
+  const message = incoming as PanelClientMessage;
+  if (message.type === 'PANEL_READY') {
+    void attachPanel(connection, message.sessionId).catch(() => {
+      try { connection.port.disconnect(); } catch { /* disconnected */ }
     });
-    port.onDisconnect.addListener(() => { disconnected = true; attached?.ports.delete(port); if (trustedFrames.get(key)?.port === port) trustedFrames.delete(key); });
+    return;
+  }
+  const attached = connection.attached;
+  if (attached?.id !== message.sessionId || sessions.get(attached.tabId) !== attached) return;
+  if (message.type === 'PANEL_RETRY' && !attached.running) void runJob(attached);
+  if (message.type === 'PANEL_CLOSE') void browser.tabs.sendMessage(attached.tabId, {type: 'PANEL_HIDE', sessionId: attached.id}, {frameId: 0}).catch(() => undefined);
+  if (message.type === 'PANEL_OPEN_SETTINGS') void openPanelSettings(connection.port);
+}
+
+function handlePanelConnection(port: browser.Runtime.Port): void {
+  if (port.name !== 'summarizer-panel') return;
+  const sender = port.sender;
+  if (!sender?.url?.startsWith(`${panelUrl}?session=`) || sender.id !== browser.runtime.id || sender.tab?.id === undefined || !sender.frameId) {
+    port.disconnect(); return;
+  }
+  const connection: PanelConnection = {port, sender, key: frameKey(sender), disconnected: false};
+  port.onMessage.addListener((incoming: unknown) => handlePanelMessage(connection, incoming));
+  port.onDisconnect.addListener(() => {
+    connection.disconnected = true;
+    connection.attached?.ports.delete(port);
+    if (trustedFrames.get(connection.key)?.port === port) trustedFrames.delete(connection.key);
   });
-  browser.tabs.onUpdated.addListener((tabId, change) => {
-    const session = sessions.get(tabId);
-    if (!session) {
-      if (change.status === 'loading') void browser.storage.session.remove(SNAPSHOT_PREFIX + tabId);
-      else if (change.url) void browser.storage.session.get(SNAPSHOT_PREFIX + tabId).then(data => {
-        const snapshot = data[SNAPSHOT_PREFIX + tabId] as Snapshot | undefined;
-        if (snapshot && canonical(change.url!) !== snapshot.url) return browser.storage.session.remove(SNAPSHOT_PREFIX + tabId);
-        return undefined;
-      });
-      return;
-    }
-    if (change.status === 'loading' || (change.url && canonical(change.url) !== session.url)) {
-      sessions.delete(tabId);
-      for (const port of session.ports) { try { port.disconnect(); } catch { /* already disconnected */ } }
-      void browser.tabs.sendMessage(tabId, {type: 'PANEL_DISMISS'}, {frameId: 0}).catch(() => undefined);
-      void browser.storage.session.remove(SNAPSHOT_PREFIX + tabId);
-    }
-  });
-  browser.tabs.onRemoved.addListener(tabId => { sessions.delete(tabId); void browser.storage.session.remove(SNAPSHOT_PREFIX + tabId); });
+}
+
+function handleAction(tab: browser.Tabs.Tab): void {
+  if (tab.id !== undefined) void openPanelWithErrorTab(tab.id);
+}
+
+function handleCommand(command: string, tab: browser.Tabs.Tab | undefined): void {
+  if (command !== 'open-sidebar-and-summarize') return;
+  if (tab?.id !== undefined) void openPanelWithErrorTab(tab.id);
+  else void browser.tabs.query({active: true, currentWindow: true}).then(tabs => { if (tabs[0]?.id !== undefined) void openPanelWithErrorTab(tabs[0].id); });
+}
+
+function handleTabUpdated(tabId: number, change: browser.Tabs.OnUpdatedChangeInfoType): void {
+  const session = sessions.get(tabId);
+  if (!session) {
+    if (change.status === 'loading') void browser.storage.session.remove(SNAPSHOT_PREFIX + tabId);
+    else if (change.url) void browser.storage.session.get(SNAPSHOT_PREFIX + tabId).then(data => {
+      const snapshot = data[SNAPSHOT_PREFIX + tabId] as Snapshot | undefined;
+      if (snapshot && canonical(change.url!) !== snapshot.url) return browser.storage.session.remove(SNAPSHOT_PREFIX + tabId);
+      return undefined;
+    });
+    return;
+  }
+  if (change.status === 'loading' || (change.url && canonical(change.url) !== session.url)) {
+    sessions.delete(tabId);
+    for (const port of session.ports) { try { port.disconnect(); } catch { /* already disconnected */ } }
+    void browser.tabs.sendMessage(tabId, {type: 'PANEL_DISMISS'}, {frameId: 0}).catch(() => undefined);
+    void browser.storage.session.remove(SNAPSHOT_PREFIX + tabId);
+  }
+}
+
+function handleTabRemoved(tabId: number): void {
+  sessions.delete(tabId);
+  void browser.storage.session.remove(SNAPSHOT_PREFIX + tabId);
+}
+
+export function setupPanelController(): void {
+  browser.action.onClicked.addListener(handleAction);
+  browser.commands.onCommand.addListener(handleCommand);
+  browser.runtime.onConnect.addListener(handlePanelConnection);
+  browser.tabs.onUpdated.addListener(handleTabUpdated);
+  browser.tabs.onRemoved.addListener(handleTabRemoved);
 }
