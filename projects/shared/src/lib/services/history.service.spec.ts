@@ -112,6 +112,50 @@ describe('HistoryService persistence and storage synchronization', () => {
     expect(service.getItems()).toEqual([item]);
   });
 
+  it('keeps newer history and selection when a stale mutation response arrives', async () => {
+    const service = TestBed.inject(HistoryService);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const older: HistoryItem = {id: 'old', summary: 'Old', title: 'Old', articleUrl: '', cached: false,
+      timestamp: new Date('2026-10-30T10:00:00Z'), preview: 'Old'};
+    const newer: HistoryItem = {id: 'new', summary: 'New', title: 'New', articleUrl: '', cached: false,
+      timestamp: new Date('2026-10-31T10:00:00Z'), preview: 'New'};
+    let finishMutation!: (value: unknown) => void;
+    runtime.sendMessage.mockImplementationOnce(() => new Promise(resolve => { finishMutation = resolve; }));
+    const pending = service.addSummary(summaryResult('Old'));
+    await vi.waitFor(() => expect(runtime.sendMessage).toHaveBeenCalled());
+    storageHarness.history = [newer];
+    for (const listener of storageHarness.listeners) listener({[STORAGE_KEY]: {newValue: [newer]}}, 'local');
+    service.selectItem(newer);
+    finishMutation({success: true, data: [older]});
+    await pending;
+    expect(service.getItems()).toEqual([newer]);
+    expect(service.getSelectedItem()).toEqual(newer);
+  });
+
+  it('keeps a storage update that arrives while the post-mutation refresh is pending', async () => {
+    const service = TestBed.inject(HistoryService);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const old: HistoryItem = {id: 'old', summary: 'Old', title: 'Old', articleUrl: '', cached: false,
+      timestamp: new Date('2026-10-30T10:00:00Z'), preview: 'Old'};
+    const latest: HistoryItem = {id: 'latest', summary: 'Latest', title: 'Latest', articleUrl: '', cached: false,
+      timestamp: new Date('2026-10-31T10:00:00Z'), preview: 'Latest'};
+    let finishMutation!: (value: unknown) => void;
+    let finishRefresh!: (value: Record<string, unknown>) => void;
+    runtime.sendMessage.mockImplementationOnce(() => new Promise(resolve => { finishMutation = resolve; }));
+    storage.local.get.mockImplementationOnce(() => new Promise(resolve => { finishRefresh = resolve; }));
+    const pending = service.addSummary(summaryResult('Old'));
+    await vi.waitFor(() => expect(runtime.sendMessage).toHaveBeenCalled());
+    for (const listener of storageHarness.listeners) listener({[STORAGE_KEY]: {newValue: [old]}}, 'local');
+    finishMutation({success: true, data: [old]});
+    await vi.waitFor(() => expect(storage.local.get).toHaveBeenCalledTimes(2));
+    for (const listener of storageHarness.listeners) listener({[STORAGE_KEY]: {newValue: [latest]}}, 'local');
+    service.selectItem(latest);
+    finishRefresh({[STORAGE_KEY]: [old]});
+    await pending;
+    expect(service.getItems()).toEqual([latest]);
+    expect(service.getSelectedItem()).toEqual(latest);
+  });
+
   it('applies only local history storage changes and updates or clears the selected item', async () => {
     const service = TestBed.inject(HistoryService);
     await new Promise(resolve => setTimeout(resolve, 0));

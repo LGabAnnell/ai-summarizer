@@ -56,9 +56,7 @@ export class HistoryService {
       if (areaName !== 'local' || !changes[HISTORY_STORAGE_KEY]) return;
       this.historyRevision++;
       const value = changes[HISTORY_STORAGE_KEY].newValue as HistoryItem[] | undefined;
-      this._history.set(this.sortHistory(value ?? []));
-      const selected = this._selectedItem();
-      this._selectedItem.set(selected ? this._history().find(item => item.id === selected.id) ?? null : null);
+      this.applyHistory(value ?? []);
     };
     if (typeof browser !== 'undefined') browser.storage?.onChanged?.addListener(storageChangedListener);
     this.destroyRef.onDestroy(() => {
@@ -91,7 +89,6 @@ export class HistoryService {
   deleteItem(id: string): Promise<void> {
     return this.enqueueMutation(async () => {
       await this.mutate({type: 'HISTORY_DELETE', id});
-      if (this._selectedItem()?.id === id) this._selectedItem.set(null);
     });
   }
 
@@ -101,7 +98,6 @@ export class HistoryService {
   clearAll(): Promise<void> {
     return this.enqueueMutation(async () => {
       await this.mutate({type: 'HISTORY_CLEAR'});
-      this._selectedItem.set(null);
       try {
         await firstValueFrom(this.messaging.clearCache());
       } catch (error) {
@@ -146,7 +142,13 @@ export class HistoryService {
     if (typeof browser === 'undefined' || !browser.storage) return;
     const revision = this.historyRevision;
     const result = await browser.storage.local.get([HISTORY_STORAGE_KEY]) as Record<string, HistoryItem[]>;
-    if (revision === this.historyRevision) this._history.set(this.sortHistory(result[HISTORY_STORAGE_KEY] ?? []));
+    if (revision === this.historyRevision) this.applyHistory(result[HISTORY_STORAGE_KEY] ?? []);
+  }
+
+  private applyHistory(items: HistoryItem[]): void {
+    this._history.set(this.sortHistory(items));
+    const selected = this._selectedItem();
+    this._selectedItem.set(selected ? this._history().find(item => item.id === selected.id) ?? null : null);
   }
 
   private sortHistory(history: HistoryItem[]): HistoryItem[] {
@@ -161,10 +163,11 @@ export class HistoryService {
 
   private async mutate(mutation: HistoryMutation): Promise<HistoryItem[]> {
     await this.historyReady;
+    const revision = this.historyRevision;
     const response = await browser.runtime.sendMessage(mutation) as {success: boolean; data?: HistoryItem[]; error?: string};
     if (!response.success || !response.data) throw new Error(response.error || 'Failed to save history');
-    const items = this.sortHistory(response.data);
-    this._history.set(items);
-    return items;
+    if (revision === this.historyRevision) this.applyHistory(response.data);
+    else await this.refreshHistoryFromStorage();
+    return this._history();
   }
 }

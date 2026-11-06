@@ -3,10 +3,11 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {ThemeService} from '@shared/public-api';
 import {AppComponent} from './app.component';
 
-const mock = vi.hoisted(() => ({connect: vi.fn(), request: vi.fn(), openOptions: vi.fn(), sendMessage: vi.fn()}));
+const mock = vi.hoisted(() => ({connect: vi.fn(), request: vi.fn(), openOptions: vi.fn(), sendMessage: vi.fn(), createTab: vi.fn()}));
 vi.mock('webextension-polyfill', () => ({default: {
   runtime: {connect: mock.connect, openOptionsPage: mock.openOptions, sendMessage: mock.sendMessage},
   permissions: {request: mock.request},
+  tabs: {create: mock.createTab},
 }}));
 
 interface MessageEvent {addListener: (fn: (message: unknown) => void) => void}
@@ -38,6 +39,39 @@ describe('floating summary view', () => {
     expect(fixture.nativeElement.textContent).toContain('Article');
     expect(fixture.nativeElement.querySelector('strong')?.textContent).toBe('Summary');
     expect(fixture.nativeElement.querySelector('[onerror]')).toBeNull();
+    fixture.destroy();
+  });
+
+  it('opens summary links in a new tab and scrolls fragment links within the panel', () => {
+    const port = makePort(); mock.connect.mockReturnValue(port); mock.createTab.mockResolvedValue({});
+    const fixture = TestBed.createComponent(AppComponent);
+    port.receive({type: 'PANEL_STATE', state: {state: 'success', jobId: 'job', tabId: 1, documentUrl: 'https://example.test/article',
+      summary: {summary: '[**External**](/other) [Section](#my-section) [Missing](#missing)\n\n## My Section', cached: false}}});
+    fixture.detectChanges();
+    const content = fixture.nativeElement.querySelector('.markdown-content') as HTMLElement;
+    const links = content.querySelectorAll('a');
+    const external = new MouseEvent('click', {bubbles: true, cancelable: true});
+    links[0].querySelector('strong')!.dispatchEvent(external);
+    expect(external.defaultPrevented).toBe(true);
+    expect(mock.createTab).toHaveBeenCalledWith({url: 'https://example.test/other'});
+    const middle = new MouseEvent('auxclick', {bubbles: true, cancelable: true, button: 1});
+    links[0].dispatchEvent(middle);
+    expect(middle.defaultPrevented).toBe(true);
+    expect(mock.createTab).toHaveBeenCalledTimes(2);
+    const right = new MouseEvent('auxclick', {bubbles: true, cancelable: true, button: 2});
+    links[0].dispatchEvent(right);
+    expect(right.defaultPrevented).toBe(false);
+    expect(mock.createTab).toHaveBeenCalledTimes(2);
+    const heading = content.querySelector('h2')!;
+    heading.scrollIntoView = vi.fn();
+    const fragment = new MouseEvent('click', {bubbles: true, cancelable: true});
+    links[1].dispatchEvent(fragment);
+    expect(fragment.defaultPrevented).toBe(true);
+    expect(heading.scrollIntoView).toHaveBeenCalledOnce();
+    const missing = new MouseEvent('click', {bubbles: true, cancelable: true});
+    links[2].dispatchEvent(missing);
+    expect(missing.defaultPrevented).toBe(true);
+    expect(mock.createTab).toHaveBeenCalledTimes(2);
     fixture.destroy();
   });
 

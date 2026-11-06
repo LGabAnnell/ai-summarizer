@@ -7,7 +7,7 @@ import type {PanelClientMessage, PanelServerMessage, PanelState} from '@shared/l
 @Component({
   selector: 'panel-root',
   imports: [DecimalPipe, ErrorStateComponent, LoadingStateComponent, MarkdownPipe, SummaryHeaderComponent, SummaryMetaComponent],
-  host: {'(document:keydown.escape)': 'close()'},
+  host: {'(document:keydown.escape)': 'close()', '(click)': 'openSummaryLink($event)', '(auxclick)': 'openSummaryLink($event)'},
   templateUrl: './app.component.html',
   styles: [`
     :host { display:block; height:100%; }
@@ -32,6 +32,7 @@ export class AppComponent implements OnDestroy {
   readonly copied = signal(false);
   readonly copyError = signal('');
   readonly settingsError = signal('');
+  readonly linkError = signal('');
   readonly errorPageFeedback = signal('');
   readonly errorVerified = signal(false);
   readonly errorPage: string;
@@ -72,6 +73,35 @@ export class AppComponent implements OnDestroy {
   formatAgentLabel(label: string): string {
     const formatted = label.replace(/_/g, ' ');
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  }
+
+  openSummaryLink(event: MouseEvent): void {
+    if ((event.type === 'click' && event.button !== 0) || (event.type === 'auxclick' && event.button !== 1)) return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const container = target.closest('.markdown-content');
+    if (!(container instanceof HTMLElement)) return;
+    const link = target.closest('a[href]');
+    if (!(link instanceof HTMLAnchorElement) || !container.contains(link)) return;
+    event.preventDefault();
+    const href = link.getAttribute('href') || '';
+    this.linkError.set('');
+    if (href.startsWith('#')) {
+      let fragment: string;
+      try { fragment = decodeURIComponent(href.slice(1)); } catch { return; }
+      const headings = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      const heading = Array.from(headings).find(element =>
+        (element.textContent || '').toLowerCase().trim().replace(/[^\p{L}\p{N}\s_-]/gu, '').replace(/\s+/g, '-') === fragment.toLowerCase());
+      heading?.scrollIntoView();
+      return;
+    }
+    try {
+      const url = new URL(href, this.state()?.summary?.articleUrl || this.state()?.documentUrl);
+      if (url.protocol !== 'https:' && url.protocol !== 'http:') return;
+      void browser.tabs.create({url: url.href}).catch(() => this.linkError.set('Could not open the link. Please try again.'));
+    } catch {
+      this.linkError.set('Could not open the link. Please try again.');
+    }
   }
 
   private connect(): void {

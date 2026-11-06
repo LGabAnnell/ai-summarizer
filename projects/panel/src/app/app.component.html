@@ -22,6 +22,7 @@
       @if (state()?.state === 'success' && state()?.summary; as summary) {
         <shared-summary-header [title]="summary.title || 'Article summary'" [copied]="copied()" (copyClick)="copy()"></shared-summary-header>
         <div class="markdown-content" [innerHTML]="summary.summary | markdown"></div>
+        @if (linkError()) { <p role="alert">{{ linkError() }}</p> }
         <shared-summary-meta [characterCount]="summary.summary.length" [cached]="summary.cached" [provider]="summary.provider || ''" [model]="summary.model || ''"></shared-summary-meta>
         @if (summary.classification; as classification) {
           @if (classification.error) {
