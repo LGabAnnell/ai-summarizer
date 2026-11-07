@@ -19,7 +19,8 @@ const storage = vi.hoisted(() => ({
     }),
   },
 }));
-vi.mock('webextension-polyfill', () => ({default: {storage}}));
+const runtime = vi.hoisted(() => ({sendMessage: vi.fn()}));
+vi.mock('webextension-polyfill', () => ({default: {storage, runtime}}));
 
 const STORAGE_KEY = 'ai-summarizer-history';
 const labels = ['one', 'two', 'three', 'four', 'five'];
@@ -39,6 +40,18 @@ describe('HistoryService persistence and storage synchronization', () => {
       for (const listener of storageHarness.listeners) {
         listener({[STORAGE_KEY]: {oldValue, newValue: storageHarness.history}}, 'local');
       }
+    });
+    runtime.sendMessage.mockImplementation(async (request: {type: string; id?: string; summary?: HistoryItem}) => {
+      const items = [...storageHarness.history] as HistoryItem[];
+      if (request.type === 'HISTORY_ADD' && request.summary) {
+        const summary = request.summary;
+        items.unshift({...summary, id: crypto.randomUUID(), preview: summary.summary.slice(0, 100)});
+      } else if (request.type === 'HISTORY_DELETE') {
+        const index = items.findIndex(item => item.id === request.id);
+        if (index >= 0) items.splice(index, 1);
+      } else if (request.type === 'HISTORY_CLEAR') items.length = 0;
+      await storage.local.set({[STORAGE_KEY]: items});
+      return {success: true, data: items};
     });
     TestBed.configureTestingModule({providers: [HistoryService, {provide: MessagingService, useValue: {clearCache: () => of({success: true})}}]});
   });
@@ -85,6 +98,62 @@ describe('HistoryService persistence and storage synchronization', () => {
     expect(service.getItems()).toHaveLength(3);
     expect(new Set(service.getItems().map(item => item.summary))).toEqual(new Set(['Existing', 'First', 'Second']));
     expect(storageHarness.history).toHaveLength(3);
+  });
+
+  it('keeps a newer storage update when the initial read finishes later', async () => {
+    let finishInitialLoad!: (value: Record<string, unknown>) => void;
+    storage.local.get.mockImplementationOnce(() => new Promise(resolve => { finishInitialLoad = resolve; }));
+    const service = TestBed.inject(HistoryService);
+    const item: HistoryItem = {id: 'new', summary: 'New', title: 'New', articleUrl: '', cached: false,
+      timestamp: new Date(), preview: 'New'};
+    for (const listener of storageHarness.listeners) listener({[STORAGE_KEY]: {newValue: [item]}}, 'local');
+    finishInitialLoad({[STORAGE_KEY]: []});
+    await vi.waitFor(() => expect(storage.local.get).toHaveResolved());
+    expect(service.getItems()).toEqual([item]);
+  });
+
+  it('keeps newer history and selection when a stale mutation response arrives', async () => {
+    const service = TestBed.inject(HistoryService);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const older: HistoryItem = {id: 'old', summary: 'Old', title: 'Old', articleUrl: '', cached: false,
+      timestamp: new Date('2026-10-30T10:00:00Z'), preview: 'Old'};
+    const newer: HistoryItem = {id: 'new', summary: 'New', title: 'New', articleUrl: '', cached: false,
+      timestamp: new Date('2026-10-31T10:00:00Z'), preview: 'New'};
+    let finishMutation!: (value: unknown) => void;
+    runtime.sendMessage.mockImplementationOnce(() => new Promise(resolve => { finishMutation = resolve; }));
+    const pending = service.addSummary(summaryResult('Old'));
+    await vi.waitFor(() => expect(runtime.sendMessage).toHaveBeenCalled());
+    storageHarness.history = [newer];
+    for (const listener of storageHarness.listeners) listener({[STORAGE_KEY]: {newValue: [newer]}}, 'local');
+    service.selectItem(newer);
+    finishMutation({success: true, data: [older]});
+    await pending;
+    expect(service.getItems()).toEqual([newer]);
+    expect(service.getSelectedItem()).toEqual(newer);
+  });
+
+  it('keeps a storage update that arrives while the post-mutation refresh is pending', async () => {
+    const service = TestBed.inject(HistoryService);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const old: HistoryItem = {id: 'old', summary: 'Old', title: 'Old', articleUrl: '', cached: false,
+      timestamp: new Date('2026-10-30T10:00:00Z'), preview: 'Old'};
+    const latest: HistoryItem = {id: 'latest', summary: 'Latest', title: 'Latest', articleUrl: '', cached: false,
+      timestamp: new Date('2026-10-31T10:00:00Z'), preview: 'Latest'};
+    let finishMutation!: (value: unknown) => void;
+    let finishRefresh!: (value: Record<string, unknown>) => void;
+    runtime.sendMessage.mockImplementationOnce(() => new Promise(resolve => { finishMutation = resolve; }));
+    storage.local.get.mockImplementationOnce(() => new Promise(resolve => { finishRefresh = resolve; }));
+    const pending = service.addSummary(summaryResult('Old'));
+    await vi.waitFor(() => expect(runtime.sendMessage).toHaveBeenCalled());
+    for (const listener of storageHarness.listeners) listener({[STORAGE_KEY]: {newValue: [old]}}, 'local');
+    finishMutation({success: true, data: [old]});
+    await vi.waitFor(() => expect(storage.local.get).toHaveBeenCalledTimes(2));
+    for (const listener of storageHarness.listeners) listener({[STORAGE_KEY]: {newValue: [latest]}}, 'local');
+    service.selectItem(latest);
+    finishRefresh({[STORAGE_KEY]: [old]});
+    await pending;
+    expect(service.getItems()).toEqual([latest]);
+    expect(service.getSelectedItem()).toEqual(latest);
   });
 
   it('applies only local history storage changes and updates or clears the selected item', async () => {

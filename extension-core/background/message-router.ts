@@ -1,6 +1,7 @@
 import browser from 'webextension-polyfill';
 import {Message, SetThemeRequest} from '@shared/lib/models/summary.model';
 import {ClassifyWithAgentRequest} from '@shared/lib/models/agent-classification.model';
+import {getHistoryGeneration, mutateHistory} from './history';
 import {extractArticleFromActiveTab, TabExtractionError} from './article-extraction';
 import {handleClearCache} from './summary-cache';
 import {handleGetSettings, handleSaveSettings} from './settings';
@@ -14,9 +15,14 @@ import {handleClassifyText, handleGetMLPermissionStatus, handleNotifyMLPermissio
  */
 export async function handleMessage(request: Message): Promise<unknown> {
   switch (request.type) {
-    case 'EXTRACT_AND_SUMMARIZE':
+    case 'HISTORY_ADD':
+    case 'HISTORY_DELETE':
+    case 'HISTORY_CLEAR':
+      return {type: 'HISTORY_RESPONSE', success: true, data: await mutateHistory(request)};
+    case 'EXTRACT_AND_SUMMARIZE': {
+      const historyGeneration = getHistoryGeneration();
       try {
-        const article = await extractArticleFromActiveTab(request.tabId);
+        const article = await extractArticleFromActiveTab(request.tabId, request.documentId, request.documentUrl);
         if (!article) {
           return {
             type: 'SUMMARIZE_RESPONSE',
@@ -28,6 +34,7 @@ export async function handleMessage(request: Message): Promise<unknown> {
         // Add article metadata to the response for the sidebar
         return {
           ...summaryResponse,
+          historyGeneration,
           title: article.title,
           articleUrl: article.url,
         };
@@ -50,9 +57,12 @@ export async function handleMessage(request: Message): Promise<unknown> {
           success: false,
         };
       }
+    }
 
-    case 'SUMMARIZE':
-      return handleSummarize(request.article, request.provider);
+    case 'SUMMARIZE': {
+      const historyGeneration = getHistoryGeneration();
+      return {...await handleSummarize(request.article, request.provider), historyGeneration};
+    }
 
     case 'GET_SETTINGS':
       return handleGetSettings();

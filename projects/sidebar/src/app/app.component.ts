@@ -876,7 +876,7 @@ export class AppComponent implements OnInit, OnDestroy {
   async addToHistory(): Promise<void> {
     const summary = this.currentSummary();
     if (summary) {
-      await this.historyService.addSummary(summary);
+      await this.historyService.addSummary({...summary, historyGeneration: undefined});
       // Track this summary as added to prevent duplicate auto-adds
       const summaryId = summary.timestamp.getTime().toString() + summary.summary.substring(0, 50);
       this.lastAddedSummaryId.set(summaryId);

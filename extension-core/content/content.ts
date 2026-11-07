@@ -6,6 +6,7 @@
 // Import the vendored Readability.js
 // In the final build, this will be bundled with the content script
 import {Readability} from '@mozilla/readability';
+import {installPanelShell} from '../panel/shell';
 import browser, {Runtime} from 'webextension-polyfill';
 import OnMessageListener = Runtime.OnMessageListener;
 
@@ -42,6 +43,7 @@ function extractArticle(): ArticleData | null {
   try {
     // Use Mozilla's Readability library
     const doc = document.cloneNode(true) as Document;
+    doc.querySelectorAll('[data-ai-summarizer-panel]').forEach(element => element.remove());
     const readability = new Readability(doc,/*, {
       charThreshold: MAX_TEXT_LENGTH,
     }*/);
@@ -92,7 +94,7 @@ function extractArticleFallback(): ArticleData | null {
     const clone = articleElement.cloneNode(true) as HTMLElement;
 
     // Remove unwanted elements
-    const unwantedSelectors = ['script', 'style', 'noscript', 'iframe', 'nav', 'footer', 'header', '.ad', '.sidebar', '.comments'];
+    const unwantedSelectors = ['[data-ai-summarizer-panel]', 'script', 'style', 'noscript', 'iframe', 'nav', 'footer', 'header', '.ad', '.sidebar', '.comments'];
     unwantedSelectors.forEach(selector => {
       const elements = clone.querySelectorAll(selector);
       elements.forEach(el => el.remove());
@@ -169,8 +171,34 @@ const handleMessage: OnMessageListener = (request: unknown, _: unknown, sendResp
   return true;
 };
 
-// Listen for messages from the background script
-browser.runtime.onMessage.addListener(handleMessage);
+// Do not install duplicate message handlers when Firefox injects this bundle on demand.
+const registry = globalThis as typeof globalThis & {__articleSummarizerInstalled?: boolean};
+if (!registry.__articleSummarizerInstalled) {
+  registry.__articleSummarizerInstalled = true;
+  const documentId = Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('');
+  let handlePanel: ReturnType<typeof installPanelShell> | undefined;
+  browser.runtime.onMessage.addListener(((request: unknown, sender: Runtime.MessageSender, sendResponse: (response: unknown) => void): true | void => {
+    const message = request as Message;
+    if (message?.type === 'PANEL_IDENTITY') { sendResponse({success: true, documentId, url: location.href}); return; }
+    if (message?.type === 'PANEL_SHOW' && (message['documentId'] !== documentId || typeof message['sessionId'] !== 'string' || !message['sessionId'])) {
+      sendResponse({success: false, error: 'The panel request is no longer valid. Try again.'}); return;
+    }
+    const currentUrl = new URL(location.href);
+    currentUrl.hash = '';
+    if (message?.type === 'EXTRACT_ARTICLE' &&
+        ((message['documentId'] && message['documentId'] !== documentId) ||
+         (message['documentUrl'] && message['documentUrl'] !== currentUrl.href))) {
+      sendResponse({success: false, error: 'The article changed before it could be extracted. Try again.'}); return;
+    }
+    if (message?.type === 'PANEL_SHOW') handlePanel ??= installPanelShell();
+    if (request && typeof request === 'object' && handlePanel?.(message)) {
+      sendResponse({success: true});
+      return;
+    }
+    if (message?.type === 'EXTRACT_ARTICLE') return handleMessage(request, sender, sendResponse);
+    return;
+  }) as Runtime.OnMessageListener);
+}
 
 // Also listen for messages from the popup (via the background script)
 // The background script will forward messages to the content script

@@ -88,21 +88,20 @@ describe('Popup website access recovery', () => {
     });
     browserMock.runtime.sendMessage.mockResolvedValueOnce({
       success: true, summary: 'Popup summary', title: 'Popup article', articleUrl: 'https://example.com/article',
-      cached: false, tokenCount: 42, agentLabels: ['one', 'two', 'three', 'four', 'five'],
+      cached: false, tokenCount: 42, agentLabels: ['one', 'two', 'three', 'four', 'five'], historyGeneration: 'generation',
     });
 
+    browserMock.runtime.sendMessage.mockResolvedValueOnce({success: true, data: [existing]});
     createPopup();
     await component.summarize();
 
-    expect(browserMock.storage.local.set).toHaveBeenCalledTimes(1);
-    const saved = browserMock.storage.local.set.mock.calls[0][0]['ai-summarizer-history'] as HistoryItem[];
-    expect(saved).toHaveLength(2);
-    expect(saved[0]).toMatchObject({
-      summary: 'Popup summary', title: 'Popup article', articleUrl: 'https://example.com/article',
-      cached: false, tokenCount: 42, agentLabels: ['one', 'two', 'three', 'four', 'five'],
+    expect(browserMock.runtime.sendMessage).toHaveBeenLastCalledWith({
+      type: 'HISTORY_ADD', generation: 'generation', summary: expect.objectContaining({
+        summary: 'Popup summary', title: 'Popup article', articleUrl: 'https://example.com/article',
+        cached: false, tokenCount: 42, agentLabels: ['one', 'two', 'three', 'four', 'five'],
+        timestamp: expect.any(Date),
+      }),
     });
-    expect(saved[0].timestamp).toBeInstanceOf(Date);
-    expect(saved[1].id).toBe('existing');
   });
 
   it('keeps the popup summary successful when history storage rejects', async () => {

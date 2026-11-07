@@ -6,10 +6,13 @@ const setup = vi.hoisted(() => ({
   handleMessage: vi.fn(),
   setupProgress: vi.fn(),
   setupSidebar: vi.fn(),
+  setupPanel: vi.fn(),
+  authorized: vi.fn(() => true),
 }));
 vi.mock('webextension-polyfill', () => ({default: {runtime: {onMessage: {addListener: setup.addListener}}}}));
 vi.mock('./background/message-router', () => ({handleMessage: setup.handleMessage}));
 vi.mock('./background/ml-progress', () => ({setupMLProgressBroadcasting: setup.setupProgress}));
+vi.mock('./panel/controller', () => ({setupPanelController: setup.setupPanel, isAuthorizedPanelSender: setup.authorized, handlePanelControl: vi.fn()}));
 vi.mock('./sidebar-shortcut', () => ({setupSidebarShortcut: setup.setupSidebar}));
 
 describe('background service worker entrypoint', () => {
@@ -28,6 +31,7 @@ describe('background service worker entrypoint', () => {
     expect(setup.addListener).toHaveBeenCalledOnce();
     expect(setup.setupProgress).toHaveBeenCalledOnce();
     expect(setup.setupSidebar).toHaveBeenCalledOnce();
+    expect(setup.setupPanel).toHaveBeenCalledOnce();
     expect(setup.listener).toBeTypeOf('function');
 
     let resolveHandler!: (value: unknown) => void;

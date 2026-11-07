@@ -1,13 +1,13 @@
 {
   "name": "article-summarizer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Firefox Manifest V3 extension that extracts article content and sends it to configurable AI providers for summarization",
   "main": "extension-core/background.js",
   "scripts": {
     "ng": "ng",
     "start": "npm run run",
-    "build": "npm run build:shared && npm run build:popup && npm run build:options && npm run build:sidebar && npm run build:extension",
-    "build:debug": "npm run build:shared:debug && npm run build:popup:debug && npm run build:options:debug && npm run build:sidebar:debug && npm run build:extension:debug",
+    "build": "npm run build:shared && npm run build:popup && npm run build:options && npm run build:sidebar && npm run build:panel && npm run build:extension",
+    "build:debug": "npm run build:shared:debug && npm run build:popup:debug && npm run build:options:debug && npm run build:sidebar:debug && npm run build:panel:debug && npm run build:extension:debug",
     "build:popup": "ng build popup --configuration production",
     "build:popup:debug": "ng build popup --configuration debug",
     "build:options": "ng build options --configuration production",
@@ -27,11 +27,14 @@
     "lint:options": "ng lint options",
     "lint:sidebar": "ng lint sidebar",
     "lint:shared": "ng lint shared",
-    "lint:all": "npm run lint:extension-core && npm run lint:shared && npm run lint:popup && npm run lint:options && npm run lint:sidebar",
+    "lint:all": "npm run lint:extension-core && npm run lint:shared && npm run lint:popup && npm run lint:options && npm run lint:sidebar && npm run lint:panel",
     "package": "rm -rf dist && npm run lint:all && npm run build && web-ext build --source-dir=dist --artifacts-dir=. --filename=ai-summarizer.zip --overwrite-dest",
     "package-local": "rm -rf dist && npm run build && web-ext build --source-dir=dist --artifacts-dir=. --filename=ai-summarizer.zip --overwrite-dest",
     "package:source": "npx tsx builds/package-source.ts",
-    "run": "web-ext run --source-dir=dist"
+    "run": "web-ext run --source-dir=dist",
+    "build:panel": "ng build panel --configuration production",
+    "build:panel:debug": "ng build panel --configuration debug",
+    "lint:panel": "ng lint panel"
   },
   "private": true,
   "dependencies": {

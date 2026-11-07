@@ -8,7 +8,6 @@
     "96": "icons/icon-96.svg"
   },
   "action": {
-    "default_popup": "popup/index.html",
     "default_icon": {
       "48": "icons/icon-48.svg",
       "96": "icons/icon-96.svg"
@@ -36,7 +35,7 @@
         "default": "Ctrl+Alt+S",
         "mac": "MacCtrl+Shift+S"
       },
-      "description": "Open sidebar and summarize article"
+      "description": "Open summary panel"
     }
   },
   "options_ui": {
@@ -49,8 +48,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -69,8 +72,22 @@
     "gecko": {
       "id": "ai-summarizer@annell.ch",
       "data_collection_permissions": {
-        "required": ["none"]
+        "required": [
+          "none"
+        ]
       }
     }
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "panel/index.html",
+        "panel/*.js",
+        "panel/*.css"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
 }

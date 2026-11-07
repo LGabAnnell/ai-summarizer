@@ -164,6 +164,7 @@ export class AppComponent {
           tokenCount: response.tokenCount,
           agentLabels: response.agentLabels,
           agentClassificationError: response.agentClassificationError,
+          historyGeneration: response.historyGeneration,
         };
         try {
           await this.historyService.addSummary(summaryResult);
