@@ -46,11 +46,19 @@ For development, load the built extension temporarily through `about:debugging`.
 
 ## CI and releases
 
-GitHub Actions runs lint, all Angular and extension-core tests, and a production build on pull requests and pushes to `main`. A pushed `vMAJOR.MINOR.PATCH` tag runs the same checks and creates a GitHub Release with generated notes, an unsigned extension ZIP, and a source ZIP containing the lockfile.
+GitHub Actions runs lint, all Angular and extension-core tests, and a production build on pull requests and pushes to `main`. A pushed `vMAJOR.MINOR.PATCH` tag runs the same checks, creates a GitHub Release with generated notes and unsigned extension and source ZIPs, and submits the extension and source archive to Firefox Add-ons (AMO). The GitHub Release and AMO submission are independent jobs after validation.
 
-To release, update the version in `manifest.json`, `package.json`, and both root version fields of `package-lock.json` (for example, run `npm version 1.2.3 --no-git-tag-version` and update the manifest). Commit those changes, then run `git tag v1.2.3` and `git push origin v1.2.3`. The workflow rejects mismatched versions. Check the Actions run and release assets after publishing. Mozilla signing and Add-ons submission are separate manual steps.
+Before the first automated submission:
 
-If validation fails, fix the issue in a new commit and push a new version tag. If publication fails after validation, rerun the failed job in GitHub Actions; if a release already exists, inspect and repair its assets before retrying.
+1. Ensure the add-on is already listed on AMO and its ID matches `ai-summarizer@annell.ch` in `manifest.json`. If needed, create the listing in the [Developer Hub](https://addons.mozilla.org/developers/).
+2. Generate credentials on the [AMO API credentials page](https://addons.mozilla.org/en-US/developers/addon/api/key/).
+3. In GitHub repository **Settings → Secrets and variables → Actions**, add `AMO_JWT_ISSUER` (the JWT issuer) and `AMO_JWT_SECRET` (the JWT secret).
+
+To release, update the version in `manifest.json`, `package.json`, and both root version fields of `package-lock.json` (for example, run `npm version 1.2.3 --no-git-tag-version` and update the manifest). Commit those changes, then run `git tag v1.2.3` and `git push origin v1.2.3`. The workflow rejects mismatched versions.
+
+The submission job does not wait for Mozilla's approval. Check its status in the Developer Hub; Firefox distributes the update after AMO lists it. A successful job means the submission was accepted, not necessarily approved or published.
+
+If validation fails, fix the issue in a new commit and push a new version tag. If the GitHub Release job fails, inspect any existing release and its assets before retrying. If the AMO job fails, check the Developer Hub before retrying: the version may already have been submitted even if the job failed. Do not resubmit an existing version; resolve any outstanding review or rejection with Mozilla, or release a new version as appropriate.
 
 ## Configuration
 
