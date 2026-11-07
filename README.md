@@ -16,7 +16,7 @@ A Firefox Manifest V3 extension that extracts article content using Mozilla's Re
 ### Development Setup
 
 1. **Prerequisites**:
-   - Node.js (v18+)
+   - Node.js 22.23.1 (or another version supported by Angular 22)
    - npm (v9+)
    - Firefox browser
 
@@ -40,20 +40,17 @@ A Firefox Manifest V3 extension that extracts article content using Mozilla's Re
 
 ### Production Build
 
-1. **Build for production**:
-   ```bash
-   npm run build
-   ```
+Run `npm run package` to build and package the extension as `ai-summarizer.zip`.
+The archive is unsigned; standard Firefox requires Mozilla signing for permanent installation.
+For development, load the built extension temporarily through `about:debugging`.
 
-2. **Package the extension**:
-   ```bash
-   npm install -g web-ext
-   web-ext build
-   ```
+## CI and releases
 
-3. **Load the packaged extension in Firefox**:
-   - The packaged extension will be in the `web-ext-artifacts` folder
-   - In Firefox, go to `about:addons` and load the `.zip` file
+GitHub Actions runs lint, all Angular and extension-core tests, and a production build on pull requests and pushes to `main`. A pushed `vMAJOR.MINOR.PATCH` tag runs the same checks and creates a GitHub Release with generated notes, an unsigned extension ZIP, and a source ZIP containing the lockfile.
+
+To release, update the version in `manifest.json`, `package.json`, and both root version fields of `package-lock.json` (for example, run `npm version 1.2.3 --no-git-tag-version` and update the manifest). Commit those changes, then run `git tag v1.2.3` and `git push origin v1.2.3`. The workflow rejects mismatched versions. Check the Actions run and release assets after publishing. Mozilla signing and Add-ons submission are separate manual steps.
+
+If validation fails, fix the issue in a new commit and push a new version tag. If publication fails after validation, rerun the failed job in GitHub Actions; if a release already exists, inspect and repair its assets before retrying.
 
 ## Configuration
 

@@ -1,6 +1,6 @@
 {
   "name": "article-summarizer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Firefox Manifest V3 extension that extracts article content and sends it to configurable AI providers for summarization",
   "main": "extension-core/background.js",
   "scripts": {

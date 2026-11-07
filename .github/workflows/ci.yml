@@ -1,0 +1,63 @@
+name: CI and release
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.1'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint:all
+      - name: Angular tests
+        run: |
+          for project in shared popup options sidebar panel; do
+            npx ng test "$project" --watch=false || exit 1
+          done
+      - run: npm run test:extension-core
+      - run: npm run build
+      - name: Check release version
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node -e 'const tag = process.env.RELEASE_TAG; const p = require("./package.json"); const l = require("./package-lock.json"); const m = require("./manifest.json"); if (!/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(tag) || [p.version, l.version, l.packages[""].version, m.version].some(v => `v${v}` !== tag)) { console.error("Tag and package, lockfile, and manifest versions must match vMAJOR.MINOR.PATCH"); process.exit(1); }'
+      - name: Package release archives
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          npx web-ext build --source-dir=dist --artifacts-dir=release --filename=ai-summarizer.zip
+          git archive --format=zip --output=release/ai-summarizer-source.zip HEAD
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: release-archives
+          path: release/*.zip
+          if-no-files-found: error
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-archives
+          path: release
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" release/*.zip --verify-tag --generate-notes
